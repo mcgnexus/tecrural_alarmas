@@ -1,0 +1,108 @@
+import { NextResponse } from "next/server";
+import {
+  crearSuscripcion,
+  listarSuscripciones,
+} from "@/lib/datos/avisos-repo";
+import { dispositivoValido, suscripcionValida } from "@/lib/datos/validacion";
+import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
+import { crearLogger } from "@/lib/log/logger";
+import { registrarSenalSegura } from "@/lib/aplicacion/crm";
+
+const log = crearLogger("api.avisos");
+
+export const dynamic = "force-dynamic";
+
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const dispositivo = url.searchParams.get("dispositivo");
+  if (!dispositivoValido(dispositivo)) {
+    return NextResponse.json(
+      { error: "Falta el identificador de dispositivo." },
+      { status: 400 },
+    );
+  }
+
+  return conRequestId({ user_id: dispositivo }, async (requestId) => {
+    const inicio = Date.now();
+    try {
+      const avisos = await listarSuscripciones(dispositivo);
+      log.info("avisos.listar.ok", {
+        status: 200,
+        duracion_ms: Date.now() - inicio,
+      });
+      return conCabeceraRequestId(NextResponse.json(avisos), requestId);
+    } catch (error) {
+      log.error(
+        "avisos.listar.error",
+        { status: 503, duracion_ms: Date.now() - inicio },
+        error,
+      );
+      return conCabeceraRequestId(
+        NextResponse.json(
+          { error: "No se pudieron cargar los avisos ahora." },
+          { status: 503 },
+        ),
+        requestId,
+      );
+    }
+  });
+}
+
+export async function POST(req: Request) {
+  const cuerpo = (await req.json().catch(() => null)) as unknown;
+  if (!suscripcionValida(cuerpo)) {
+    return NextResponse.json({ error: "Solicitud no válida." }, { status: 400 });
+  }
+
+  return conRequestId(
+    { user_id: cuerpo.dispositivoId, plot_id: cuerpo.parcelaId ?? undefined },
+    async (requestId) => {
+      const inicio = Date.now();
+      try {
+        const aviso = await crearSuscripcion({
+          dispositivoId: cuerpo.dispositivoId,
+          parcelaId: cuerpo.parcelaId ?? null,
+          canal: cuerpo.canal,
+          destino: cuerpo.destino,
+          severidadMinima: cuerpo.severidadMinima,
+        });
+        log.info("avisos.crear.ok", {
+          status: 201,
+          duracion_ms: Date.now() - inicio,
+          external_source: aviso.canal,
+        });
+        await registrarSenalSegura({
+          dispositivoId: cuerpo.dispositivoId,
+          evento: "avisos_activados",
+          metadata: { canal: aviso.canal },
+        });
+        return conCabeceraRequestId(
+          NextResponse.json(aviso, { status: 201 }),
+          requestId,
+        );
+      } catch (error) {
+        if (error instanceof Error && error.message === "Parcela no encontrada") {
+          return conCabeceraRequestId(
+            NextResponse.json(
+              { error: "Parcela no encontrada." },
+              { status: 404 },
+            ),
+            requestId,
+          );
+        }
+        log.error(
+          "avisos.crear.error",
+          { status: 503, duracion_ms: Date.now() - inicio },
+          error,
+        );
+        return conCabeceraRequestId(
+          NextResponse.json(
+            { error: "No se pudo guardar el aviso ahora." },
+            { status: 503 },
+          ),
+          requestId,
+        );
+      }
+    },
+  );
+}
