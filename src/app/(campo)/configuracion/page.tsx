@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { GestionAvisos } from "@/components/avisos/gestion-avisos";
 import { ResumenInteres } from "@/components/crm/resumen-interes";
 
@@ -20,6 +21,13 @@ export default function ConfiguracionPage() {
 
       <GestionAvisos />
       <ResumenInteres />
+
+      <Link
+        href="/gestion"
+        className="block rounded-xl border border-stone-200 bg-white p-4 text-[13px] font-medium text-brand-800"
+      >
+        Gestión avanzada: catálogo fenológico, Kc y reglas por cultivo
+      </Link>
     </>
   );
 }

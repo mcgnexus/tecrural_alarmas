@@ -62,7 +62,7 @@ export async function crearSuscripcion(input: {
       parcelaId: input.parcelaId,
       canal: input.canal,
       destino: input.destino,
-      severidadMinima: input.severidadMinima ?? "aviso",
+      severidadMinima: input.severidadMinima ?? "alerta",
     })
     .returning();
   if (!fila) throw new Error("No se pudo guardar el aviso.");

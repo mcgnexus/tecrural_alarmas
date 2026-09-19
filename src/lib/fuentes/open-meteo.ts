@@ -14,6 +14,7 @@ export async function solicitarPrevision(
     latitude: lat.toFixed(4),
     longitude: lon.toFixed(4),
     timezone: "UTC",
+    past_days: "7",
     forecast_days: "5",
     hourly: [
       "temperature_2m",

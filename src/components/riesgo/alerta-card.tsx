@@ -1,37 +1,55 @@
+import { useState } from "react";
 import type { Alerta, Severidad } from "@/lib/alertas/tipos";
+import { AlertaDetalle } from "./alerta-detalle";
 
-const estilos: Record<Severidad, { etiqueta: string; clase: string }> = {
-  critica: { etiqueta: "Crítico", clase: "bg-red-50 text-red-700" },
-  alerta: { etiqueta: "Alerta", clase: "bg-amber-50 text-amber-700" },
-  aviso: { etiqueta: "Aviso", clase: "bg-yellow-50 text-yellow-700" },
-  info: { etiqueta: "Info", clase: "bg-brand-50 text-brand-700" },
+const estilos: Record<Severidad, { etiqueta: string; clase: string; icono: string; borde: string }> = {
+  critica: { etiqueta: "Crítico", clase: "bg-red-100 text-red-800 border-red-300", icono: "!", borde: "border-red-300" },
+  alerta: { etiqueta: "Alerta", clase: "bg-amber-100 text-amber-800 border-amber-300", icono: "▲", borde: "border-amber-300" },
+  aviso: { etiqueta: "Aviso", clase: "bg-yellow-100 text-yellow-800 border-yellow-300", icono: "●", borde: "border-yellow-300" },
+  info: { etiqueta: "Info", clase: "bg-stone-100 text-stone-800 border-stone-300", icono: "i", borde: "border-stone-300" },
 };
 
 export function AlertaCard({ alerta }: { alerta: Alerta }) {
+  const [abierto, setAbierto] = useState(false);
   const estilo = estilos[alerta.severidad] ?? estilos.info;
   return (
-    <article className="rounded-xl border border-stone-200 bg-white p-4">
-      <div className="mb-1.5 flex items-center justify-between gap-2">
+    <article className={`rounded-2xl border-2 bg-white p-4 shadow-sm ${estilo.borde}`}>
+      <div className="mb-2 flex items-center gap-2">
         <span
-          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${estilo.clase}`}
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold ${estilo.clase}`}
+          aria-label={`Nivel ${estilo.etiqueta}`}
         >
+          <span aria-hidden="true" className="text-base leading-none">{estilo.icono}</span>
           {estilo.etiqueta}
         </span>
-        <span className="text-[11px] capitalize text-stone-400">
+        <span className="inline-flex items-center gap-1 rounded-full bg-stone-900 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-white">
           {alerta.tipo.replace(/-/g, " ")}
         </span>
       </div>
-      <h3 className="text-sm font-semibold text-stone-800">{alerta.titulo}</h3>
-      <p className="mt-1 text-[13px] leading-relaxed text-stone-600">
+      <h3 className="text-base font-bold leading-tight text-stone-900">{alerta.titulo}</h3>
+      <p className="mt-2 text-base leading-relaxed text-stone-800">
         {alerta.mensaje}
       </p>
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        aria-expanded={abierto}
+        className="mt-3 inline-flex min-h-[44px] items-center gap-1 rounded-xl border-2 border-stone-900 bg-white px-4 py-2 text-sm font-bold text-stone-900 hover:bg-stone-50"
+      >
+        <span aria-hidden="true">{abierto ? "▴" : "▾"}</span> {abierto ? "Ocultar detalle" : "Ver detalle"}
+      </button>
+      {abierto ? (
+        <div className="mt-4">
+          <AlertaDetalle alerta={alerta} />
+        </div>
+      ) : null}
       <a
         href={alerta.fuente.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-2 inline-block text-[11px] text-brand-800 underline"
+        className="mt-3 inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-brand-800 underline underline-offset-4 hover:text-brand-900"
       >
-        Fuente: {alerta.fuente.nombre}
+        Fuente: {alerta.fuente.nombre} ↗
       </a>
     </article>
   );

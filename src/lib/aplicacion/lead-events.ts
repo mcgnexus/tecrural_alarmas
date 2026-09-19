@@ -32,6 +32,8 @@ export function tipoLeadEvento(
     case "presupuesto_solicitado":
       return "QUOTE_REQUESTED";
     case "whatsapp_contact":
+    case "contact_requested":
+    case "solicitar_informacion":
       return "CONTACT_REQUESTED";
     default:
       return intereses.length > 0 ? "SENSOR_CTA_VIEWED" : null;

@@ -28,14 +28,22 @@ export const proveedorSiar: WeatherProvider = {
   async getCurrent(): Promise<NormalizedObservation> {
     const base = process.env.SIAR_BASE_URL;
     const estacion = process.env.SIAR_ESTACION;
+    const token = process.env.SIAR_TOKEN ?? process.env.SIAR_API_KEY ?? process.env.SIAR_API_TOKEN ?? "";
     if (!base || !estacion) {
       throw new Error("SiAR no configurado (SIAR_BASE_URL/SIAR_ESTACION)");
+    }
+
+    const headers: Record<string, string> = { accept: "application/json" };
+    if (token) {
+      headers["authorization"] = `Bearer ${token}`;
+      headers["x-api-key"] = token;
+      headers["x-siar-token"] = token;
     }
 
     const respuesta = await fetch(
       `${base.replace(/\/$/, "")}/estaciones/${encodeURIComponent(estacion)}`,
       {
-        headers: { accept: "application/json" },
+        headers,
         signal: AbortSignal.timeout(10_000),
       },
     );

@@ -5,6 +5,7 @@ import type {
 } from "@/lib/dominio/evaluacion";
 import type { WeatherHourly } from "@/lib/dominio/proveedores";
 import type { RiskLevel } from "@/lib/dominio/riesgo";
+import { aplicarSensibilidad, sensibilidadDeContexto } from "@/lib/agronomia/sensibilidad";
 import { numeroParametro } from "./comun";
 
 const FRASE_LABORES =
@@ -81,7 +82,7 @@ export const evaluadorViento: RiskEvaluator = {
       ? media(vientos)
       : context.clima.actual.vientoKmh;
 
-    const level: RiskLevel | null =
+    let level: string | null =
       rachaMaxKmh > params.rojo
         ? "red"
         : rachaMaxKmh >= params.naranja
@@ -90,6 +91,10 @@ export const evaluadorViento: RiskEvaluator = {
             ? "yellow"
             : null;
     if (!level) return null; // verde: sin riesgo, no se emite evento
+    const sensibilidadViento = sensibilidadDeContexto(context as unknown as Record<string, unknown> & { coldSensitivity: unknown; heatSensitivity: unknown }, "viento");
+    const ajustadoViento = aplicarSensibilidad(level, rachaMaxKmh, sensibilidadViento);
+    level = ajustadoViento.nivel;
+    if (!level) return null;
 
     const duracionHoras = horas.filter(
       (hora) => (hora.windGustKmh ?? 0) >= params.amarillo,

@@ -12,7 +12,7 @@ export function ListaAlertas() {
 
   if (error) {
     return (
-      <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-[13px] text-red-600">
+      <p role="alert" className="rounded-xl border-2 border-red-300 bg-red-50 p-4 text-base font-semibold text-red-800">
         {error}
       </p>
     );
@@ -20,7 +20,7 @@ export function ListaAlertas() {
 
   if (!cargando && conAlertas.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-stone-300 bg-white p-4 text-[13px] text-stone-500">
+      <p className="rounded-xl border-2 border-dashed border-stone-400 bg-white p-5 text-base font-medium text-stone-700">
         No hay alertas aún. Evalúa el riesgo de alguna parcela y vuelve a
         consultar esta pantalla.
       </p>

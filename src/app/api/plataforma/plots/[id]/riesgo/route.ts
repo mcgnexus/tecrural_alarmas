@@ -30,18 +30,23 @@ export async function POST(
         (error.message === "Parcela no encontrada" ||
           error.message === "Cultivo no soportado" ||
           error.message === "Parcela sin coordenadas");
+      const esNoData =
+        error instanceof Error &&
+        ((error as unknown as Record<string, unknown>).code === "NO_DATA" ||
+          error.message.includes("NO_DATA") ||
+          error.message.includes("Datos temporalmente"));
       log.error(
         "plataforma.plot.riesgo.error",
-        { status: noEncontrada ? 404 : 503, duracion_ms: Date.now() - inicio },
+        { status: noEncontrada ? 404 : esNoData ? 503 : 503, duracion_ms: Date.now() - inicio },
         error,
       );
       return conCabeceraRequestId(
         NextResponse.json(
-          {
-            error: noEncontrada
-              ? "Parcela no encontrada o no evaluable."
-              : "No se pudo evaluar el riesgo ahora.",
-          },
+          noEncontrada
+            ? { error: "Parcela no encontrada o no evaluable." }
+            : esNoData
+              ? { error: "Datos temporalmente no disponibles", code: "NO_DATA" }
+              : { error: "No se pudo evaluar el riesgo ahora." },
           { status: noEncontrada ? 404 : 503 },
         ),
         requestId,

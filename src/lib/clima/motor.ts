@@ -72,6 +72,21 @@ export async function obtenerClimaPunto(
       });
       return punto;
     } catch (error) {
+      // Resiliencia: si todos los proveedores fallan, intentar cache stale (24h) antes de NO_DATA
+      if (ubicacion) {
+        try {
+          const stale = await leerHorarioReciente(ubicacion.id, new Date(Date.now() - 24 * 60 * 60 * 1000));
+          if (stale.length > 0) {
+            log.warn("clima.motor.fallback.stale", { external_source: "cache-stale", duracion_ms: Date.now() - inicio }, error);
+            return agregarHorario(stale);
+          }
+        } catch {
+          // ignorar
+        }
+      }
+      const noData = new Error("NO_DATA: Datos temporalmente no disponibles");
+      (noData as unknown as Record<string, unknown>).cause = error;
+      (noData as unknown as Record<string, unknown>).code = "NO_DATA";
       log.error(
         "clima.motor.error",
         {
@@ -80,7 +95,7 @@ export async function obtenerClimaPunto(
         },
         error,
       );
-      throw error;
+      throw noData;
     }
   });
 }

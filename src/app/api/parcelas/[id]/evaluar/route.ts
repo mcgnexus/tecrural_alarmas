@@ -13,6 +13,7 @@ export async function POST(
   const { id } = await ctx.params;
   const cuerpo = (await req.json().catch(() => null)) as unknown;
   const dispositivo = esCuerpoDispositivo(cuerpo) ? cuerpo.dispositivoId : null;
+  const fenofaseId = typeof (cuerpo as Record<string, unknown>)?.fenofaseId === "string" ? ((cuerpo as Record<string, unknown>).fenofaseId as string) : undefined;
   if (!dispositivoValido(dispositivo)) {
     return NextResponse.json(
       { error: "Falta el identificador de dispositivo." },
@@ -25,7 +26,9 @@ export async function POST(
     async (requestId) => {
       const inicio = Date.now();
       try {
-        const resultado = await evaluarYGuardarParcela(id, dispositivo);
+        const resultado = await evaluarYGuardarParcela(id, dispositivo, fenofaseId);
+        // resultado nunca es GREEN por error; GREEN es level green explícito, NO_DATA nunca
+        if (!resultado) throw new Error("NO_DATA");
         log.info("parcelas.evaluar.ok", {
           status: 200,
           duracion_ms: Date.now() - inicio,
@@ -59,6 +62,11 @@ export async function POST(
             requestId,
           );
         }
+        const esNoData =
+          error instanceof Error &&
+          ((error as unknown as Record<string, unknown>).code === "NO_DATA" ||
+            error.message.includes("NO_DATA") ||
+            error.message.includes("Datos temporalmente"));
         log.error(
           "parcelas.evaluar.error",
           { status: 503, duracion_ms: Date.now() - inicio },
@@ -66,7 +74,9 @@ export async function POST(
         );
         return conCabeceraRequestId(
           NextResponse.json(
-            { error: "No se pudo evaluar el riesgo ahora." },
+            esNoData
+              ? { error: "Datos temporalmente no disponibles", code: "NO_DATA" }
+              : { error: "No se pudo evaluar el riesgo ahora." },
             { status: 503 },
           ),
           requestId,

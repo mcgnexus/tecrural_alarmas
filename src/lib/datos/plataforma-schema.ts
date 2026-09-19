@@ -33,6 +33,8 @@ export const usuarios = plataforma.table("users", {
   marketingConsent: boolean("marketing_consent").notNull().default(false),
   marketingConsentAt: timestamp("marketing_consent_at", { withTimezone: true }),
   privacyVersion: text("privacy_version"),
+  consentVersion: text("consent_version"),
+  consentTimestamp: timestamp("consent_timestamp", { withTimezone: true }),
 });
 
 export const explotaciones = plataforma.table("farms", {
@@ -57,6 +59,8 @@ export const cultivos = plataforma.table("crops", {
   active: boolean("active").notNull().default(true),
   defaultHeatThresholdC: doublePrecision("default_heat_threshold_c"),
   defaultColdThresholdC: doublePrecision("default_cold_threshold_c"),
+  kc: doublePrecision("kc"),
+  kcValidated: boolean("kc_validated").notNull().default(false),
 });
 
 export const estadosFenologicos = plataforma.table("phenological_states", {
@@ -68,6 +72,8 @@ export const estadosFenologicos = plataforma.table("phenological_states", {
   coldSensitivity: numeric("cold_sensitivity"),
   heatSensitivity: numeric("heat_sensitivity"),
   waterSensitivity: numeric("water_sensitivity"),
+  kc: numeric("kc"),
+  kcValidated: boolean("kc_validated").notNull().default(false),
   active: boolean("active").notNull().default(true),
 });
 
@@ -289,6 +295,54 @@ export const notificacionesPlataforma = plataforma.table("notifications", {
   > | null>(),
 });
 
+export const solicitudesContacto = plataforma.table(
+  "commercial_contact_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    plotId: uuid("plot_id").references(() => parcelasPlataforma.id, {
+      onDelete: "set null",
+    }),
+    service: text("service").notNull(),
+    preferredChannel: text("preferred_channel").notNull(),
+    message: text("message"),
+    anonymousId: text("anonymous_id"),
+    userId: uuid("user_id").references(() => usuarios.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+);
+
+export const sensores = plataforma.table("sensors", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  plotId: uuid("plot_id")
+    .notNull()
+    .references(() => parcelasPlataforma.id, { onDelete: "cascade" }),
+  deviceId: text("device_id").notNull().unique(),
+  sensorType: text("sensor_type").notNull(),
+  model: text("model"),
+  installedAt: timestamp("installed_at", { withTimezone: true }),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const lecturasSensores = plataforma.table("sensor_readings", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  sensorId: uuid("sensor_id")
+    .notNull()
+    .references(() => sensores.id, { onDelete: "cascade" }),
+  timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
+  soilMoisturePct: doublePrecision("soil_moisture_pct"),
+  airTemperatureC: doublePrecision("air_temperature_c"),
+  relativeHumidityPct: doublePrecision("relative_humidity_pct"),
+  soilTemperatureC: doublePrecision("soil_temperature_c"),
+  batteryVoltage: doublePrecision("battery_voltage"),
+  rawPayload: jsonb("raw_payload").$type<Record<string, unknown>>().notNull().default({}),
+});
+
 export const esquemaPlataforma = {
   plataforma,
   usuarios,
@@ -307,4 +361,7 @@ export const esquemaPlataforma = {
   puntuacionesLead,
   preferenciasNotificacion,
   notificacionesPlataforma,
+  solicitudesContacto,
+  sensores,
+  lecturasSensores,
 };

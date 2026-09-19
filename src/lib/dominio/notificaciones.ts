@@ -64,7 +64,11 @@ export function nivelHabilitado(
   prefs: NotificationPreference,
   level: NotificationLevel,
 ): boolean {
-  return prefs[CLAVE_NIVEL[level]];
+  // Verde nunca, Amarillo solo si preventivos, Naranja por defecto, Rojo siempre si canal habilitado
+  if (level === "yellow") return prefs.yellowEnabled;
+  if (level === "orange") return prefs.orangeEnabled;
+  if (level === "red") return true;
+  return false;
 }
 
 /** ¿Las preferencias permiten notificar por ese canal y nivel? */
@@ -72,8 +76,14 @@ export function puedeNotificar(
   prefs: NotificationPreference,
   channel: NotificationChannel,
   level: NotificationLevel,
+  opts?: { isOfficial?: boolean },
 ): boolean {
-  return canalHabilitado(prefs, channel) && nivelHabilitado(prefs, level);
+  if (!canalHabilitado(prefs, channel)) return false;
+  // Verde nunca
+  if ((level as string) === "green") return false;
+  // Avisos oficiales: comportamiento propio, se envían si no son verdes y el canal está habilitado
+  if (opts?.isOfficial) return true;
+  return nivelHabilitado(prefs, level);
 }
 
 function minutos(hora: string): number {

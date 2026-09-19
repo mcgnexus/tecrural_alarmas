@@ -33,18 +33,33 @@ export async function obtenerPronostico(
   location: GeoPoint,
 ): Promise<NormalizedForecast> {
   const principal = proveedorPrincipal();
-  if (principal.configurado() && principal.capacidades.forecast) {
+  const secundarios: WeatherProvider[] = [proveedorAemet, proveedorOpenMeteo, proveedorSiar].filter(
+    (p) => p.id !== principal.id,
+  );
+  const orden = [principal, ...secundarios].filter((p) => p.configurado() && p.capacidades.forecast);
+
+  let ultimoError: unknown = null;
+  for (const proveedor of orden) {
     try {
-      return await principal.getForecast(location);
+      const datos = await proveedor.getForecast(location);
+      if (proveedor.id !== principal.id) {
+        log.info("proveedores.pronostico.fallback.ok", { external_source: proveedor.id });
+      }
+      return datos;
     } catch (error) {
+      ultimoError = error;
       log.warn(
         "proveedores.pronostico.fallback",
-        { external_source: principal.id },
+        { external_source: proveedor.id },
         error,
       );
     }
   }
-  return proveedorOpenMeteo.getForecast(location);
+  // Todos fallaron → NO_DATA, no convertir a GREEN
+  const err = new Error("NO_DATA: Datos temporalmente no disponibles");
+  (err as unknown as Record<string, unknown>).cause = ultimoError;
+  (err as unknown as Record<string, unknown>).code = "NO_DATA";
+  throw err;
 }
 
 export async function obtenerObservacion(

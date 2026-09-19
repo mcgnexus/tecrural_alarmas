@@ -23,6 +23,11 @@ export async function POST(req: Request) {
       });
       return conCabeceraRequestId(NextResponse.json(resultado), requestId);
     } catch (error) {
+      const esNoData =
+        error instanceof Error &&
+        ((error as unknown as Record<string, unknown>).code === "NO_DATA" ||
+          error.message.includes("NO_DATA") ||
+          error.message.includes("Datos temporalmente"));
       log.error(
         "riesgo.evaluar.error",
         { status: 503, duracion_ms: Date.now() - inicio },
@@ -30,7 +35,9 @@ export async function POST(req: Request) {
       );
       return conCabeceraRequestId(
         NextResponse.json(
-          { error: "No se pudieron obtener los datos meteorológicos ahora." },
+          esNoData
+            ? { error: "Datos temporalmente no disponibles", code: "NO_DATA" }
+            : { error: "No se pudieron obtener los datos meteorológicos ahora." },
           { status: 503 },
         ),
         requestId,

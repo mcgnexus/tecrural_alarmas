@@ -6,11 +6,15 @@ import type {
 import type { RiskLevel } from "@/lib/dominio/riesgo";
 import { nivelDesdeSeveridadTexto } from "./comun";
 
-const ORDEN: Record<RiskLevel, number> = {
+const ORDEN: Record<string, number> = {
   green: 0,
   yellow: 1,
   orange: 2,
   red: 3,
+  GREEN: 0,
+  YELLOW: 1,
+  ORANGE: 2,
+  RED: 3,
 };
 
 export const evaluadorFitosanitario: RiskEvaluator = {
@@ -24,10 +28,10 @@ export const evaluadorFitosanitario: RiskEvaluator = {
     );
     if (avisos.length === 0) return null;
 
-    let peor: RiskLevel = "yellow";
+    let peor: string = "yellow";
     for (const aviso of avisos) {
       const nivel = nivelDesdeSeveridadTexto(aviso.severity);
-      if (ORDEN[nivel] > ORDEN[peor]) peor = nivel;
+      if ((ORDEN[nivel] ?? 0) > (ORDEN[peor] ?? 0)) peor = nivel;
     }
 
     const primero = avisos[0]!;

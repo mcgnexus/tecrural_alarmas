@@ -24,8 +24,21 @@ export const proveedorRaif: WeatherProvider = {
     const url = process.env.RAIF_FEED_URL;
     if (!url) return [];
 
+    const token =
+      process.env.RAIF_TOKEN ??
+      process.env.RAIF_API_KEY ??
+      process.env.OPENCLAW_RAIF_TOKEN ??
+      process.env.RAIF_API_TOKEN ??
+      "";
+    const headers: Record<string, string> = { accept: "application/json" };
+    if (token) {
+      headers["authorization"] = `Bearer ${token}`;
+      headers["x-api-key"] = token;
+      headers["x-raif-token"] = token;
+    }
+
     const respuesta = await fetch(url, {
-      headers: { accept: "application/json" },
+      headers,
       signal: AbortSignal.timeout(10_000),
     });
     if (!respuesta.ok) throw new Error(`RAIF HTTP ${respuesta.status}`);

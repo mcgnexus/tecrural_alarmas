@@ -19,7 +19,7 @@ const PALABRAS_TORMENTA = [
   "lightning",
 ];
 
-const ORDEN: Record<RiskLevel, number> = {
+const ORDEN: Record<string, number> = {
   green: 0,
   yellow: 1,
   orange: 2,
@@ -54,7 +54,7 @@ function esAvisoDeTormenta(aviso: OfficialWarning): boolean {
   return PALABRAS_TORMENTA.some((palabra) => texto.includes(palabra));
 }
 
-function nivelDeValor(valor: number, umbrales: Umbral): RiskLevel {
+function nivelDeValor(valor: number, umbrales: Umbral): string {
   if (valor >= umbrales.red) return "red";
   if (valor >= umbrales.orange) return "orange";
   if (valor >= umbrales.yellow) return "yellow";
@@ -149,9 +149,9 @@ export const evaluadorTormenta: RiskEvaluator = {
       nivelDeValor(probabilidad, uProb),
       nivelDeValor(intensidad, uInt),
     ];
-    const level: RiskLevel = niveles.reduce(
+    const level: string = niveles.reduce(
       (minimo, nivel) => (ORDEN[nivel] < ORDEN[minimo] ? nivel : minimo),
-      "red" as RiskLevel,
+      "red",
     );
     if (level === "green") return null;
 
@@ -182,3 +182,7 @@ export const evaluadorTormenta: RiskEvaluator = {
     };
   },
 };
+
+
+
+

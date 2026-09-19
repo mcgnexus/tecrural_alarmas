@@ -12,7 +12,7 @@ import { nivelDesdeSeveridadTexto, numeroParametro } from "./comun";
 
 const PALABRAS_LLUVIA = ["lluvia", "precipitac", "rain", "chubasc", "aguacero"];
 
-const ORDEN: Record<RiskLevel, number> = {
+const ORDEN: Record<string, number> = {
   green: 0,
   yellow: 1,
   orange: 2,
@@ -47,7 +47,7 @@ function umbral(
   };
 }
 
-function nivelDeValor(valor: number, umbrales: UmbralVentana): RiskLevel | null {
+function nivelDeValor(valor: number, umbrales: UmbralVentana): string | null {
   return valor >= umbrales.red
     ? "red"
     : valor >= umbrales.orange
@@ -141,7 +141,7 @@ export const evaluadorLluvia: RiskEvaluator = {
         )
       : (context.clima.prevision[0]?.probPrecipitacionMax ?? 0);
 
-    const niveles: RiskLevel[] = [];
+    const niveles: string[] = [];
     for (const nivel of [
       nivelDeValor(rain1h, u1),
       nivelDeValor(rain3h, u3),
@@ -152,7 +152,7 @@ export const evaluadorLluvia: RiskEvaluator = {
     }
     if (niveles.length === 0) return null;
 
-    let level: RiskLevel = niveles[0]!;
+    let level: string = niveles[0]!;
     for (const nivel of niveles) {
       if (ORDEN[nivel] > ORDEN[level]) level = nivel;
     }
@@ -177,3 +177,7 @@ export const evaluadorLluvia: RiskEvaluator = {
     };
   },
 };
+
+
+
+

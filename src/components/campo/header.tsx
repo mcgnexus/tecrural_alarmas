@@ -1,16 +1,16 @@
 export function Header() {
   return (
-    <header className="sticky top-0 z-10 border-b border-stone-200 bg-white/90 px-4 py-3 backdrop-blur">
-      <div className="flex items-center justify-between gap-2">
+    <header className="sticky top-0 z-10 border-b-2 border-stone-900/10 bg-white/95 px-4 py-3 backdrop-blur">
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-brand-900">
+          <p className="truncate text-base font-bold tracking-tight text-stone-900">
             TecRural Campo
           </p>
-          <p className="truncate text-xs text-stone-500">
-            Riesgo agroclimático sencillo
+          <p className="truncate text-sm font-medium text-stone-700">
+            Alertas y datos útiles para tu explotación.
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-800">
+        <span className="shrink-0 rounded-full border-2 border-brand-800 bg-brand-800 px-3 py-1 text-sm font-bold text-white">
           MVP
         </span>
       </div>

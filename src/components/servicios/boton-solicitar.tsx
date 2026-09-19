@@ -25,7 +25,7 @@ export function BotonSolicitar({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           dispositivoId: obtenerDispositivoId(),
-          evento: "presupuesto_intent",
+          evento: "solicitar_informacion",
           intereses: [interes],
           serviceKey: servicioKey,
           source: "app_campo",
@@ -43,9 +43,9 @@ export function BotonSolicitar({
       type="button"
       onClick={solicitar}
       disabled={estado !== "inicial"}
-      className="mt-3 w-full rounded-xl bg-brand-50 px-4 py-2 text-[13px] font-semibold text-brand-800 disabled:opacity-70"
+      className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-brand-800 bg-brand-50 px-4 py-3 text-base font-bold text-brand-900 hover:bg-brand-100 active:bg-brand-200 disabled:opacity-70"
     >
-      {estado === "enviado"
+      <span aria-hidden="true">{estado === "enviado" ? "✓" : estado === "enviando" ? "⏳" : "→"}</span> {estado === "enviado"
         ? "Solicitado, te contactaremos"
         : estado === "enviando"
           ? "Enviando…"

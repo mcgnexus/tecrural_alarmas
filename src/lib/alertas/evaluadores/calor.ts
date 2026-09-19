@@ -79,7 +79,7 @@ export const evaluadorCalor: RiskEvaluator = {
       : (context.clima.prevision[0]?.tMax ?? null);
     if (tMax === null) return null;
 
-    const level: RiskLevel | null =
+    const level: string | null =
       tMax >= params.temperatura.rojo
         ? "red"
         : tMax >= params.temperatura.naranja
@@ -142,3 +142,4 @@ export const evaluadorCalor: RiskEvaluator = {
     };
   },
 };
+

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { listarAlertasFitosanitarias } from "@/lib/datos/fitosanitario-repo";
+import { listarAvisosFitosanitariosOficiales } from "@/lib/aplicacion/fitosanitario";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
 
@@ -15,13 +15,16 @@ export async function GET(req: Request) {
   return conRequestId({ external_source: "fitosanitario" }, async (requestId) => {
     const inicio = Date.now();
     try {
-      const alertas = await listarAlertasFitosanitarias({ cropId, province });
+      const avisos = await listarAvisosFitosanitariosOficiales({
+        cropId,
+        province,
+      });
       log.info("fitosanitario.listar.ok", {
         status: 200,
         duracion_ms: Date.now() - inicio,
-        data: { total: alertas.length },
+        data: { total: avisos.length },
       });
-      return conCabeceraRequestId(NextResponse.json(alertas), requestId);
+      return conCabeceraRequestId(NextResponse.json(avisos), requestId);
     } catch (error) {
       log.error(
         "fitosanitario.listar.error",

@@ -1,0 +1,28 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/weather-refresh",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/risk-evaluation",
+      "schedule": "0 */3 * * *"
+    },
+    {
+      "path": "/api/cron/water-demand-update",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/phytosanitary-refresh",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/notification-dispatch",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/lead-score-recalculation",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

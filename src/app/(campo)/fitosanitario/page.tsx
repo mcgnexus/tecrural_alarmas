@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { avisosFitosanitariosEjemplo } from "@/lib/fitosanitario/catalogo";
+import { ListaAvisosFitosanitarios } from "@/components/fitosanitario/lista-avisos";
+import { RiesgoAgroclimatico } from "@/components/fitosanitario/riesgo-agroclimatico";
 
 export const metadata: Metadata = {
   title: "Avisos fitosanitarios",
@@ -15,36 +16,23 @@ export default function FitosanitarioPage() {
           Avisos fitosanitarios
         </h1>
         <p className="mt-1 text-[13px] text-stone-500">
-          Información de fuentes oficiales (RAIF). Próximamente se conectará en
-          tiempo real con datos oficiales.
+          Se separan estrictamente el aviso oficial y la estimación propia de
+          TecRural.
         </p>
       </section>
 
-      <section className="flex flex-col gap-3">
-        {avisosFitosanitariosEjemplo.map((aviso) => (
-          <article
-            key={aviso.id}
-            className="rounded-xl border border-stone-200 bg-white p-4"
-          >
-            <h2 className="text-sm font-semibold text-stone-800">
-              {aviso.plaga}
-            </h2>
-            <p className="mt-0.5 text-xs italic text-stone-400">
-              {aviso.organismo} · {aviso.cultivo}
-            </p>
-            <p className="mt-2 text-[13px] leading-relaxed text-stone-600">
-              {aviso.recomendacion}
-            </p>
-            <a
-              href={aviso.fuenteUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-block text-[11px] text-brand-800 underline"
-            >
-              {aviso.fuente}
-            </a>
-          </article>
-        ))}
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-stone-700">
+          Tipo 1 · Aviso oficial
+        </h2>
+        <ListaAvisosFitosanitarios />
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-stone-700">
+          Tipo 2 · Riesgo agroclimático TecRural
+        </h2>
+        <RiesgoAgroclimatico />
       </section>
 
       <p className="text-center text-[11px] text-stone-400">

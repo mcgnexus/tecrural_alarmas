@@ -5,6 +5,7 @@ import type {
 } from "@/lib/dominio/evaluacion";
 import type { WeatherHourly } from "@/lib/dominio/proveedores";
 import type { RiskLevel } from "@/lib/dominio/riesgo";
+import { aplicarSensibilidad, sensibilidadDeContexto } from "@/lib/agronomia/sensibilidad";
 import { numeroParametro } from "./comun";
 
 const FRASE_RADIATIVA = "Patrón compatible con enfriamiento radiativo.";
@@ -70,7 +71,7 @@ export const evaluadorHelada: RiskEvaluator = {
     const tmin = tminHoraria ?? context.clima.prevision[0]?.tMin ?? null;
     if (tmin === null) return null;
 
-    const level: RiskLevel | null =
+    let level: string | null =
       tmin <= temperatura.rojo
         ? "red"
         : tmin <= temperatura.naranja
@@ -79,6 +80,11 @@ export const evaluadorHelada: RiskEvaluator = {
             ? "yellow"
             : null;
     if (!level) return null; // verde: sin riesgo, no se emite evento
+    // Fase 4: riesgo = meteo × sensibilidad
+    const sensibilidad = sensibilidadDeContexto(context as unknown as Record<string, unknown> & { coldSensitivity: unknown }, "helada");
+    const ajustado = aplicarSensibilidad(level, tmin, sensibilidad);
+    level = ajustado.nivel;
+    if (!level) return null;
 
     const viento = hora?.windSpeedKmh ?? context.clima.actual.vientoKmh;
     const nubosidad = hora?.cloudCoverPct ?? null;
@@ -123,3 +129,4 @@ export const evaluadorHelada: RiskEvaluator = {
     };
   },
 };
+

@@ -200,8 +200,10 @@ independiente por parcela.
 El motor meteorológico resuelve el punto por `grid_key`
 (`src/lib/dominio/coordenadas.ts`), lee `weather_hourly` reciente
 (`src/lib/datos/clima-repo.ts`) y, si no hay datos frescos, descarga, normaliza,
-guarda y agrega a `ClimaPunto`. Sustituye la antigua caché JSON
-`campo.weather_cache` (módulo eliminado).
+guarda y agrega a `ClimaPunto`. La ingesta solicita `past_days=7` +
+`forecast_days=5`; la previsión diaria (`ClimaPunto.prevision`) usa solo días
+futuros, y las horas pasadas quedan disponibles para el balance hídrico.
+Sustituye la antigua caché JSON `campo.weather_cache` (módulo eliminado).
 
 ### 9.2 Avisos oficiales
 
@@ -393,11 +395,112 @@ concreta de fitosanitarios. El `reason` incluye `windSpeedMeanKmh`,
 
 ### 9.15 Demanda hídrica
 
-`WaterDemandEvaluator` calcula un balance meteorológico (ET0 − precipitación)
-sobre las próximas 72 h con umbrales configurables
-(`risk_rules.parameters.deficit72hMm`; por defecto 15/30/50 mm). Headline
-«Demanda hídrica». **Sin sensor de suelo no se afirma estrés hídrico**: el
-resumen dice «Estimación meteorológica orientativa; sin sensor de suelo no se
-puede confirmar el estado hídrico real del cultivo.» y el `reason` marca
-`sensorSuelo: false`. Terminología permitida: «Demanda hídrica» / «riesgo
-meteorológico de déficit hídrico».
+`WaterDemandEvaluator` calcula el índice `waterDeficitIndex = ET0_7d −
+lluviaEfectiva_7d` (ET0 y precipitación de los **últimos 7 días**; lluvia
+efectiva estimada = precipitación × `effectiveRainFactor`). Añade un
+`forecastHeatModifier` si la máxima prevista a 72 h supera `heatThresholdC`.
+`score = waterDeficitIndex + forecastHeatModifier` y el nivel sale de
+`scoreLevels` (configurable; por defecto 20/40/70). Headline «Demanda hídrica».
+
+Niveles por cultivo quedan **pendientes**; `ETc = ET0 × Kc` **no** se aplica
+(`reason.kcApplied: false`) hasta validar Kc por cultivo y fenología, y **no**
+se producen recomendaciones de riego. Sin sensor de suelo no se afirma estrés
+hídrico (`reason.sensorSuelo: false`); el resumen lo dice explícitamente.
+
+### 9.16 Niveles por cultivo y validación de Kc
+
+**Niveles por cultivo/estado fenológico**: `risk_rules` puede acotarse con
+`crop_id` y `phenological_state_id`. La resolución
+(`src/lib/aplicacion/reglas-resolucion.ts`) elige, por tipo de riesgo, la regla
+más específica (estado fenológico > cultivo > global; empates por `version`).
+Así un mismo riesgo puede tener umbrales distintos por cultivo.
+
+**Validación de Kc**: `plataforma.crops` (`kc`, `kc_validated`) y
+`plataforma.phenological_states` (`kc`, `kc_validated`). `riesgo-plataforma`
+resuelve el Kc por estado fenológico > cultivo y marca si está validado. El
+evaluador de demanda hídrica aplica `ETc_7d = ET0_7d × Kc` **solo si el Kc está
+validado** (`reason.kcApplied: true`, `reason.etcMm7d`); si no, usa ET0 y lo
+indica. Se mantiene sin afirmar estrés hídrico sin sensor ni emitir
+recomendaciones de riego.
+
+### 9.17 Gestión (catálogo, Kc y reglas)
+
+Pantalla `/gestion` (enlazada desde Ajustes) para administrar el modelo:
+
+- **Cargar catálogo fenológico** (`POST /api/plataforma/catalogo/cargar`):
+  pobla `crops.kc` y `phenological_states` (slug, nombre, orden y Kc) en estado
+  **sin validar**; no pisa Kc ya validados.
+- **Validar Kc** por cultivo (`PATCH /api/plataforma/cultivos/[id]`) y por estado
+  fenológico (`PATCH /api/plataforma/estados-fenologicos/[id]`).
+- **CRUD de reglas** (`GET/POST /api/reglas`, `PATCH/DELETE /api/reglas/[id]`)
+  con `crop_id`/`phenological_state_id` y `parameters` JSON;
+  `GET /api/reglas?todas=1` incluye las desactivadas.
+
+### 9.18 Fitosanidad — Tipo 1: aviso oficial
+
+Se separa estrictamente el aviso **oficial** de cualquier estimación TecRural.
+La pantalla `/fitosanitario` muestra los avisos oficiales (RAIF) con los campos
+exactos: **Fuente, Fecha, Cultivo, Zona, Resumen y Enlace**, con etiqueta «Aviso
+oficial». **TecRural no modifica el contenido técnico sustantivo.**
+
+`GET /api/fitosanitario` (`src/lib/aplicacion/fitosanitario.ts`) combina
+`plataforma.phytosanitary_alerts` (ligados a cultivo/zona) y los avisos de RAIF
+persistidos en `plataforma.official_alerts`, sin reinterpretarlos, y resuelve el
+nombre de cultivo. Se eliminó el catálogo fitosanitario de ejemplo.
+
+### 9.19 Fitosanidad — Tipo 2: riesgo agroclimático TecRural
+
+Estimación propia, extremadamente limitada y claramente separada del aviso
+oficial. Para cada parcela, con la previsión meteorológica, indica si las
+condiciones pueden favorecer enfermedades fúngicas. **No** afirma la presencia
+de una enfermedad: usa «Las condiciones meteorológicas pueden favorecer
+determinadas enfermedades fúngicas.» y añade siempre «Esto no constituye un
+diagnóstico fitosanitario.»
+
+`evaluarRiesgoFungicoAgroclimatico` (`src/lib/aplicacion/fitosanitario.ts`) usa
+humedad relativa, temperatura y precipitación, con umbrales configurables en
+`risk_rules` (`riesgo-fungico`: `humidity.{yellow,orange}`,
+`temperature.{minC,maxC}`). Ruta
+`GET /api/fitosanitario/agroclimatico?lat=&lon=&cultivo=`. La UI lo muestra por
+parcela con la etiqueta «Estimación TecRural».
+
+## 26. ENDPOINTS API — Prefijo `/api/v1`
+
+Todas las rutas devuelven JSON y usan los formatos internos canónicos. Solo exponen datos necesarios.
+
+### Localización
+
+- `GET /api/v1/locations/search?q=` — busca municipios/localidades por nombre (`public.municipalities`).
+
+### Clima
+
+- `GET /api/v1/weather/current?lat=&lon=` — observación más cercana (`WeatherHourly`).
+- `GET /api/v1/weather/forecast?lat=&lon=&hours=72` — serie horaria recortada a `hours` (1–168).
+
+### Parcelas (plataforma.plots)
+
+- `GET /api/v1/plots?userId=` — lista parcelas del usuario.
+- `POST /api/v1/plots?userId=` + `{ name, latitude, longitude, cropId, areaHa? }`
+- `GET /api/v1/plots/:id` — detalle.
+- `PATCH /api/v1/plots/:id` — actualización parcial (`name`, `latitude`, `longitude`, `cropId`, `areaHa`, `phenologicalStateId`, `irrigated`…).
+- `DELETE /api/v1/plots/:id`
+
+### Cultivos
+
+- `GET /api/v1/crops` — lista `plataforma.crops`.
+- `GET /api/v1/crops/:id/phenology` — estados fenológicos de ese cultivo.
+
+### Riesgos
+
+- `GET /api/v1/plots/:id/risks` → `{ plotId, generatedAt, risks: [{ type, level, startsAt, endsAt, headline, summary }] }` (tipos en UPPER_SNAKE, niveles en UPPER).
+- `GET /api/v1/plots/:id/risks/:riskId` — detalle completo del evento (`reason`, `score`, `status`…).
+
+### Fitosanitario y avisos oficiales
+
+- `GET /api/v1/phytosanitary?cropId=&province=` — avisos fitosanitarios oficiales (Tipo 1).
+- `GET /api/v1/official-alerts?lat=&lon=` — avisos oficiales normalizados del punto.
+
+### Preferencias
+
+- `GET /api/v1/notification-preferences?userId=` — preferencias de notificación del usuario.
+- `PATCH /api/v1/notification-preferences` + `{ userId, pushEnabled?, emailEnabled?, telegramEnabled?, whatsappEnabled?, yellowEnabled?, orangeEnabled?, redEnabled?, quietHoursStart?, quietHoursEnd? }`

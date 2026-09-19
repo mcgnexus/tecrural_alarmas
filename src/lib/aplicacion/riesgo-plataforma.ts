@@ -12,14 +12,34 @@ import {
 import { listarAlertasFitosanitarias } from "@/lib/datos/fitosanitario-repo";
 import { listarAvisosOficiales } from "@/lib/datos/alertas-oficiales-repo";
 import { listarReglasRiesgo } from "@/lib/datos/reglas-repo";
-import { obtenerPlotConCultivo } from "@/lib/datos/plataforma-repo";
+import {
+  obtenerPlotConCultivo,
+  type PlotConCultivo,
+} from "@/lib/datos/plataforma-repo";
 import { culturaDesdeSlugPlataforma } from "@/lib/dominio/cultivos";
+import type { CoeficienteCultivo } from "@/lib/dominio/evaluacion";
 import type {
   OfficialWarning,
   WeatherHourly,
 } from "@/lib/dominio/proveedores";
 import type { PhytosanitaryAlert } from "@/lib/dominio/fitosanitario";
 import type { NuevoRiskEvent, RiskEvent } from "@/lib/dominio/riesgo";
+import { resolverParametrosPorRiesgo } from "./reglas-resolucion";
+import { sensorDataProvider } from "@/lib/proveedores/sensor-data";
+
+function resolverCoeficiente(plot: PlotConCultivo): CoeficienteCultivo {
+  if (plot.stateKc !== null) {
+    return {
+      kc: plot.stateKc,
+      validado: plot.stateKcValidated,
+      origen: "phenological_state",
+    };
+  }
+  if (plot.cropKc !== null) {
+    return { kc: plot.cropKc, validado: plot.cropKcValidated, origen: "crop" };
+  }
+  return { kc: null, validado: false, origen: null };
+}
 
 export interface ResultadoRiesgoPlot {
   plotId: string;
@@ -48,10 +68,12 @@ export async function evaluarPlotPlataforma(
   const fenofase = faseActiva(cultivo, momento);
 
   const reglas = await listarReglasRiesgo({ enabled: true });
-  const parametrosPorRiesgo: Record<string, Record<string, unknown>> = {};
-  for (const regla of reglas) {
-    parametrosPorRiesgo[regla.riskType] = regla.parameters;
-  }
+  const parametrosPorRiesgo = resolverParametrosPorRiesgo(
+    reglas,
+    plot.cropId,
+    plot.phenologicalStateId,
+  );
+  const coeficiente = resolverCoeficiente(plot);
 
   let avisosFitosanitarios: PhytosanitaryAlert[] = [];
   try {
@@ -87,7 +109,28 @@ export async function evaluarPlotPlataforma(
     }
   }
 
+  let sensorData: Awaited<ReturnType<typeof sensorDataProvider.getData>> = null;
+  try {
+    sensorData = await sensorDataProvider.getData(plotId);
+  } catch {
+    // Sensores opcionales en MVP
+  }
+
   const evaluaciones = await evaluarRiesgos({
+    // Spec 43 canonical
+    plot: { id: plotId, latitude: plot.latitud, longitude: plot.longitud, farmId: plot.farmId, name: plot.nombre },
+    crop: { id: plot.cropId, slug: plot.cropSlug, nameEs: plot.cropNombre },
+    phenology: fenofase ? { id: fenofase.id, slug: fenofase.id, nameEs: fenofase.etiqueta } : undefined,
+    hourlyForecast: horario,
+    recentWeather: horario?.slice(-24),
+    officialWarnings: avisosOficiales,
+    phytosanitaryAlerts: avisosFitosanitarios,
+    sensorData,
+    evaluationTime: momento,
+    coldSensitivity: plot.coldSensitivity,
+    heatSensitivity: plot.heatSensitivity,
+    waterSensitivity: plot.waterSensitivity,
+    // Compatibilidad legado
     plotId,
     latitud: plot.latitud,
     longitud: plot.longitud,
@@ -97,21 +140,22 @@ export async function evaluarPlotPlataforma(
     fenofase: fenofase?.etiqueta ?? null,
     momento,
     parametrosPorRiesgo,
+    coeficiente,
     avisosFitosanitarios,
     avisosOficiales,
     cropIdPlataforma: plot.cropId,
-  });
+  } as unknown as Parameters<typeof evaluarRiesgos>[0]);
 
   const eventos: NuevoRiskEvent[] = evaluaciones.map((evaluacion) => ({
     plotId,
-    riskType: evaluacion.riskType,
-    level: evaluacion.level,
+    riskType: (evaluacion.riskType ?? (evaluacion as unknown as { type: string }).type) as string,
+    level: String(evaluacion.level).toLowerCase() as NuevoRiskEvent["level"],
     score: evaluacion.score,
-    startsAt: evaluacion.startsAt,
-    endsAt: evaluacion.endsAt,
+    startsAt: evaluacion.startsAt as Date,
+    endsAt: evaluacion.endsAt as Date | null,
     headline: evaluacion.headline,
     summary: evaluacion.summary,
-    reason: evaluacion.reason,
+    reason: (evaluacion.reason ?? (evaluacion as unknown as { explanation: { factors: unknown[] } }).explanation) as Record<string, unknown>,
     ruleVersion: 1,
     weatherLocationId,
     status: "open",

@@ -101,7 +101,7 @@ export const suscripcionesAviso = campo.table(
     severidadMinima: text("severidad_minima")
       .$type<Alerta["severidad"]>()
       .notNull()
-      .default("aviso"),
+      .default("alerta"),
     activa: boolean("activa").notNull().default(true),
     creadaEn: timestamp("creada_en", { withTimezone: true })
       .notNull()

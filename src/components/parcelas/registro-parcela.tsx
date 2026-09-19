@@ -82,14 +82,14 @@ export function RegistroParcela({
     }
   }
 
-  const claseLabel = "mb-1 block text-xs font-medium text-stone-500";
+  const claseLabel = "mb-1.5 block text-sm font-semibold text-stone-800";
   const claseCampo =
-    "w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-800 disabled:bg-stone-50";
+    "w-full rounded-xl border-2 border-stone-300 bg-white px-4 py-3.5 text-base font-medium text-stone-900 placeholder:text-stone-500 focus:border-brand-700 disabled:bg-stone-50";
 
   return (
-    <section className="rounded-xl border border-stone-200 bg-white p-4">
-      <h2 className="text-sm font-semibold text-stone-800">Nueva parcela</h2>
-      <p className="mt-1 text-[13px] text-stone-500">
+    <section className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm">
+      <h2 className="text-lg font-bold text-stone-900">Nueva parcela</h2>
+      <p className="mt-1 text-base leading-snug text-stone-700">
         Guardada en la nube, sin registro.
       </p>
 
@@ -147,17 +147,17 @@ export function RegistroParcela({
           type="button"
           onClick={usarUbicacion}
           disabled={localizando || cargando}
-          className="rounded-xl border border-brand-700 px-4 py-2 text-[13px] font-medium text-brand-800 disabled:opacity-60"
+          className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border-2 border-stone-900 bg-white px-4 py-3 text-base font-semibold text-stone-900 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-60"
         >
-          {localizando ? "Localizando…" : "Usar mi ubicación actual"}
+          <span aria-hidden="true">📍</span> {localizando ? "Localizando…" : "Usar mi ubicación actual"}
         </button>
         <button
           type="button"
           onClick={guardar}
           disabled={cargando}
-          className="rounded-xl bg-brand-800 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-70"
+          className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-xl bg-brand-800 px-5 py-3.5 text-base font-bold text-white shadow-sm hover:bg-brand-900 active:bg-brand-950 disabled:opacity-70"
         >
-          {cargando ? "Guardando…" : "Guardar parcela"}
+          <span aria-hidden="true">✓</span> {cargando ? "Guardando…" : "Guardar parcela"}
         </button>
       </div>
 

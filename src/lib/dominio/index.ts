@@ -3,7 +3,7 @@ export * from "./leads";
 export * from "./proveedores";
 export * from "./coordenadas";
 export * from "./fitosanitario";
-export * from "./reglas";
+export type { RiskRule } from "./reglas";
 export * from "./riesgo";
 export * from "./cultivos";
 export * from "./lead-events";

@@ -191,3 +191,44 @@ export type CuerpoNotificacion = z.infer<typeof esquemaNotificacion>;
 export function notificacionValida(dato: unknown): dato is CuerpoNotificacion {
   return esquemaNotificacion.safeParse(dato).success;
 }
+
+export const esquemaReglaRiesgo = z.object({
+  code: z.string().trim().min(1).max(80),
+  riskType: z.string().trim().min(1).max(40),
+  name: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(500).optional(),
+  cropId: z.string().uuid().nullable().optional(),
+  phenologicalStateId: z.string().uuid().nullable().optional(),
+  parameters: z.record(z.string(), z.unknown()).optional(),
+  enabled: z.boolean().optional(),
+  version: z.number().int().min(1).max(1000).optional(),
+});
+
+export type CuerpoReglaRiesgo = z.infer<typeof esquemaReglaRiesgo>;
+
+export function reglaRiesgoValida(dato: unknown): dato is CuerpoReglaRiesgo {
+  return esquemaReglaRiesgo.safeParse(dato).success;
+}
+
+export const esquemaReglaRiesgoParcial = esquemaReglaRiesgo.partial();
+
+export type CuerpoReglaRiesgoParcial = z.infer<
+  typeof esquemaReglaRiesgoParcial
+>;
+
+export function reglaRiesgoParcialValida(
+  dato: unknown,
+): dato is CuerpoReglaRiesgoParcial {
+  return esquemaReglaRiesgoParcial.safeParse(dato).success;
+}
+
+export const esquemaKc = z.object({
+  kc: z.number().finite().min(0).max(3).nullable().optional(),
+  kcValidated: z.boolean().optional(),
+});
+
+export type CuerpoKc = z.infer<typeof esquemaKc>;
+
+export function kcValido(dato: unknown): dato is CuerpoKc {
+  return esquemaKc.safeParse(dato).success;
+}

@@ -13,8 +13,14 @@ CREATE TABLE IF NOT EXISTS plataforma.users (
   updated_at timestamptz NOT NULL DEFAULT now(),
   marketing_consent boolean NOT NULL DEFAULT false,
   marketing_consent_at timestamptz,
-  privacy_version text
+  privacy_version text,
+  consent_version text,
+  consent_timestamp timestamptz
 );
+
+-- RGPD: consentimiento explícito separado (no auto-equivalencia alerta=publicidad)
+ALTER TABLE plataforma.users ADD COLUMN IF NOT EXISTS consent_version text;
+ALTER TABLE plataforma.users ADD COLUMN IF NOT EXISTS consent_timestamp timestamptz;
 
 CREATE TABLE IF NOT EXISTS plataforma.farms (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -214,8 +220,13 @@ VALUES
    '{"gust":{"yellow":50,"orange":70,"red":90},"precipitationProbability":{"yellow":50,"orange":70,"red":85},"rainIntensity":{"yellow":5,"orange":15,"red":30}}'::jsonb,
    true),
   ('demanda-hidrica', 'demanda-hidrica', 'Demanda hídrica orientativa',
-   'Balance meteorológico ET0 − precipitación; sin sensor no afirma estrés hídrico.',
-   '{"deficit72hMm":{"yellow":15,"orange":30,"red":50}}'::jsonb, true)
+   'Índice ET0_7d − lluvia efectiva; sin sensor no afirma estrés ni recomienda riego.',
+   '{"scoreLevels":{"yellow":20,"orange":40,"red":70},"effectiveRainFactor":0.8,"forecastModifier":{"heatThresholdC":32,"modifier":10}}'::jsonb,
+   true),
+  ('riesgo-fungico', 'riesgo-fungico', 'Riesgo fúngico agroclimático',
+   'Condiciones meteorológicas que pueden favorecer enfermedades fúngicas (orientativo).',
+   '{"humidity":{"yellow":80,"orange":90},"temperature":{"minC":8,"maxC":28}}'::jsonb,
+   true)
 ON CONFLICT (code) DO NOTHING;
 
 -- Configura los umbrales de helada si aún no se han ajustado (no pisa cambios manuales).
@@ -251,9 +262,30 @@ WHERE code = 'viento' AND parameters = '{}'::jsonb;
 
 -- Configura los umbrales de demanda hídrica si aún no se han ajustado.
 UPDATE plataforma.risk_rules
-SET parameters = '{"deficit72hMm":{"yellow":15,"orange":30,"red":50}}'::jsonb,
+SET parameters = '{"scoreLevels":{"yellow":20,"orange":40,"red":70},"effectiveRainFactor":0.8,"forecastModifier":{"heatThresholdC":32,"modifier":10}}'::jsonb,
     updated_at = now()
-WHERE code = 'demanda-hidrica' AND parameters = '{}'::jsonb;
+WHERE code = 'demanda-hidrica'
+  AND parameters = '{"deficit72hMm":{"yellow":15,"orange":30,"red":50}}'::jsonb;
+
+-- Configura los umbrales de riesgo fúngico si aún no se han ajustado.
+UPDATE plataforma.risk_rules
+SET parameters = '{"humidity":{"yellow":80,"orange":90},"temperature":{"minC":8,"maxC":28}}'::jsonb,
+    updated_at = now()
+WHERE code = 'riesgo-fungico' AND parameters = '{}'::jsonb;
+
+-- Niveles por cultivo: las reglas pueden acotarse por crop_id y
+-- phenological_state_id (la más específica gana sobre la global).
+CREATE INDEX IF NOT EXISTS risk_rules_crop_state_idx
+  ON plataforma.risk_rules (risk_type, crop_id, phenological_state_id);
+
+-- Coeficiente de cultivo (Kc) y su validación, por cultivo y estado fenológico.
+ALTER TABLE plataforma.crops
+  ADD COLUMN IF NOT EXISTS kc real,
+  ADD COLUMN IF NOT EXISTS kc_validated boolean NOT NULL DEFAULT false;
+
+ALTER TABLE plataforma.phenological_states
+  ADD COLUMN IF NOT EXISTS kc numeric,
+  ADD COLUMN IF NOT EXISTS kc_validated boolean NOT NULL DEFAULT false;
 
 -- Eventos de riesgo por parcela (resultado del motor de reglas, explicable).
 CREATE TABLE IF NOT EXISTS plataforma.risk_events (
@@ -373,3 +405,67 @@ CREATE INDEX IF NOT EXISTS notifications_user_idx
   ON plataforma.notifications (user_id, scheduled_at DESC);
 CREATE INDEX IF NOT EXISTS notifications_status_idx
   ON plataforma.notifications (status, scheduled_at);
+
+-- Solicitudes de contacto comercial
+CREATE TABLE IF NOT EXISTS plataforma.commercial_contact_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  plot_id uuid REFERENCES plataforma.plots(id) ON DELETE SET NULL,
+  service text NOT NULL,
+  preferred_channel text NOT NULL,
+  message text,
+  anonymous_id text,
+  user_id uuid REFERENCES plataforma.users(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS commercial_contact_requests_created_idx
+  ON plataforma.commercial_contact_requests (created_at DESC);
+
+-- Sensores — preparación arquitectura (sin conexión aún)
+CREATE TABLE IF NOT EXISTS plataforma.sensors (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  plot_id uuid NOT NULL REFERENCES plataforma.plots(id) ON DELETE CASCADE,
+  device_id text NOT NULL UNIQUE,
+  sensor_type text NOT NULL,
+  model text,
+  installed_at timestamptz,
+  status text NOT NULL DEFAULT 'active',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS sensors_plot_idx ON plataforma.sensors (plot_id);
+CREATE INDEX IF NOT EXISTS sensors_device_idx ON plataforma.sensors (device_id);
+
+CREATE TABLE IF NOT EXISTS plataforma.sensor_readings (
+  id bigserial PRIMARY KEY,
+  sensor_id uuid NOT NULL REFERENCES plataforma.sensors(id) ON DELETE CASCADE,
+  timestamp timestamptz NOT NULL,
+  soil_moisture_pct double precision,
+  air_temperature_c double precision,
+  relative_humidity_pct double precision,
+  soil_temperature_c double precision,
+  battery_voltage double precision,
+  raw_payload jsonb NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS sensor_readings_sensor_idx ON plataforma.sensor_readings (sensor_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS sensor_readings_ts_idx ON plataforma.sensor_readings (timestamp DESC);
+
+-- Seguridad: Row Level Security y roles (65)
+ALTER TABLE plataforma.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE plataforma.farms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE plataforma.plots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE plataforma.risk_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE plataforma.lead_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE plataforma.lead_scores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE plataforma.notification_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE plataforma.notifications ENABLE ROW LEVEL SECURITY;
+
+-- Políticas: anonymous solo lectura crops/rules, user solo sus datos, admin todo (via service_role)
+CREATE POLICY users_own ON plataforma.users FOR ALL USING (auth.uid() = id OR current_setting('app.role', true) = 'admin');
+CREATE POLICY farms_own ON plataforma.farms FOR ALL USING (user_id = auth.uid() OR current_setting('app.role', true) = 'admin');
+CREATE POLICY plots_own ON plataforma.plots FOR ALL USING (farm_id IN (SELECT id FROM plataforma.farms WHERE user_id = auth.uid()) OR current_setting('app.role', true) = 'admin');
+-- RLS para lecturas públicas de catálogo
+CREATE POLICY crops_public_read ON plataforma.crops FOR SELECT USING (true);
+CREATE POLICY risk_rules_public_read ON plataforma.risk_rules FOR SELECT USING (true);

@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "TecRural Campo",
     short_name: "TecRural",
     description:
-      "Riesgos agroclimáticos para tu parcela y cultivo, explicados de forma sencilla.",
+      "Consulta riesgos meteorológicos y agrícolas según tu ubicación y cultivo.",
     lang: "es",
     start_url: "/",
     display: "standalone",

@@ -11,6 +11,7 @@ import { cargarReglasActivas } from "./reglas";
 export async function evaluarYGuardarParcela(
   id: string,
   dispositivoId: string,
+  fenofaseId?: string,
 ): Promise<ResultadoEvaluacion> {
   const parcela = await obtenerParcela(id);
   if (!parcela) throw new Error("Parcela no encontrada");
@@ -24,6 +25,7 @@ export async function evaluarYGuardarParcela(
       latitud: parcela.latitud,
       longitud: parcela.longitud,
       cultivo: parcela.cultivoSlug as CulturaId,
+      fenofaseId,
     },
     reglasActivas,
   );

@@ -49,7 +49,7 @@ export function numeroParametro(valor: unknown, porDefecto: number): number {
 
 export function nivelDesdeSeveridadTexto(
   severidad: string | null | undefined,
-): RiskLevel {
+): string {
   const s = (severidad ?? "").toLowerCase();
   if (
     s.includes("extreme") ||

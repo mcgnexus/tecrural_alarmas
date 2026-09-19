@@ -28,9 +28,16 @@ export function agregarHorario(horas: WeatherHourly[]): ClimaPunto {
     porDia.set(dia, lista);
   }
 
-  const prevision: PrevisionDiaria[] = [...porDia.entries()]
-    .slice(0, 5)
-    .map(([fecha, diarias]) => {
+  // La previsión diaria debe ser de días futuros (la serie puede incluir el
+  // pasado para el balance hídrico).
+  const hoy = new Date().toISOString().slice(0, 10);
+  const diasFuturos = [...porDia.entries()].filter(([fecha]) => fecha >= hoy);
+  const diasPrevistos =
+    diasFuturos.length > 0
+      ? diasFuturos.slice(0, 5)
+      : [...porDia.entries()].slice(-5);
+
+  const prevision: PrevisionDiaria[] = diasPrevistos.map(([fecha, diarias]) => {
       const temperaturas = soloNumeros(diarias.map((h) => h.temperatureC));
       const rachas = soloNumeros(diarias.map((h) => h.windGustKmh));
       const probabilidades = soloNumeros(
