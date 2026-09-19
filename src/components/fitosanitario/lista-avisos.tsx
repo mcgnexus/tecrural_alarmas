@@ -40,20 +40,22 @@ function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
 
 export function ListaAvisosFitosanitarios() {
   const [avisos, setAvisos] = useState<AvisoOficial[]>([]);
+  const [disponible, setDisponible] = useState<boolean | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let activo = true;
     fetch("/api/fitosanitario", { cache: "no-store" })
-      .then((resp) => (resp.ok ? (resp.json() as Promise<AvisoOficial[]>) : null))
+      .then((resp) => (resp.ok ? (resp.json() as Promise<{ disponible?: boolean; avisos?: AvisoOficial[] }>) : null))
       .then((datos) => {
         if (!activo) return;
         if (!datos) {
           setError("No se pudieron cargar los avisos oficiales.");
           return;
         }
-        setAvisos(datos);
+        if (typeof datos.disponible === "boolean") setDisponible(datos.disponible);
+        setAvisos(Array.isArray(datos.avisos) ? datos.avisos : []);
       })
       .catch(() => {
         if (activo) setError("No se pudieron cargar los avisos oficiales.");
@@ -66,6 +68,13 @@ export function ListaAvisosFitosanitarios() {
     };
   }, []);
 
+  if (disponible === false) {
+    return (
+      <p className="rounded-xl border border-dashed border-stone-300 bg-white p-4 text-[13px] text-stone-500">
+        El servicio de avisos oficiales (RAIF) no está disponible en este momento.
+      </p>
+    );
+  }
   if (cargando) {
     return <p className="text-[13px] text-stone-500">Cargando avisos…</p>;
   }

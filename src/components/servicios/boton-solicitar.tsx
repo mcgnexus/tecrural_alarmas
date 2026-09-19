@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { obtenerDispositivoId } from "@/lib/datos/dispositivo";
+import { asegurarSesionDispositivo, obtenerDispositivoId } from "@/lib/datos/dispositivo";
 import type { InteresLead } from "@/lib/dominio/leads";
 
 export function BotonSolicitar({
@@ -18,6 +18,7 @@ export function BotonSolicitar({
   );
 
   async function solicitar() {
+    await asegurarSesionDispositivo();
     setEstado("enviando");
     try {
       const resp = await fetch("/api/crm/eventos", {

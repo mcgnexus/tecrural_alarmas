@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { catalogoCultivos } from "@/lib/cultivos/catalogo";
-import { obtenerDispositivoId } from "@/lib/datos/dispositivo";
+import { asegurarSesionDispositivo, obtenerDispositivoId } from "@/lib/datos/dispositivo";
 import type { ParcelaDto } from "@/lib/datos/tipos";
 import { DashboardParcela } from "./dashboard-parcela";
 import { CtaContextual } from "@/components/servicios/cta-contextual";
@@ -20,6 +20,7 @@ export function TarjetaParcela({ parcela, onCambio }: Props) {
   const cultivo = catalogoCultivos[parcela.cultivo];
 
   async function evaluar() {
+    await asegurarSesionDispositivo();
     setCargando(true);
     setError(null);
     try {
@@ -44,6 +45,7 @@ export function TarjetaParcela({ parcela, onCambio }: Props) {
   }
 
   async function borrar() {
+    await asegurarSesionDispositivo();
     setError(null);
     try {
       const resp = await fetch(

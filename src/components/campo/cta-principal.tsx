@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParcelas } from "@/hooks/use-parcelas";
+import {
+  asegurarSesionDispositivo,
+  obtenerDispositivoId,
+} from "@/lib/datos/dispositivo";
 
 type Estado = "anonimo" | "con_ubicacion" | "con_parcela" | "recurrente" | "cualificado";
 
@@ -15,10 +19,15 @@ export function CtaPrincipal({ ubicacion }: { ubicacion: { lat: number; lon: num
     const v = Number(localStorage.getItem("visitas") ?? "0") + 1;
     localStorage.setItem("visitas", String(v));
     setVisitas(v);
-    // intentar cargar lead score si existe
-    const anon = localStorage.getItem("dispositivoId") ?? "";
+    // intentar cargar lead score si existe sesión firmada
+    const anon = obtenerDispositivoId();
     if (anon) {
-      fetch(`/api/lead-score?anonymousId=${encodeURIComponent(anon)}`).then((r) => r.json().then((j) => setLeadScore(j.score ?? null)).catch(()=>{}));
+      asegurarSesionDispositivo().then(() =>
+        fetch(`/api/lead-score?anonymousId=${encodeURIComponent(anon)}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((j) => setLeadScore(j?.score ?? null))
+          .catch(() => {}),
+      );
     }
   }, []);
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { eliminarSuscripcion } from "@/lib/datos/avisos-repo";
-import { dispositivoValido } from "@/lib/datos/validacion";
+import { exigirDispositivo } from "@/lib/datos/sesion-dispositivo";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
 
@@ -13,19 +13,18 @@ export async function DELETE(
   const { id } = await ctx.params;
   const url = new URL(req.url);
   const dispositivo = url.searchParams.get("dispositivo");
-  if (!dispositivoValido(dispositivo)) {
-    return NextResponse.json(
-      { error: "Falta el identificador de dispositivo." },
-      { status: 400 },
-    );
+  const identidad = exigirDispositivo(req, dispositivo);
+  if (!identidad.ok) {
+    return NextResponse.json({ error: identidad.error }, { status: identidad.status });
   }
+  const idDispositivo = identidad.dispositivoId;
 
   return conRequestId(
-    { user_id: dispositivo, plot_id: id },
+    { user_id: idDispositivo, plot_id: id },
     async (requestId) => {
       const inicio = Date.now();
       try {
-        const eliminada = await eliminarSuscripcion(id, dispositivo);
+        const eliminada = await eliminarSuscripcion(id, idDispositivo);
         if (!eliminada) {
           log.warn("avisos.eliminar.no_encontrado", {
             status: 404,

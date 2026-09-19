@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { catalogoCultivos } from "@/lib/cultivos/catalogo";
 import type { CulturaId } from "@/lib/cultivos/catalogo";
-import { obtenerDispositivoId } from "@/lib/datos/dispositivo";
+import { asegurarSesionDispositivo, obtenerDispositivoId } from "@/lib/datos/dispositivo";
 
 export function MejorarPrecision({ parcelaId, cultivo, fenofaseActual, onActualizado }: { parcelaId: string; cultivo: CulturaId; fenofaseActual: string | null; onActualizado: () => void }) {
   const [abierto, setAbierto] = useState(false);
@@ -13,6 +13,7 @@ export function MejorarPrecision({ parcelaId, cultivo, fenofaseActual, onActuali
   const cultura = catalogoCultivos[cultivo];
 
   async function guardar() {
+    await asegurarSesionDispositivo();
     if (!fenofase) return;
     setGuardando(true);
     try {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { crearParcela, listarParcelas } from "@/lib/datos/parcelas-repo";
-import { cuerpoParcelaValido, dispositivoValido } from "@/lib/datos/validacion";
+import { cuerpoParcelaValido } from "@/lib/datos/validacion";
+import { exigirDispositivo } from "@/lib/datos/sesion-dispositivo";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
 import { registrarSenalSegura } from "@/lib/aplicacion/crm";
@@ -12,17 +13,16 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const dispositivo = url.searchParams.get("dispositivo");
-  if (!dispositivoValido(dispositivo)) {
-    return NextResponse.json(
-      { error: "Falta el identificador de dispositivo." },
-      { status: 400 },
-    );
+  const identidad = exigirDispositivo(req, dispositivo);
+  if (!identidad.ok) {
+    return NextResponse.json({ error: identidad.error }, { status: identidad.status });
   }
+  const idDispositivo = identidad.dispositivoId;
 
-  return conRequestId({ user_id: dispositivo }, async (requestId) => {
+  return conRequestId({ user_id: idDispositivo }, async (requestId) => {
     const inicio = Date.now();
     try {
-      const parcelas = await listarParcelas(dispositivo);
+      const parcelas = await listarParcelas(idDispositivo);
       log.info("parcelas.listar.ok", {
         status: 200,
         duracion_ms: Date.now() - inicio,
@@ -50,12 +50,17 @@ export async function POST(req: Request) {
   if (!cuerpoParcelaValido(cuerpo)) {
     return NextResponse.json({ error: "Solicitud no válida." }, { status: 400 });
   }
+  const identidad = exigirDispositivo(req, cuerpo.dispositivoId);
+  if (!identidad.ok) {
+    return NextResponse.json({ error: identidad.error }, { status: identidad.status });
+  }
+  const idDispositivo = identidad.dispositivoId;
 
-  return conRequestId({ user_id: cuerpo.dispositivoId }, async (requestId) => {
+  return conRequestId({ user_id: idDispositivo }, async (requestId) => {
     const inicio = Date.now();
     try {
       const parcela = await crearParcela({
-        dispositivoId: cuerpo.dispositivoId,
+        dispositivoId: idDispositivo,
         nombre: cuerpo.nombre,
         cultivo: cuerpo.cultivo,
         latitud: cuerpo.latitud,
@@ -67,7 +72,7 @@ export async function POST(req: Request) {
         plot_id: parcela.id,
       });
       await registrarSenalSegura({
-        dispositivoId: cuerpo.dispositivoId,
+        dispositivoId: idDispositivo,
         evento: "parcela_anadida",
         cropType: cuerpo.cultivo,
       });

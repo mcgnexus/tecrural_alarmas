@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { listarAvisosFitosanitariosOficiales } from "@/lib/aplicacion/fitosanitario";
+import { proveedorRaif } from "@/lib/proveedores/raif";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
 
@@ -24,7 +25,13 @@ export async function GET(req: Request) {
         duracion_ms: Date.now() - inicio,
         data: { total: avisos.length },
       });
-      return conCabeceraRequestId(NextResponse.json(avisos), requestId);
+      return conCabeceraRequestId(
+        NextResponse.json({
+          disponible: proveedorRaif.configurado(),
+          avisos,
+        }),
+        requestId,
+      );
     } catch (error) {
       log.error(
         "fitosanitario.listar.error",

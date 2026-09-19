@@ -44,6 +44,7 @@ export function HomeSinRegistro() {
   const [error, setError] = useState<string | null>(null);
   const [evaluando, setEvaluando] = useState(false);
   const [alertas, setAlertas] = useState<Alerta[] | null>(null);
+  const [proveedorRiesgo, setProveedorRiesgo] = useState<string | null>(null);
   const [weather, setWeather] = useState<{ temperatura: number | null; maxima: number | null; minima: number | null; precipitacion: number | null; viento: number | null; proveedor: string; actualizado: string } | null>(null);
   const [cultivo, setCultivo] = useState<CulturaId>("almendro");
   const [mostrarCultivo, setMostrarCultivo] = useState(false);
@@ -117,8 +118,10 @@ export function HomeSinRegistro() {
         if (j.code === "NO_DATA") throw new Error("NO_DATA");
         throw new Error();
       }
-      const datos = await resp.json();
+      const datos = (await resp.json()) as { alertas: Alerta[]; fuente?: { nombre?: string; id?: string } };
       setAlertas(datos.alertas as Alerta[]);
+      if (datos.fuente?.nombre) setProveedorRiesgo(datos.fuente.nombre);
+      else setProveedorRiesgo(datos.fuente?.id ?? null);
       cargarWeather(ubi);
     } catch (e) {
       if (e instanceof Error && e.message === "NO_DATA") setError("NO_DATA");
@@ -214,7 +217,7 @@ export function HomeSinRegistro() {
       <section className="rounded-2xl border-2 border-stone-900 bg-white p-5 shadow-sm">
         <h1 className="text-2xl font-extrabold tracking-tight text-stone-900">TecRural Campo</h1>
         <p className="mt-1 text-xl font-bold leading-tight text-stone-800">¿Qué está pasando en tu zona?</p>
-        <p className="mt-2 text-base leading-snug text-stone-700">Consulta el riesgo sin crear cuenta. Datos de AEMET y SiAR, explicados para tu campo.</p>
+        <p className="mt-2 text-base leading-snug text-stone-700">Consulta el riesgo sin crear cuenta. Fuente de datos según disponibilidad (AEMET, SiAR, Open-Meteo). Explicado para tu campo.</p>
       </section>
 
       <section className="flex flex-col gap-3">
@@ -299,6 +302,9 @@ export function HomeSinRegistro() {
         <section className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm">
           <h2 className="text-base font-bold text-stone-900">Tiempo en tu zona</h2>
           <p className="mt-1 text-xs font-medium text-stone-600">{haceMinutos(weather.actualizado)} · Proveedor {weather.proveedor} · error externo no rompe app</p>
+          {(weather.proveedor === "open-meteo" || (weather.proveedor !== "aemet" && weather.proveedor !== "siar")) ? (
+            <p className="mt-1 text-[11px] font-medium text-amber-700">Datos provisionales (Open-Meteo). AEMET/SiAR no disponibles en este momento.</p>
+          ) : null}
           {esDatosCaducados(weather.actualizado, 90) ? <p role="alert" className="mt-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-2 text-center text-sm font-bold text-amber-800">⚠ Datos meteorológicos pendientes de actualización</p> : null}
           <div className={`mt-3 grid grid-cols-2 gap-2 text-center ${esDatosCaducados(weather.actualizado, 90) ? "opacity-60" : ""}`}>
             <div className="rounded-xl border-2 border-stone-200 p-3"><p className="text-xs font-bold uppercase text-stone-600">Temperatura</p><p className="text-lg font-extrabold">{weather.temperatura !== null ? `${weather.temperatura}°C` : "—"}</p></div>
@@ -312,6 +318,7 @@ export function HomeSinRegistro() {
       {ubicacion ? (
         <section className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-bold text-stone-900">Riesgos próximos</h2>
+          <p className="mt-1 text-[11px] text-stone-500">Fuente: {proveedorRiesgo ?? "—"}</p>
           {evaluando ? (
             <p className="mt-3 text-base font-medium text-stone-700">Evaluando…</p>
           ) : alertas ? (

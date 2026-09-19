@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { catalogoCultivos } from "@/lib/cultivos/catalogo";
 import type { CulturaId } from "@/lib/cultivos/catalogo";
-import { obtenerDispositivoId } from "@/lib/datos/dispositivo";
+import { asegurarSesionDispositivo, obtenerDispositivoId } from "@/lib/datos/dispositivo";
 
 const CULTIVOS = Object.keys(catalogoCultivos) as CulturaId[];
 
@@ -99,6 +99,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
   }
 
   async function guardar() {
+    await asegurarSesionDispositivo();
     if (!ubicacionOk || !cultivo || !nombre.trim()) {
       setError("Completa ubicación, cultivo y nombre.");
       return;

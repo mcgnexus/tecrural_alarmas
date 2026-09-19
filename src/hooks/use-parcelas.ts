@@ -1,11 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { obtenerDispositivoId } from "@/lib/datos/dispositivo";
+import {
+  asegurarSesionDispositivo,
+  obtenerDispositivoId,
+} from "@/lib/datos/dispositivo";
 import type { ParcelaDto } from "@/lib/datos/tipos";
 
 async function cargarParcelasRemotas(): Promise<ParcelaDto[]> {
   const dispositivo = obtenerDispositivoId();
+  // La cookie de sesión firmada debe existir antes de la primera llamada.
+  await asegurarSesionDispositivo();
   const resp = await fetch(
     `/api/parcelas?dispositivo=${encodeURIComponent(dispositivo)}`,
     { cache: "no-store" },

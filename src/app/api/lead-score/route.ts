@@ -4,6 +4,7 @@ import {
   puntajeAnonimo,
 } from "@/lib/datos/lead-scores-repo";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
+import { dispositivoAutenticado } from "@/lib/datos/sesion-dispositivo";
 import { crearLogger } from "@/lib/log/logger";
 
 const log = crearLogger("api.lead-score");
@@ -21,8 +22,22 @@ export async function GET(req: Request) {
     );
   }
 
+  // El anonymousId solo se sirve si coincide con la sesión firmada:
+  // evita leer puntuaciones ajenas con identificadores inventados.
+  let anonAutorizado: string | null = null;
+  if (anonymousId) {
+    const autenticado = dispositivoAutenticado(req);
+    if (!autenticado || autenticado !== anonymousId) {
+      return NextResponse.json(
+        { error: "Sesión de dispositivo no válida." },
+        { status: anonymousId ? 403 : 401 },
+      );
+    }
+    anonAutorizado = autenticado;
+  }
+
   return conRequestId(
-    { user_id: anonymousId ?? userId ?? undefined, external_source: "lead-score" },
+    { user_id: anonAutorizado ?? userId ?? undefined, external_source: "lead-score" },
     async (requestId) => {
       const inicio = Date.now();
       try {
@@ -34,7 +49,7 @@ export async function GET(req: Request) {
               lastActivityAt: null,
               updatedAt: new Date().toISOString(),
             })
-          : await puntajeAnonimo(anonymousId as string);
+          : await puntajeAnonimo(anonAutorizado as string);
 
         log.info("lead-score.ok", {
           status: 200,

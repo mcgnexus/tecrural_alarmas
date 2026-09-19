@@ -11,7 +11,16 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const lat = Number(url.searchParams.get("lat"));
   const lon = Number(url.searchParams.get("lon"));
-  const hours = Math.min(168, Math.max(1, Number(url.searchParams.get("hours") ?? "72")));
+  const horasParam = Number(url.searchParams.get("hours") ?? "72");
+  if (
+    !Number.isFinite(horasParam) ||
+    !Number.isInteger(horasParam) ||
+    horasParam < 1 ||
+    horasParam > 168
+  ) {
+    return NextResponse.json({ error: "hours debe ser un entero entre 1 y 168." }, { status: 400 });
+  }
+  const hours = horasParam;
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
     return NextResponse.json({ error: "Coordenadas no válidas." }, { status: 400 });
   }
@@ -19,8 +28,10 @@ export async function GET(req: Request) {
     const inicio = Date.now();
     try {
       const horas = await obtenerClimaHorario(lat, lon);
-      // No exponer datos internos: solo horario normalizado recortado
-      const recortado = horas.slice(0, hours);
+      // La fuente (Open-Meteo) incluye past_days; no servir histórico como forecast.
+      const ahora = Date.now();
+      const futuras = horas.filter((h) => new Date(h.timestamp).getTime() >= ahora);
+      const recortado = futuras.slice(0, hours);
       log.info("v1.weather.forecast.ok", { status: 200, duracion_ms: Date.now() - inicio, data: { horas: recortado.length } });
       return conCabeceraRequestId(NextResponse.json(recortado), requestId);
     } catch (error) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { TIPOS_LEAD_EVENTO } from "@/lib/datos/validacion";
 import { registrarEventoLead } from "@/lib/aplicacion/lead-events";
+import { dispositivoAutenticado } from "@/lib/datos/sesion-dispositivo";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
 
@@ -25,19 +26,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Solicitud no válida.", issues: parsed.error.issues }, { status: 400 });
   }
 
-  // Identidad: preferir header/query, fallback body. Al menos uno requerido.
   const url = new URL(req.url);
-  const headerAnon = req.headers.get("x-anonymous-id")?.trim() || null;
+
+  // Identidad anónima: solo desde la cookie firmada por el servidor.
+  // Un anonymousId enviado por el cliente (body/header/query) se ignora o se
+  // rechaza si no coincide con la sesión, evitando inyección bajo otra identidad.
+  const anonSesion = dispositivoAutenticado(req);
+  const anonDeclarado =
+    parsed.data.anonymousId ??
+    req.headers.get("x-anonymous-id")?.trim() ??
+    url.searchParams.get("anonymousId")?.trim() ??
+    null;
   const headerUser = req.headers.get("x-user-id")?.trim() || null;
-  const queryAnon = url.searchParams.get("anonymousId")?.trim() || null;
   const queryUser = url.searchParams.get("userId")?.trim() || null;
 
-  const anonymousId = parsed.data.anonymousId ?? headerAnon ?? queryAnon ?? null;
   const userId = parsed.data.userId ?? headerUser ?? queryUser ?? null;
 
-  if (!anonymousId && !userId) {
-    return NextResponse.json({ error: "Falta anonymousId o userId (header x-anonymous-id / x-user-id o query)." }, { status: 400 });
+  if (!anonSesion && !userId) {
+    return NextResponse.json({ error: "Falta sesión de dispositivo o userId." }, { status: 401 });
   }
+  if (anonDeclarado && anonDeclarado !== anonSesion) {
+    return NextResponse.json({ error: "El identificador no coincide con la sesión." }, { status: 403 });
+  }
+  const anonymousId = anonSesion;
 
   // Defensa: si el frontend envía points, se ignora completamente (asignación exclusiva backend)
   const hasPoints = body !== null && typeof body === "object" && "points" in (body as Record<string, unknown>);

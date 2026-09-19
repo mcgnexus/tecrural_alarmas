@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { catalogoCultivos } from "@/lib/cultivos/catalogo";
 import type { CulturaId } from "@/lib/cultivos/catalogo";
-import { obtenerDispositivoId } from "@/lib/datos/dispositivo";
+import { asegurarSesionDispositivo, obtenerDispositivoId } from "@/lib/datos/dispositivo";
 
 const ids = Object.keys(catalogoCultivos) as CulturaId[];
 
@@ -42,6 +42,7 @@ export function RegistroParcela({
   }
 
   async function guardar() {
+    await asegurarSesionDispositivo();
     const latNum = Number(lat);
     const lonNum = Number(lon);
     if (!nombre.trim()) {

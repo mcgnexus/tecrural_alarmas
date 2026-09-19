@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { obtenerDispositivoId } from "@/lib/datos/dispositivo";
+import { asegurarSesionDispositivo, obtenerDispositivoId } from "@/lib/datos/dispositivo";
 import type { InteresLead, ResumenLead } from "@/lib/dominio/leads";
 
 const ETIQUETA_NIVEL: Record<string, string> = {
@@ -25,11 +25,15 @@ export function ResumenInteres() {
 
   useEffect(() => {
     let activo = true;
-    fetch(
-      `/api/crm/lead?dispositivo=${encodeURIComponent(obtenerDispositivoId())}`,
-      { cache: "no-store" },
-    )
-      .then((resp) => (resp.ok ? (resp.json() as Promise<ResumenLead>) : null))
+    let cancelado = false;
+    asegurarSesionDispositivo()
+      .then(() => {
+        if (cancelado) return null;
+        return fetch(
+          `/api/crm/lead?dispositivo=${encodeURIComponent(obtenerDispositivoId())}`,
+          { cache: "no-store" },
+        ).then((resp) => (resp.ok ? (resp.json() as Promise<ResumenLead>) : null));
+      })
       .then((datos) => {
         if (!activo) return;
         setResumen(datos);
@@ -40,6 +44,7 @@ export function ResumenInteres() {
       });
     return () => {
       activo = false;
+      cancelado = true;
     };
   }, []);
 

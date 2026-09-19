@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { resumenLead } from "@/lib/aplicacion/crm";
-import { dispositivoValido } from "@/lib/datos/validacion";
+import { exigirDispositivo } from "@/lib/datos/sesion-dispositivo";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
 
@@ -19,17 +19,16 @@ const VACIO = {
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const dispositivo = url.searchParams.get("dispositivo");
-  if (!dispositivoValido(dispositivo)) {
-    return NextResponse.json(
-      { error: "Falta el identificador de dispositivo." },
-      { status: 400 },
-    );
+  const identidad = exigirDispositivo(req, dispositivo);
+  if (!identidad.ok) {
+    return NextResponse.json({ error: identidad.error }, { status: identidad.status });
   }
+  const idDispositivo = identidad.dispositivoId;
 
-  return conRequestId({ user_id: dispositivo }, async (requestId) => {
+  return conRequestId({ user_id: idDispositivo }, async (requestId) => {
     const inicio = Date.now();
     try {
-      const resumen = await resumenLead(dispositivo);
+      const resumen = await resumenLead(idDispositivo);
       log.info("crm.lead.ok", {
         status: 200,
         duracion_ms: Date.now() - inicio,

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParcelas } from "@/hooks/use-parcelas";
-import { obtenerDispositivoId } from "@/lib/datos/dispositivo";
+import { asegurarSesionDispositivo, obtenerDispositivoId } from "@/lib/datos/dispositivo";
 import type { SuscripcionDto } from "@/lib/datos/tipos";
 import type { Canal } from "@/lib/notificaciones/tipos";
 import type { Severidad } from "@/lib/alertas/tipos";
@@ -34,6 +34,7 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
 }
 
 async function cargarAvisosRemotos(): Promise<SuscripcionDto[]> {
+  await asegurarSesionDispositivo();
   const dispositivo = obtenerDispositivoId();
   const resp = await fetch(
     `/api/avisos?dispositivo=${encodeURIComponent(dispositivo)}`,
@@ -53,6 +54,23 @@ export function GestionAvisos() {
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Health check de push: null = comprobando, false = no configurado en el servidor.
+  const [pushDisponible, setPushDisponible] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let activo = true;
+    fetch("/api/avisos/push/clave")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { disponible?: boolean } | null) => {
+        if (activo) setPushDisponible(Boolean(j?.disponible));
+      })
+      .catch(() => {
+        if (activo) setPushDisponible(false);
+      });
+    return () => {
+      activo = false;
+    };
+  }, []);
 
   const cargar = useCallback(async () => {
     try {
@@ -87,6 +105,7 @@ export function GestionAvisos() {
   }, []);
 
   async function crear(datos: { canal: Canal; destino: string }) {
+    await asegurarSesionDispositivo();
     setGuardando(true);
     setError(null);
     try {
@@ -112,6 +131,10 @@ export function GestionAvisos() {
   }
 
   async function agregar() {
+    if (canal === "push" && pushDisponible === false) {
+      setError("El canal push no está disponible ahora mismo.");
+      return;
+    }
     if (canal === "push") {
       await activarPush();
       return;
@@ -124,6 +147,7 @@ export function GestionAvisos() {
   }
 
   async function activarPush() {
+    await asegurarSesionDispositivo();
     setGuardando(true);
     setError(null);
     try {
@@ -162,6 +186,7 @@ export function GestionAvisos() {
   }
 
   async function eliminar(id: string) {
+    await asegurarSesionDispositivo();
     setError(null);
     try {
       const dispositivo = obtenerDispositivoId();
@@ -198,13 +223,22 @@ export function GestionAvisos() {
               disabled={guardando}
               className={claseCampo}
             >
-              {CANALES.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.etiqueta}
-                </option>
-              ))}
+              {CANALES.map((c) => {
+                const noDisponible = c.id === "push" && pushDisponible === false;
+                return (
+                  <option key={c.id} value={c.id} disabled={noDisponible}>
+                    {noDisponible ? `${c.etiqueta} (próximamente)` : c.etiqueta}
+                  </option>
+                );
+              })}
             </select>
           </div>
+
+          {canal === "push" && pushDisponible === false ? (
+            <p className="text-[13px] font-medium text-amber-600">
+              El aviso push no está configurado todavía. Elige otro canal.
+            </p>
+          ) : null}
 
           {canal !== "push" ? (
             <div>

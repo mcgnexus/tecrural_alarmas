@@ -34,8 +34,10 @@ export async function GET(req: Request) {
 
   return conRequestId({}, async (requestId) => {
     const inicio = Date.now();
+    const zonasValidas = ["altiplano", "costa"];
+    const zonaEsValida = zonasValidas.includes(zona);
     // Si se pide zona sin q, devolver todos de esa zona
-    if (zona && (zona === "altiplano" || zona === "costa")) {
+    if (zona && zonaEsValida) {
       const lista = zona === "altiplano" ? ALTIPLANO : COSTA;
       const filtrada = q.length >= 2 ? lista.filter((m) => m.name.toLowerCase().includes(q.toLowerCase()) || m.slug.includes(q.toLowerCase())) : lista;
       log.info("v1.locations.search.ok", { status: 200, duracion_ms: Date.now() - inicio, data: { q, zona, total: filtrada.length } });
@@ -44,6 +46,9 @@ export async function GET(req: Request) {
 
     if (q.length < 2 && !zona) {
       return NextResponse.json({ error: "Indica al menos 2 caracteres o elige zona." }, { status: 400 });
+    }
+    if (zona && !zonaEsValida) {
+      return NextResponse.json({ error: "Zona desconocida." }, { status: 400 });
     }
 
     // Intentar DB primero, con fallback a estáticos

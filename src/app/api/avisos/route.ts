@@ -3,7 +3,8 @@ import {
   crearSuscripcion,
   listarSuscripciones,
 } from "@/lib/datos/avisos-repo";
-import { dispositivoValido, suscripcionValida } from "@/lib/datos/validacion";
+import { suscripcionValida } from "@/lib/datos/validacion";
+import { exigirDispositivo } from "@/lib/datos/sesion-dispositivo";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
 import { registrarSenalSegura } from "@/lib/aplicacion/crm";
@@ -15,17 +16,16 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const dispositivo = url.searchParams.get("dispositivo");
-  if (!dispositivoValido(dispositivo)) {
-    return NextResponse.json(
-      { error: "Falta el identificador de dispositivo." },
-      { status: 400 },
-    );
+  const identidad = exigirDispositivo(req, dispositivo);
+  if (!identidad.ok) {
+    return NextResponse.json({ error: identidad.error }, { status: identidad.status });
   }
+  const idDispositivo = identidad.dispositivoId;
 
-  return conRequestId({ user_id: dispositivo }, async (requestId) => {
+  return conRequestId({ user_id: idDispositivo }, async (requestId) => {
     const inicio = Date.now();
     try {
-      const avisos = await listarSuscripciones(dispositivo);
+      const avisos = await listarSuscripciones(idDispositivo);
       log.info("avisos.listar.ok", {
         status: 200,
         duracion_ms: Date.now() - inicio,
@@ -53,14 +53,19 @@ export async function POST(req: Request) {
   if (!suscripcionValida(cuerpo)) {
     return NextResponse.json({ error: "Solicitud no válida." }, { status: 400 });
   }
+  const identidad = exigirDispositivo(req, cuerpo.dispositivoId);
+  if (!identidad.ok) {
+    return NextResponse.json({ error: identidad.error }, { status: identidad.status });
+  }
+  const idDispositivo = identidad.dispositivoId;
 
   return conRequestId(
-    { user_id: cuerpo.dispositivoId, plot_id: cuerpo.parcelaId ?? undefined },
+    { user_id: idDispositivo, plot_id: cuerpo.parcelaId ?? undefined },
     async (requestId) => {
       const inicio = Date.now();
       try {
         const aviso = await crearSuscripcion({
-          dispositivoId: cuerpo.dispositivoId,
+          dispositivoId: idDispositivo,
           parcelaId: cuerpo.parcelaId ?? null,
           canal: cuerpo.canal,
           destino: cuerpo.destino,
@@ -72,7 +77,7 @@ export async function POST(req: Request) {
           external_source: aviso.canal,
         });
         await registrarSenalSegura({
-          dispositivoId: cuerpo.dispositivoId,
+          dispositivoId: idDispositivo,
           evento: "avisos_activados",
           metadata: { canal: aviso.canal },
         });
