@@ -252,7 +252,7 @@ export const proveedorAemet: WeatherProvider = {
   configurado: () => Boolean(process.env.AEMET_API_KEY),
 
   async getForecast({ latitud, longitud }: GeoPoint): Promise<NormalizedForecast> {
-    const municipio = process.env.AEMET_MUNICIPIO;
+    const municipio = process.env.AEMET_MUNICIPIO?.trim();
     if (!municipio) {
       throw new Error("AEMET: falta AEMET_MUNICIPIO para la predicción");
     }
@@ -263,7 +263,7 @@ export const proveedorAemet: WeatherProvider = {
   },
 
   async getWarnings(): Promise<OfficialWarning[]> {
-    const area = process.env.AEMET_AREA;
+    const area = process.env.AEMET_AREA?.trim();
     if (!area) {
       throw new Error("AEMET: falta AEMET_AREA para los avisos");
     }

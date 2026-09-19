@@ -26,9 +26,9 @@ export const proveedorSiar: WeatherProvider = {
   },
 
   async getCurrent(): Promise<NormalizedObservation> {
-    const base = process.env.SIAR_BASE_URL;
-    const estacion = process.env.SIAR_ESTACION;
-    const token = process.env.SIAR_TOKEN ?? process.env.SIAR_API_KEY ?? process.env.SIAR_API_TOKEN ?? "";
+    const base = process.env.SIAR_BASE_URL?.trim();
+    const estacion = process.env.SIAR_ESTACION?.trim();
+    const token = (process.env.SIAR_TOKEN ?? process.env.SIAR_API_KEY ?? process.env.SIAR_API_TOKEN ?? "").trim();
     if (!base || !estacion) {
       throw new Error("SiAR no configurado (SIAR_BASE_URL/SIAR_ESTACION)");
     }
