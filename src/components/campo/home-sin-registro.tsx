@@ -89,11 +89,11 @@ export function HomeSinRegistro() {
 
   async function cargarWeather(ubi: Ubicacion) {
     try {
-      const r = await fetch(`/api/v1/weather/current?lat=${ubi.lat}&lon=${ubi.lon}`);
+      const r = await fetch(`/api/v1/weather/current?lat=${ubi.lat}&lon=${ubi.lon}`, { cache: "no-store" });
       if (!r.ok) return;
       const j = await r.json() as { temperatureC: number | null; provider: string; fetchedAt: string; precipitationMm?: number | null; windSpeedKmh?: number | null };
       // also fetch forecast for max/min
-      const rf = await fetch(`/api/v1/weather/forecast?lat=${ubi.lat}&lon=${ubi.lon}&hours=24`);
+      const rf = await fetch(`/api/v1/weather/forecast?lat=${ubi.lat}&lon=${ubi.lon}&hours=24`, { cache: "no-store" });
       let maxima: number | null = null, minima: number | null = null;
       if (rf.ok) {
         const horas = await rf.json() as { temperatureC: number | null }[];

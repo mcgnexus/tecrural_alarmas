@@ -1,4 +1,4 @@
-const CACHE = "tecrural-campo-v1";
+const CACHE = "tecrural-campo-v2";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -50,6 +50,10 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  // Las respuestas de API nunca se cachean: meteorología, riesgo y avisos
+  // deben ser siempre frescos. Sin respondWith, el navegador va a red.
+  if (url.pathname.startsWith("/api/")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(
