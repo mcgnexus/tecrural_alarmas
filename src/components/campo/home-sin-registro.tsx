@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { catalogoCultivos } from "@/lib/cultivos/catalogo";
 import type { CulturaId } from "@/lib/cultivos/catalogo";
 import type { Alerta } from "@/lib/dominio/tipos";
@@ -30,6 +30,10 @@ function nivelColor(severidad?: string): { bg: string; dot: string; label: strin
   }
 }
 
+const LS_UBICACION = "tecrural:ubicacion";
+const LS_CULTIVO = "tecrural:cultivo";
+const LS_ZONA = "tecrural:zona";
+
 export function HomeSinRegistro() {
   const [ubicacion, setUbicacion] = useState<Ubicacion | null>(null);
   const [buscandoGeo, setBuscandoGeo] = useState(false);
@@ -43,6 +47,44 @@ export function HomeSinRegistro() {
   const [weather, setWeather] = useState<{ temperatura: number | null; maxima: number | null; minima: number | null; precipitacion: number | null; viento: number | null; proveedor: string; actualizado: string } | null>(null);
   const [cultivo, setCultivo] = useState<CulturaId>("almendro");
   const [mostrarCultivo, setMostrarCultivo] = useState(false);
+
+  // Restaurar localidad elegida al volver a inicio (fix: persistencia)
+  useEffect(() => {
+    try {
+      const rawU = localStorage.getItem(LS_UBICACION);
+      const rawC = localStorage.getItem(LS_CULTIVO) as CulturaId | null;
+      const rawZ = localStorage.getItem(LS_ZONA) as "altiplano" | "costa" | null;
+      if (rawZ === "altiplano" || rawZ === "costa") {
+        setZona(rawZ);
+        // recargar municipios de la zona guardada
+        fetch(`/api/v1/locations/search?zona=${rawZ}`)
+          .then((r) => (r.ok ? r.json() : []))
+          .then((d) => { if (Array.isArray(d)) setMunicipios(d as Municipio[]); })
+          .catch(() => {});
+      }
+      if (rawC && (Object.keys(catalogoCultivos) as string[]).includes(rawC)) setCultivo(rawC);
+      if (rawU) {
+        const ubi = JSON.parse(rawU) as Ubicacion;
+        if (typeof ubi.lat === "number" && typeof ubi.lon === "number") {
+          setUbicacion(ubi);
+          // re-evaluar sin bloquear UI
+          setTimeout(() => evaluarCon(ubi, (rawC as CulturaId) ?? "almendro"), 0);
+        }
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (ubicacion) localStorage.setItem(LS_UBICACION, JSON.stringify(ubicacion));
+    } catch {}
+  }, [ubicacion]);
+  useEffect(() => {
+    try { localStorage.setItem(LS_CULTIVO, cultivo); } catch {}
+  }, [cultivo]);
+  useEffect(() => {
+    try { if (zona) localStorage.setItem(LS_ZONA, zona); } catch {}
+  }, [zona]);
 
   async function cargarWeather(ubi: Ubicacion) {
     try {
@@ -159,6 +201,14 @@ export function HomeSinRegistro() {
     setMostrarCultivo(false);
   }
 
+  function limpiarUbicacion() {
+    setUbicacion(null);
+    setAlertas(null);
+    setWeather(null);
+    setError(null);
+    try { localStorage.removeItem(LS_UBICACION); } catch {}
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <section className="rounded-2xl border-2 border-stone-900 bg-white p-5 shadow-sm">
@@ -222,9 +272,19 @@ export function HomeSinRegistro() {
         </div>
 
         {ubicacion ? (
-          <p className="rounded-xl border-2 border-brand-200 bg-brand-50 px-4 py-3 text-base font-semibold text-brand-900">
-            📍 {ubicacion.nombre}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="flex-1 rounded-xl border-2 border-brand-200 bg-brand-50 px-4 py-3 text-base font-semibold text-brand-900">
+              📍 {ubicacion.nombre}
+            </p>
+            <button
+              type="button"
+              onClick={limpiarUbicacion}
+              aria-label="Cambiar ubicación"
+              className="inline-flex min-h-[48px] shrink-0 items-center justify-center gap-1 rounded-xl border-2 border-stone-900 bg-white px-4 py-3 text-base font-bold text-stone-900 hover:bg-stone-50"
+            >
+              Cambiar
+            </button>
+          </div>
         ) : null}
         {error ? (
           error === "NO_DATA" ? (
