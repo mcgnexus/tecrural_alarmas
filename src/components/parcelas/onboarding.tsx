@@ -18,6 +18,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
   const [ubicacionNombre, setUbicacionNombre] = useState<string>("");
   const [modoMapa, setModoMapa] = useState(false);
   const [query, setQuery] = useState("");
+  const [zona, setZona] = useState<"altiplano" | "costa" | null>(null);
   const [municipios, setMunicipios] = useState<Municipio[]>([]);
   const [buscando, setBuscando] = useState(false);
   const [localizando, setLocalizando] = useState(false);
@@ -52,6 +53,22 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
     );
   }
 
+  async function cargarZona(z: "altiplano" | "costa") {
+    setZona(z);
+    setBuscando(true);
+    setError(null);
+    try {
+      const r = await fetch(`/api/v1/locations/search?zona=${z}`);
+      if (!r.ok) throw new Error();
+      const datos = (await r.json()) as Municipio[];
+      setMunicipios(datos);
+    } catch {
+      setError("No se pudo cargar municipios.");
+    } finally {
+      setBuscando(false);
+    }
+  }
+
   async function buscarMunicipio() {
     if (query.trim().length < 2) {
       setError("Escribe al menos 2 letras.");
@@ -60,7 +77,8 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
     setBuscando(true);
     setError(null);
     try {
-      const r = await fetch(`/api/v1/locations/search?q=${encodeURIComponent(query.trim())}`);
+      const url = zona ? `/api/v1/locations/search?q=${encodeURIComponent(query.trim())}&zona=${zona}` : `/api/v1/locations/search?q=${encodeURIComponent(query.trim())}`;
+      const r = await fetch(url);
       if (!r.ok) throw new Error();
       const datos = (await r.json()) as Municipio[];
       setMunicipios(datos);
@@ -160,7 +178,12 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
 
             <div className="rounded-2xl border-2 border-stone-200 p-4">
               <p className="text-sm font-bold text-stone-900">Municipio</p>
-              <div className="mt-2 flex gap-2">
+              <p className="mb-2 text-xs font-medium text-stone-600">Elige zona primero</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => cargarZona("altiplano")} className={`min-h-[48px] rounded-xl border-2 px-3 py-2 text-sm font-bold ${zona === "altiplano" ? "border-brand-800 bg-brand-800 text-white" : "border-stone-300 bg-white"}`}>🏔️ Altiplano</button>
+                <button type="button" onClick={() => cargarZona("costa")} className={`min-h-[48px] rounded-xl border-2 px-3 py-2 text-sm font-bold ${zona === "costa" ? "border-brand-800 bg-brand-800 text-white" : "border-stone-300 bg-white"}`}>🏖️ Costa Tropical</button>
+              </div>
+              <div className="mt-3 flex gap-2">
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}

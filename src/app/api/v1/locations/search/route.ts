@@ -6,63 +6,73 @@ const log = crearLogger("api.v1.locations.search");
 
 export const dynamic = "force-dynamic";
 
+type Municipio = { name: string; slug: string; region: string; province: string; latitude: number; longitude: number; zona: string };
+
+const ALTIPLANO: Municipio[] = [
+  { name: "Huéscar", slug: "huescar", region: "Altiplano de Granada", province: "Granada", latitude: 37.8106, longitude: -2.5412, zona: "altiplano" },
+  { name: "Baza", slug: "baza", region: "Altiplano de Granada", province: "Granada", latitude: 37.4897, longitude: -2.7735, zona: "altiplano" },
+  { name: "Puebla de Don Fadrique", slug: "puebla-de-don-fadrique", region: "Altiplano de Granada", province: "Granada", latitude: 37.9587, longitude: -2.4354, zona: "altiplano" },
+  { name: "Castril", slug: "castril", region: "Altiplano de Granada", province: "Granada", latitude: 37.7969, longitude: -2.9415, zona: "altiplano" },
+  { name: "Orce", slug: "orce", region: "Altiplano de Granada", province: "Granada", latitude: 37.6425, longitude: -2.4788, zona: "altiplano" },
+  { name: "Galera", slug: "galera", region: "Altiplano de Granada", province: "Granada", latitude: 37.6833, longitude: -2.55, zona: "altiplano" },
+  { name: "Cúllar", slug: "cullar", region: "Altiplano de Granada", province: "Granada", latitude: 37.5833, longitude: -2.4744, zona: "altiplano" },
+];
+
+const COSTA: Municipio[] = [
+  { name: "Almuñécar", slug: "almunecar", region: "Costa Tropical", province: "Granada", latitude: 36.7352, longitude: -3.6916, zona: "costa" },
+  { name: "La Herradura", slug: "la-herradura", region: "Costa Tropical", province: "Granada", latitude: 36.6206, longitude: -3.7348, zona: "costa" },
+  { name: "Salobreña", slug: "salobrena", region: "Costa Tropical", province: "Granada", latitude: 36.7447, longitude: -3.5849, zona: "costa" },
+  { name: "Motril", slug: "motril", region: "Costa Tropical", province: "Granada", latitude: 36.7448, longitude: -3.3426, zona: "costa" },
+];
+
+const TODOS = [...ALTIPLANO, ...COSTA];
+
 export async function GET(req: Request) {
-  const q = new URL(req.url).searchParams.get("q")?.trim() ?? "";
-  if (q.length < 2) {
-    return NextResponse.json(
-      { error: "Indica al menos 2 caracteres." },
-      { status: 400 },
-    );
-  }
+  const url = new URL(req.url);
+  const q = url.searchParams.get("q")?.trim() ?? "";
+  const zona = url.searchParams.get("zona")?.trim().toLowerCase() ?? url.searchParams.get("zone")?.trim().toLowerCase() ?? "";
 
   return conRequestId({}, async (requestId) => {
     const inicio = Date.now();
-    try {
-      const pg = (await import("pg")).default;
-      const { readFileSync } = await import("node:fs");
-      const envRaw = readFileSync("./.env.local", "utf8");
-      const env: Record<string, string> = {};
-      for (const linea of envRaw.split(/\r?\n/)) {
-        const limpia = linea.trim();
-        if (!limpia || limpia.startsWith("#")) continue;
-        const indice = limpia.indexOf("=");
-        if (indice === -1) continue;
-        env[limpia.slice(0, indice).trim()] = limpia.slice(indice + 1).trim();
-      }
-      const client = new pg.Client({
-        connectionString: env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
-      });
-      await client.connect();
-      let resultados: unknown[] = [];
-      try {
-        const r = await client.query(
-          `SELECT name, slug, region, province, latitude, longitude
-           FROM public.municipalities WHERE active = true
-             AND (name ILIKE $1 OR slug ILIKE $1)
-           ORDER BY name LIMIT 20`,
-          [`%${q}%`],
-        );
-        resultados = r.rows;
-      } finally {
-        await client.end();
-      }
-      log.info("v1.locations.search.ok", {
-        status: 200,
-        duracion_ms: Date.now() - inicio,
-        data: { q, total: resultados.length },
-      });
-      return conCabeceraRequestId(NextResponse.json(resultados), requestId);
-    } catch (error) {
-      log.error(
-        "v1.locations.search.error",
-        { status: 503, duracion_ms: Date.now() - inicio },
-        error,
-      );
-      return conCabeceraRequestId(
-        NextResponse.json({ error: "No se pudo buscar." }, { status: 503 }),
-        requestId,
-      );
+    // Si se pide zona sin q, devolver todos de esa zona
+    if (zona && (zona === "altiplano" || zona === "costa")) {
+      const lista = zona === "altiplano" ? ALTIPLANO : COSTA;
+      const filtrada = q.length >= 2 ? lista.filter((m) => m.name.toLowerCase().includes(q.toLowerCase()) || m.slug.includes(q.toLowerCase())) : lista;
+      log.info("v1.locations.search.ok", { status: 200, duracion_ms: Date.now() - inicio, data: { q, zona, total: filtrada.length } });
+      return conCabeceraRequestId(NextResponse.json(filtrada), requestId);
     }
+
+    if (q.length < 2 && !zona) {
+      return NextResponse.json({ error: "Indica al menos 2 caracteres o elige zona." }, { status: 400 });
+    }
+
+    // Intentar DB primero, con fallback a estáticos
+    try {
+      const connStr = process.env.DATABASE_URL;
+      if (connStr) {
+        const pg = (await import("pg")).default;
+        const client = new pg.Client({ connectionString: connStr, ssl: { rejectUnauthorized: false } });
+        await client.connect();
+        try {
+          const r = await client.query(
+            `SELECT name, slug, region, province, latitude, longitude, 'altiplano' as zona FROM public.municipalities WHERE active = true AND (name ILIKE $1 OR slug ILIKE $1) ORDER BY name LIMIT 20`,
+            [`%${q}%`],
+          );
+          if (r.rows.length > 0) {
+            log.info("v1.locations.search.ok", { status: 200, duracion_ms: Date.now() - inicio, data: { q, total: r.rows.length } });
+            return conCabeceraRequestId(NextResponse.json(r.rows), requestId);
+          }
+        } finally {
+          await client.end();
+        }
+      }
+    } catch (error) {
+      log.warn("v1.locations.search.db.error", {}, error);
+    }
+
+    // Fallback estático
+    const filtrados = TODOS.filter((m) => m.name.toLowerCase().includes(q.toLowerCase()) || m.slug.includes(q.toLowerCase()));
+    log.info("v1.locations.search.fallback", { status: 200, duracion_ms: Date.now() - inicio, data: { q, total: filtrados.length } });
+    return conCabeceraRequestId(NextResponse.json(filtrados), requestId);
   });
 }

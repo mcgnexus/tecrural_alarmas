@@ -34,6 +34,7 @@ export function HomeSinRegistro() {
   const [ubicacion, setUbicacion] = useState<Ubicacion | null>(null);
   const [buscandoGeo, setBuscandoGeo] = useState(false);
   const [query, setQuery] = useState("");
+  const [zona, setZona] = useState<"altiplano" | "costa" | null>(null);
   const [municipios, setMunicipios] = useState<Municipio[]>([]);
   const [buscandoMun, setBuscandoMun] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +108,22 @@ export function HomeSinRegistro() {
     );
   }
 
+  async function cargarZona(z: "altiplano" | "costa") {
+    setZona(z);
+    setBuscandoMun(true);
+    setError(null);
+    try {
+      const r = await fetch(`/api/v1/locations/search?zona=${z}`);
+      if (!r.ok) throw new Error();
+      const datos = (await r.json()) as Municipio[];
+      setMunicipios(datos);
+    } catch {
+      setError("No se pudo cargar municipios de la zona.");
+    } finally {
+      setBuscandoMun(false);
+    }
+  }
+
   async function buscarMunicipio() {
     if (query.trim().length < 2) {
       setError("Escribe al menos 2 letras.");
@@ -115,7 +132,8 @@ export function HomeSinRegistro() {
     setBuscandoMun(true);
     setError(null);
     try {
-      const r = await fetch(`/api/v1/locations/search?q=${encodeURIComponent(query.trim())}`);
+      const url = zona ? `/api/v1/locations/search?q=${encodeURIComponent(query.trim())}&zona=${zona}` : `/api/v1/locations/search?q=${encodeURIComponent(query.trim())}`;
+      const r = await fetch(url);
       if (!r.ok) throw new Error();
       const datos = (await r.json()) as Municipio[];
       setMunicipios(datos);
@@ -161,8 +179,13 @@ export function HomeSinRegistro() {
         </button>
 
         <div className="rounded-2xl border-2 border-stone-200 bg-white p-4 shadow-sm">
-          <label htmlFor="municipio" className="mb-1.5 block text-sm font-bold text-stone-900">Elegir municipio</label>
-          <div className="flex gap-2">
+          <label className="mb-1.5 block text-sm font-bold text-stone-900">Elegir municipio</label>
+          <p className="mb-2 text-xs font-medium text-stone-600">Primero elige zona, luego municipio</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => cargarZona("altiplano")} className={`min-h-[56px] rounded-xl border-2 px-3 py-3 text-sm font-bold ${zona === "altiplano" ? "border-brand-800 bg-brand-800 text-white" : "border-stone-300 bg-white text-stone-900"}`}>🏔️ Altiplano de Granada</button>
+            <button type="button" onClick={() => cargarZona("costa")} className={`min-h-[56px] rounded-xl border-2 px-3 py-3 text-sm font-bold ${zona === "costa" ? "border-brand-800 bg-brand-800 text-white" : "border-stone-300 bg-white text-stone-900"}`}>🏖️ Costa Tropical</button>
+          </div>
+          <div className="mt-3 flex gap-2">
             <input
               id="municipio"
               value={query}
