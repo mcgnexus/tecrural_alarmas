@@ -21,7 +21,7 @@ export const proveedorRaif: WeatherProvider = {
   },
 
   async getWarnings(): Promise<OfficialWarning[]> {
-    const url = process.env.RAIF_FEED_URL;
+    let url = process.env.RAIF_FEED_URL;
     if (!url) return [];
 
     const token =
@@ -37,13 +37,43 @@ export const proveedorRaif: WeatherProvider = {
       headers["x-raif-token"] = token;
     }
 
-    const respuesta = await fetch(url, {
-      headers,
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!respuesta.ok) throw new Error(`RAIF HTTP ${respuesta.status}`);
+    // Soporta URL base https://raif-gamma.vercel.app/ → prueba /api/alerts, /api/feed, /api/documents
+    const candidatos = [url];
+    if (url === "https://raif-gamma.vercel.app" || url === "https://raif-gamma.vercel.app/") {
+      candidatos.push("https://raif-gamma.vercel.app/api/alerts", "https://raif-gamma.vercel.app/api/feed", "https://raif-gamma.vercel.app/api/documents");
+    }
 
-    const datos = (await respuesta.json()) as unknown;
+    let datos: unknown = null;
+    let ultimoError: unknown = null;
+    for (const u of candidatos) {
+      try {
+        const respuesta = await fetch(u, {
+          headers,
+          signal: AbortSignal.timeout(10_000),
+        });
+        if (!respuesta.ok) throw new Error(`RAIF HTTP ${respuesta.status} @ ${u}`);
+        datos = await respuesta.json();
+        // si es array, es el feed correcto
+        if (Array.isArray(datos)) break;
+        // si es objeto con .data o .alerts, intentar
+        if (datos && typeof datos === "object" && Array.isArray((datos as Record<string, unknown>).data)) {
+          datos = (datos as Record<string, unknown>).data;
+          break;
+        }
+        if (datos && typeof datos === "object" && Array.isArray((datos as Record<string, unknown>).alerts)) {
+          datos = (datos as Record<string, unknown>).alerts;
+          break;
+        }
+        // si no es array, probar siguiente candidato
+        datos = null;
+      } catch (e) {
+        ultimoError = e;
+      }
+    }
+    if (datos === null) {
+      if (ultimoError) throw ultimoError;
+      return [];
+    }
     const lista = Array.isArray(datos) ? (datos as Record<string, unknown>[]) : [];
 
     return lista.map((aviso, indice) => ({
