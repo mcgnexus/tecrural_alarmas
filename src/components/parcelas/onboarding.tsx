@@ -158,7 +158,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
               disabled={localizando}
               className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-brand-800 px-5 py-4 text-base font-bold text-white hover:bg-brand-900 disabled:opacity-60"
             >
-              <span aria-hidden="true">📍</span> {localizando ? "Localizando…" : "GPS — Usar mi ubicación"}
+              Gps: {localizando ? "Localizando…" : "GPS — Usar mi ubicación"}
             </button>
 
             <button
@@ -166,7 +166,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
               onClick={() => setModoMapa((v) => !v)}
               className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border-2 border-stone-900 bg-white px-5 py-4 text-base font-bold text-stone-900 hover:bg-stone-50"
             >
-              <span aria-hidden="true">🗺️</span> Mapa — Elegir en mapa
+              Mapa: Mapa — Elegir en mapa
             </button>
             {modoMapa ? (
               <div className="rounded-xl border-2 border-stone-200 p-3">
@@ -183,8 +183,8 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
               <p className="text-sm font-bold text-stone-900">Municipio</p>
               <p className="mb-2 text-xs font-medium text-stone-600">Elige zona primero</p>
               <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => cargarZona("altiplano")} className={`min-h-[48px] rounded-xl border-2 px-3 py-2 text-sm font-bold ${zona === "altiplano" ? "border-brand-800 bg-brand-800 text-white" : "border-stone-300 bg-white"}`}>🏔️ Altiplano</button>
-                <button type="button" onClick={() => cargarZona("costa")} className={`min-h-[48px] rounded-xl border-2 px-3 py-2 text-sm font-bold ${zona === "costa" ? "border-brand-800 bg-brand-800 text-white" : "border-stone-300 bg-white"}`}>🏖️ Costa Tropical</button>
+                <button type="button" onClick={() => cargarZona("altiplano")} className={`min-h-[48px] rounded-xl border-2 px-3 py-2 text-sm font-bold ${zona === "altiplano" ? "border-brand-800 bg-brand-800 text-white" : "border-stone-300 bg-white"}`}>Altiplano</button>
+                <button type="button" onClick={() => cargarZona("costa")} className={`min-h-[48px] rounded-xl border-2 px-3 py-2 text-sm font-bold ${zona === "costa" ? "border-brand-800 bg-brand-800 text-white" : "border-stone-300 bg-white"}`}>Costa Tropical</button>
               </div>
               <div className="mt-3 flex gap-2">
                 <input
@@ -212,7 +212,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
               ) : null}
             </div>
 
-            {ubicacionOk ? <p className="rounded-xl border-2 border-brand-200 bg-brand-50 px-4 py-3 text-base font-semibold text-brand-900">📍 {ubicacionNombre || `${lat}, ${lon}`}</p> : null}
+            {ubicacionOk ? <p className="rounded-xl border-2 border-brand-200 bg-brand-50 px-4 py-3 text-base font-semibold text-brand-900">Ubicación: {ubicacionNombre || `${lat}, ${lon}`}</p> : null}
             {error ? <p role="alert" className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</p> : null}
 
             <button
@@ -242,7 +242,6 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
                   onClick={() => setCultivo(id)}
                   className={`flex min-h-[96px] flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center ${activo ? "border-brand-800 bg-brand-50" : "border-stone-200 bg-white hover:bg-stone-50"}`}
                 >
-                  <span className="text-2xl" aria-hidden="true">{id === "almendro" ? "🌸" : id === "olivar" ? "🫒" : id === "pistacho" ? "🥜" : id === "cereal" ? "🌾" : id === "aguacate" ? "🥑" : id === "mango" ? "🥭" : "🍈"}</span>
                   <span className="text-base font-bold text-stone-900">{c.nombre}</span>
                 </button>
               );

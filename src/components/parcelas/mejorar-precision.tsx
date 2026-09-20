@@ -40,7 +40,7 @@ export function MejorarPrecision({ parcelaId, cultivo, fenofaseActual, onActuali
           onClick={() => setAbierto(true)}
           className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-base font-bold text-brand-800 shadow-sm hover:bg-brand-100 border-2 border-brand-800"
         >
-          🌱 Indicar estado del cultivo
+          Indicar estado del cultivo
         </button>
       </div>
     );

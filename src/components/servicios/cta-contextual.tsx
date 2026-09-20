@@ -75,7 +75,7 @@ export function CtaContextual({ alertas }: { alertas: Alerta[] }) {
           onClick={() => registrarEventoEmbudo("click_whatsapp", { origen: "alertas", servicioKey: cta.key })}
           className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-base font-bold text-white hover:bg-emerald-700"
         >
-          💬 Hablar ahora por WhatsApp
+          Hablar ahora por WhatsApp
         </a>
       ) : null}
       <Link

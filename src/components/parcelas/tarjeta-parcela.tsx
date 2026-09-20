@@ -84,7 +84,7 @@ export function TarjetaParcela({ parcela, onCambio }: Props) {
           aria-label={`Eliminar parcela ${parcela.nombre}`}
           className="inline-flex min-h-[44px] items-center rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100"
         >
-          🗑 Eliminar
+          Eliminar
         </button>
       </div>
 
@@ -127,7 +127,7 @@ export function TarjetaParcela({ parcela, onCambio }: Props) {
           href="/alertas"
           className="inline-flex min-h-[48px] items-center justify-center gap-1 rounded-xl border-2 border-stone-900 bg-white px-4 py-3 text-base font-semibold text-stone-900 hover:bg-stone-50"
         >
-          🔔 Alertas
+          Alertas
         </Link>
       </div>
     </article>

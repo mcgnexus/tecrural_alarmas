@@ -85,7 +85,7 @@ export function BottomNav() {
               href={item.href}
               aria-current={activo ? "page" : undefined}
               aria-label={item.etiqueta}
-              className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-sm font-semibold leading-none ${
+              className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[15px] font-semibold leading-none ${
                 activo
                   ? "bg-brand-800 text-white shadow-sm"
                   : "text-stone-700 hover:bg-stone-100 active:bg-stone-200"

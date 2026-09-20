@@ -126,7 +126,7 @@ export function AsistenteChat() {
           onClick={abrir}
           className="inline-flex min-h-[52px] w-full items-center justify-center min-h-[52px] items-center gap-2 rounded-full border-2 border-brand-800 bg-brand-800 px-5 py-3 text-base font-bold text-white shadow-lg hover:bg-brand-900"
         >
-          💬 ¿Te ayudo?
+          ¿Te ayudo?
         </button>
       ) : null}
 
@@ -155,8 +155,8 @@ export function AsistenteChat() {
 
             {paso === "inicio" ? (
               <div className="mt-3 flex gap-2">
-                <button type="button" onClick={() => elegirPerfil("agricultura")} className="min-h-[44px] flex-1 rounded-xl border-2 border-brand-800 bg-white px-3 py-2 text-sm font-bold text-brand-900 hover:bg-brand-50">🌱 Agricultor</button>
-                <button type="button" onClick={() => elegirPerfil("ganaderia")} className="min-h-[44px] flex-1 rounded-xl border-2 border-brand-800 bg-white px-3 py-2 text-sm font-bold text-brand-900 hover:bg-brand-50">🐄 Ganadero</button>
+                <button type="button" onClick={() => elegirPerfil("agricultura")} className="min-h-[44px] flex-1 rounded-xl border-2 border-brand-800 bg-white px-3 py-2 text-sm font-bold text-brand-900 hover:bg-brand-50">Agricultor</button>
+                <button type="button" onClick={() => elegirPerfil("ganaderia")} className="min-h-[44px] flex-1 rounded-xl border-2 border-brand-800 bg-white px-3 py-2 text-sm font-bold text-brand-900 hover:bg-brand-50">Ganadero</button>
               </div>
             ) : null}
 

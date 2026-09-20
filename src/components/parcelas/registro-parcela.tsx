@@ -150,7 +150,7 @@ export function RegistroParcela({
           disabled={localizando || cargando}
           className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border-2 border-stone-900 bg-white px-4 py-3 text-base font-semibold text-stone-900 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-60"
         >
-          <span aria-hidden="true">📍</span> {localizando ? "Localizando…" : "Usar mi ubicación actual"}
+          Ubicación: {localizando ? "Localizando…" : "Usar mi ubicación actual"}
         </button>
         <button
           type="button"

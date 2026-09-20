@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { FormularioContacto } from "@/components/servicios/formulario-contacto";
 import { EnlaceWhatsapp } from "@/components/analitica/enlace-whatsapp";
 import { enlaceWhatsapp } from "@/lib/config/contacto";
@@ -168,12 +169,12 @@ export default function ServiciosPage() {
             </li>
           ))}
         </ul>
-        <a
-          href="/#contacto"
+        <Link
+          href="#contacto-servicios"
           className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-base font-bold text-white hover:bg-brand-900"
         >
           Elegir plan — te ayudamos →
-        </a>
+        </Link>
       </section>
 
       <section className="flex flex-col gap-4">
@@ -225,27 +226,23 @@ export default function ServiciosPage() {
               Qué compras: {servicio.tipoCompra}
             </p>
 
-            {/* Formulario breve con este servicio preseleccionado. */}
-            <div className="mt-4">
-              <FormularioContacto
-                servicioKey={servicio.servicioKey}
-                servicioNombre={servicio.titulo}
-                interes={servicio.interes}
-              />
-            </div>
-
             {wa ? (
               <EnlaceWhatsapp
                 href={wa}
                 ubicacion={servicio.servicioKey}
                 className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-600 bg-white px-4 py-3 text-base font-bold text-emerald-700 hover:bg-emerald-50"
               >
-                💬 Preguntar por WhatsApp
+                Preguntar por WhatsApp
               </EnlaceWhatsapp>
             ) : null}
           </article>
           );
         })}
+      </section>
+
+      <section id="contacto-servicios" className="scroll-mt-24">
+        <h2 className="mb-3 text-xl font-extrabold text-stone-950">Te ayudamos a elegir</h2>
+        <FormularioContacto />
       </section>
     </>
   );

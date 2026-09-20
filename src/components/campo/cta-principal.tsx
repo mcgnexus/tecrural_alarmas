@@ -32,7 +32,7 @@ export function CtaPrincipal() {
           onClick={() => registrarEventoEmbudo("click_whatsapp", { origen: "cta_portada" })}
           className="mt-3 inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3.5 text-base font-bold text-white hover:bg-emerald-600"
         >
-          💬 Hablar ahora por WhatsApp
+          Hablar ahora por WhatsApp
         </a>
       ) : null}
       <Link
@@ -43,7 +43,7 @@ export function CtaPrincipal() {
       </Link>
       {tel && TELEFONO_VISIBLE ? (
         <a href={tel} className="mt-3 block text-center text-base font-bold text-white underline underline-offset-4">
-          📞 {TELEFONO_VISIBLE}
+          {TELEFONO_VISIBLE}
         </a>
       ) : null}
     </div>
