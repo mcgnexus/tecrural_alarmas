@@ -8,7 +8,7 @@ import { asegurarSesionDispositivo, obtenerDispositivoId } from "@/lib/datos/dis
 
 const CULTIVOS = Object.keys(catalogoCultivos) as CulturaId[];
 
-type Municipio = { name: string; province: string; latitude: number; longitude: number };
+type Municipio = { name: string; province: string; latitude: number; longitude: number; aemetMunicipio?: string };
 
 export function Onboarding({ onComplete }: { onComplete: () => void }) {
   const router = useRouter();

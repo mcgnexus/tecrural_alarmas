@@ -10,6 +10,28 @@ import type {
 const PROVEEDOR = "aemet";
 const BASE = "https://opendata.aemet.es/opendata/api";
 
+// Respaldo para parcelas guardadas o búsquedas procedentes de la base de datos.
+// Las coordenadas del catálogo son centros municipales y se comparan con una
+// tolerancia amplia para no depender de un único AEMET_MUNICIPIO global.
+const MUNICIPIOS_GRANADA: Array<[number, number, string]> = [
+  [37.8106, -2.5412, "18098"], [37.4897, -2.7735, "18023"],
+  [37.9587, -2.4354, "18164"], [37.7969, -2.9415, "18046"],
+  [37.6425, -2.4788, "18145"], [37.6833, -2.55, "18077"],
+  [37.5833, -2.4744, "18057"], [36.7352, -3.6916, "18017"],
+  [36.6206, -3.7348, "18017"], [36.7447, -3.5849, "18173"],
+  [36.7448, -3.3426, "18140"],
+];
+
+function municipioAemetPorCoordenadas(lat: number, lon: number): string | undefined {
+  let mejor: string | undefined;
+  let distancia = Number.POSITIVE_INFINITY;
+  for (const [mLat, mLon, codigo] of MUNICIPIOS_GRANADA) {
+    const d = (lat - mLat) ** 2 + (lon - mLon) ** 2;
+    if (d < distancia) { distancia = d; mejor = codigo; }
+  }
+  return distancia <= 0.04 ** 2 ? mejor : undefined;
+}
+
 function numero(valor: unknown): number | null {
   if (typeof valor === "number" && Number.isFinite(valor)) return valor;
   if (typeof valor === "string" && valor.trim() !== "") {
@@ -408,7 +430,7 @@ export const proveedorAemet: WeatherProvider = {
   configurado: () => Boolean(process.env.AEMET_API_KEY),
 
   async getForecast({ latitud, longitud, aemetMunicipio }: GeoPoint): Promise<NormalizedForecast> {
-    const municipio = aemetMunicipio?.trim() || process.env.AEMET_MUNICIPIO?.trim();
+    const municipio = aemetMunicipio?.trim() || municipioAemetPorCoordenadas(latitud, longitud) || process.env.AEMET_MUNICIPIO?.trim();
     if (!municipio) {
       throw new Error("AEMET: falta AEMET_MUNICIPIO para la predicción");
     }
