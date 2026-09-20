@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { enlaceWhatsapp } from "@/lib/config/contacto";
 import { registrarEventoEmbudo } from "@/lib/analitica";
+import { MeteoZona } from "@/components/campo/meteo-zona";
 
 type Municipio = { name: string; province: string; region: string; latitude: number; longitude: number; aemetMunicipio?: string };
 type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
@@ -61,6 +62,8 @@ export function HomeSinRegistro() {
       {municipios.length ? <ul className="mt-3 divide-y divide-stone-200 rounded-xl border-2 border-stone-200">{municipios.slice(0,8).map((m) => <li key={`${m.name}-${m.latitude}`}><button type="button" onClick={() => elegir(m)} className="min-h-[52px] w-full px-4 text-left text-base font-semibold">{m.name} · <span className="text-stone-600">{m.province}</span></button></li>)}</ul> : null}
       {ubicacion ? <p role="status" className="mt-3 rounded-xl bg-brand-50 p-3 text-base font-bold text-brand-900">Ubicación elegida: {ubicacion.nombre}</p> : null}{error ? <p role="alert" className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 p-3 text-[15px] font-semibold text-red-800">{error}</p> : null}
     </section>
+
+    {ubicacion ? <MeteoZona key={`${ubicacion.lat}-${ubicacion.lon}`} ubicacion={ubicacion} /> : null}
 
     <section className="rounded-2xl bg-olive-900 p-5 text-white"><h2 className="text-xl font-extrabold">Cuéntanos qué necesitas</h2><p className="mt-1 text-base text-wheat-100">Te responde una persona, sin menús ni complicaciones.</p>{wa ? <a href={wa} target="_blank" rel="noopener noreferrer" onClick={() => registrarEventoEmbudo("click_whatsapp", { origen: "home", municipio: ubicacion?.nombre ?? null })} className="mt-4 inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-lg font-black text-white hover:bg-emerald-700">Hablar por WhatsApp</a> : <a href="#contacto" className="mt-4 inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-wheat-100 px-5 py-3 text-lg font-black text-olive-950">Pedir una llamada</a>}</section>
 
