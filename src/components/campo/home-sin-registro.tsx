@@ -386,9 +386,6 @@ export function HomeSinRegistro() {
         <section className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm">
           <h2 className="text-base font-bold text-stone-900">Tiempo en tu zona</h2>
           <p className="mt-1 text-xs font-medium text-stone-600">{haceMinutos(weather.actualizado)}</p>
-          {weather.proveedor !== "aemet" ? (
-            <p className="mt-1 text-[11px] font-medium text-amber-700">Datos provisionales (Open-Meteo). AEMET no disponible en este momento.</p>
-          ) : null}
           {esDatosCaducados(weather.actualizado, 90) ? <p role="alert" className="mt-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-2 text-center text-sm font-bold text-amber-800">⚠ Datos meteorológicos pendientes de actualización</p> : null}
           <div className={`mt-3 grid grid-cols-2 gap-2 text-center ${esDatosCaducados(weather.actualizado, 90) ? "opacity-60" : ""}`}>
             <div className="rounded-xl border-2 border-stone-200 p-3"><p className="text-xs font-bold uppercase text-stone-600">Temperatura</p><p className="text-lg font-extrabold">{weather.temperatura !== null ? `${weather.temperatura}°C` : "—"}</p></div>
