@@ -6,6 +6,7 @@ import {
 import { reglaRiesgoValida } from "@/lib/datos/validacion";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
+import { verificarAccesoAdmin } from "@/lib/admin/auth";
 
 const log = crearLogger("api.reglas");
 
@@ -49,6 +50,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const acceso = verificarAccesoAdmin(req);
+  if (!acceso.ok) return NextResponse.json({ error: acceso.error }, { status: acceso.status });
   const cuerpo = (await req.json().catch(() => null)) as unknown;
   if (!reglaRiesgoValida(cuerpo)) {
     return NextResponse.json({ error: "Solicitud no válida." }, { status: 400 });

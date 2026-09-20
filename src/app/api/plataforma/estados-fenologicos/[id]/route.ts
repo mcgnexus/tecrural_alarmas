@@ -3,6 +3,7 @@ import { actualizarKcEstado } from "@/lib/datos/catalogo-repo";
 import { kcValido } from "@/lib/datos/validacion";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
+import { verificarAccesoAdmin } from "@/lib/admin/auth";
 
 const log = crearLogger("api.plataforma.estados.id");
 
@@ -12,6 +13,8 @@ export async function PATCH(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
+  const acceso = verificarAccesoAdmin(req);
+  if (!acceso.ok) return NextResponse.json({ error: acceso.error }, { status: acceso.status });
   const { id } = await ctx.params;
   const cuerpo = (await req.json().catch(() => null)) as unknown;
   if (!kcValido(cuerpo)) {

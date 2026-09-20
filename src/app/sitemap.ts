@@ -15,18 +15,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/privacidad",
     "/servicios",
     "/parcelas",
-    "/parcelas/nueva",
-    "/parcelas/[id]/editar",
-    "/riesgo",
-    "/contacto",
-    "/avisos",
-    "/dashboard",
+    "/alertas",
+    "/fitosanitario",
   ];
 
   return rutas.map((ruta) => ({
     url: `${baseUrl()}${ruta}`,
     lastModified: new Date(),
-    changeFrequency: ruta === "/" || ruta === "/riesgo" ? "hourly" : "daily",
+    changeFrequency: ruta === "/" || ruta === "/alertas" ? "hourly" : "daily",
     priority: ruta === "/" ? 1 : ruta.startsWith("/parcelas") ? 0.8 : 0.6,
   }));
 }

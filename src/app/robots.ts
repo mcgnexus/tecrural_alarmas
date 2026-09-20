@@ -17,6 +17,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           "/api/",
           "/admin/",
+          "/gestion",
           "/dashboard/",
           "/parcelas/[id]/editar",
           "/_next/",
@@ -27,7 +28,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "Googlebot",
         allow: ["/"],
-        disallow: ["/api/", "/admin/", "/dashboard/", "/_next/", "/sw.js"],
+        disallow: ["/api/", "/admin/", "/gestion", "/dashboard/", "/_next/", "/sw.js"],
       },
     ],
     sitemap: `${ua}/sitemap.xml`,

@@ -34,7 +34,7 @@ async function cargarCultivosRemotos(): Promise<Cultivo[]> {
   return (await resp.json()) as Cultivo[];
 }
 
-export function GestionCatalogo() {
+export function GestionCatalogo({ adminSecret }: { adminSecret: string }) {
   const [cultivos, setCultivos] = useState<Cultivo[]>([]);
   const [estados, setEstados] = useState<Record<string, Estado[]>>({});
   const [borradores, setBorradores] = useState<Record<string, BorradorKc>>({});
@@ -121,7 +121,7 @@ export function GestionCatalogo() {
     try {
       const resp = await fetch(url, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
         body: JSON.stringify({
           kc: numeroOpcional(borrador?.kc ?? ""),
           kcValidated: borrador?.kcValidated ?? false,
@@ -140,6 +140,7 @@ export function GestionCatalogo() {
     try {
       const resp = await fetch("/api/plataforma/catalogo/cargar", {
         method: "POST",
+        headers: { "x-admin-secret": adminSecret },
       });
       if (!resp.ok) throw new Error();
       const resultado = (await resp.json()) as {

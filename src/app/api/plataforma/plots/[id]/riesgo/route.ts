@@ -3,15 +3,18 @@ import { evaluarPlotPlataforma } from "@/lib/aplicacion/riesgo-plataforma";
 import { listarEventosRiesgo } from "@/lib/datos/eventos-riesgo-repo";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
+import { verificarAccesoAdmin } from "@/lib/admin/auth";
 
 const log = crearLogger("api.plataforma.plot.riesgo");
 
 export const dynamic = "force-dynamic";
 
 export async function POST(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
+  const acceso = verificarAccesoAdmin(req);
+  if (!acceso.ok) return NextResponse.json({ error: acceso.error }, { status: acceso.status });
   const { id } = await ctx.params;
 
   return conRequestId({ plot_id: id }, async (requestId) => {

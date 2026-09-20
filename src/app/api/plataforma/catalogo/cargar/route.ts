@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { cargarCatalogoFenologico } from "@/lib/aplicacion/catalogo";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
+import { verificarAccesoAdmin } from "@/lib/admin/auth";
 
 const log = crearLogger("api.plataforma.catalogo.cargar");
 
 export const dynamic = "force-dynamic";
 
-export async function POST() {
+export async function POST(req: Request) {
+  const acceso = verificarAccesoAdmin(req);
+  if (!acceso.ok) return NextResponse.json({ error: acceso.error }, { status: acceso.status });
   return conRequestId({ external_source: "catalogo" }, async (requestId) => {
     const inicio = Date.now();
     try {

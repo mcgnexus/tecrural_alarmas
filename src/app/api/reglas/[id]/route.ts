@@ -6,6 +6,7 @@ import {
 import { reglaRiesgoParcialValida } from "@/lib/datos/validacion";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
+import { verificarAccesoAdmin } from "@/lib/admin/auth";
 
 const log = crearLogger("api.reglas.id");
 
@@ -15,6 +16,8 @@ export async function PATCH(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
+  const acceso = verificarAccesoAdmin(req);
+  if (!acceso.ok) return NextResponse.json({ error: acceso.error }, { status: acceso.status });
   const { id } = await ctx.params;
   const cuerpo = (await req.json().catch(() => null)) as unknown;
   if (!reglaRiesgoParcialValida(cuerpo)) {
@@ -54,9 +57,11 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
+  const acceso = verificarAccesoAdmin(req);
+  if (!acceso.ok) return NextResponse.json({ error: acceso.error }, { status: acceso.status });
   const { id } = await ctx.params;
 
   return conRequestId({ external_source: "reglas" }, async (requestId) => {

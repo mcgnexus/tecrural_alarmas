@@ -70,7 +70,7 @@ async function cargarDatosRemotos(): Promise<DatosGestion> {
   };
 }
 
-export function GestionReglas() {
+export function GestionReglas({ adminSecret }: { adminSecret: string }) {
   const [cultivos, setCultivos] = useState<Cultivo[]>([]);
   const [reglas, setReglas] = useState<Regla[]>([]);
   const [estados, setEstados] = useState<Estado[]>([]);
@@ -171,7 +171,7 @@ export function GestionReglas() {
         editandoId ? `/api/reglas/${editandoId}` : "/api/reglas",
         {
           method: editandoId ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
           body: JSON.stringify(cuerpo),
         },
       );
@@ -187,7 +187,7 @@ export function GestionReglas() {
   async function eliminar(id: string) {
     setError(null);
     try {
-      const resp = await fetch(`/api/reglas/${id}`, { method: "DELETE" });
+      const resp = await fetch(`/api/reglas/${id}`, { method: "DELETE", headers: { "x-admin-secret": adminSecret } });
       if (!resp.ok) throw new Error();
       aplicarDatos(await cargarDatosRemotos());
     } catch {
