@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { asegurarSesionDispositivo, obtenerDispositivoId } from "@/lib/datos/dispositivo";
 import type { InteresLead } from "@/lib/dominio/leads";
 import { enlaceWhatsapp, EMAIL_CONTACTO } from "@/lib/config/contacto";
+import { registrarEventoEmbudo } from "@/lib/analitica";
 
 type Estado = "inicial" | "enviando" | "enviado" | "error";
 
@@ -36,6 +37,13 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
   const [acepta, setAcepta] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [wa, setWa] = useState<string | null>(null);
+  const [leadIniciado, setLeadIniciado] = useState(false);
+
+  function iniciarLead() {
+    if (leadIniciado) return;
+    setLeadIniciado(true);
+    registrarEventoEmbudo("lead_started", { origen: "formulario", servicioKey: servicioKey ?? null });
+  }
 
   useEffect(() => {
     setWa(
@@ -76,6 +84,15 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
       });
       if (!resp.ok) throw new Error();
       setEstado("enviado");
+      registrarEventoEmbudo("lead_submitted", {
+        origen: "formulario",
+        servicioKey: servicioKey ?? null,
+        tipoExplotacion,
+        problema,
+      });
+      if (servicioKey) {
+        registrarEventoEmbudo("service_interest_selected", { servicioKey, servicioNombre: servicioNombre ?? null });
+      }
     } catch {
       setEstado("error");
       setError("No se pudo enviar. Revisa la conexión e inténtalo de nuevo.");
@@ -123,6 +140,7 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
           href={wa}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => registrarEventoEmbudo("click_whatsapp", { origen: "formulario", servicioKey: servicioKey ?? null })}
           className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-600 bg-emerald-50 px-5 py-3 text-base font-bold text-emerald-700 hover:bg-emerald-100"
         >
           💬 Prefiero WhatsApp — escribir ahora
@@ -133,7 +151,8 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
       <input
         id="contacto-nombre"
         value={nombre}
-        onChange={(e) => setNombre(e.target.value)}
+        onChange={(e) => { iniciarLead(); setNombre(e.target.value); }}
+        onFocus={iniciarLead}
         autoComplete="name"
         className="mt-1 min-h-[48px] w-full rounded-xl border-2 border-stone-300 px-4 py-3 text-base font-medium"
         placeholder="Tu nombre"

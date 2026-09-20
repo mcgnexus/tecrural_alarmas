@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { catalogoCultivos } from "@/lib/cultivos/catalogo";
 import type { CulturaId } from "@/lib/cultivos/catalogo";
 import { asegurarSesionDispositivo, obtenerDispositivoId } from "@/lib/datos/dispositivo";
+import { registrarEventoEmbudo } from "@/lib/analitica";
 
 const CULTIVOS = Object.keys(catalogoCultivos) as CulturaId[];
 
@@ -91,6 +92,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
   }
 
   function elegirMunicipio(m: Municipio) {
+    registrarEventoEmbudo("municipality_selected", { municipio: m.name, origen: "onboarding" });
     setLat(String(m.latitude));
     setLon(String(m.longitude));
     setUbicacionNombre(`${m.name}, ${m.province}`);

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { asegurarSesionDispositivo, obtenerDispositivoId } from "@/lib/datos/dispositivo";
+import { registrarEventoEmbudo } from "@/lib/analitica";
 
 interface Mensaje {
   de: "bot" | "usuario";
@@ -34,6 +35,8 @@ export function AsistenteChat() {
   function abrir() {
     setAbierto(true);
     if (mensajes.length === 0) {
+      registrarEventoEmbudo("ai_conversation_started");
+      registrarEventoEmbudo("lead_started", { origen: "asistente" });
       setMensajes([
         { de: "bot", texto: "Hola, soy el asistente de TecRural. Puedo ayudarte a saber qué solución encaja mejor con tu explotación." },
         { de: "bot", texto: "¿Eres agricultor o ganadero?" },
@@ -100,6 +103,7 @@ export function AsistenteChat() {
         }),
       });
       if (!resp.ok) throw new Error();
+      registrarEventoEmbudo("lead_submitted", { origen: "asistente", tipoExplotacion: perfil ?? null, problema });
       setMensajes((m) => [
         ...m,
         { de: "bot", texto: `¡Listo, ${nombre.trim().split(" ")[0]}! Un técnico te escribirá por WhatsApp al ${telefono.trim()} en menos de 24 h laborables.` },

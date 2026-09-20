@@ -7,6 +7,7 @@ import type { CulturaId } from "@/lib/cultivos/catalogo";
 import type { Alerta } from "@/lib/dominio/tipos";
 import { CtaPrincipal } from "./cta-principal";
 import { esDatosCaducados, haceMinutos } from "@/lib/dominio/frescura";
+import { registrarEventoEmbudo } from "@/lib/analitica";
 
 type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
 type Municipio = { name: string; province: string; region: string; latitude: number; longitude: number; aemetMunicipio?: string };
@@ -221,6 +222,7 @@ export function HomeSinRegistro() {
   }
 
   function elegirMunicipio(m: Municipio) {
+    registrarEventoEmbudo("municipality_selected", { municipio: m.name, zona: m.region });
     const ubi: Ubicacion = { lat: Number(m.latitude), lon: Number(m.longitude), nombre: `${m.name}, ${m.province}`, aemetMunicipio: m.aemetMunicipio };
     setUbicacion(ubi);
     setMunicipios([]);

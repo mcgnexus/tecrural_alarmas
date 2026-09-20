@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FormularioContacto } from "@/components/servicios/formulario-contacto";
+import { EnlaceWhatsapp } from "@/components/analitica/enlace-whatsapp";
 import { enlaceWhatsapp } from "@/lib/config/contacto";
 import type { InteresLead } from "@/lib/dominio/leads";
 
@@ -233,14 +234,13 @@ export default function ServiciosPage() {
             </div>
 
             {wa ? (
-              <a
+              <EnlaceWhatsapp
                 href={wa}
-                target="_blank"
-                rel="noopener noreferrer"
+                ubicacion={servicio.servicioKey}
                 className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-600 bg-white px-4 py-3 text-base font-bold text-emerald-700 hover:bg-emerald-50"
               >
                 💬 Preguntar por WhatsApp
-              </a>
+              </EnlaceWhatsapp>
             ) : null}
           </article>
           );

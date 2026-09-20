@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { enlaceTelefono, enlaceWhatsapp, TELEFONO_VISIBLE } from "@/lib/config/contacto";
+import { registrarEventoEmbudo } from "@/lib/analitica";
 
 /**
  * CTA comercial de la portada: invita a solicitar contacto con confirmación
@@ -34,6 +35,7 @@ export function CtaPrincipal() {
           href={wa}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => registrarEventoEmbudo("click_whatsapp", { origen: "cta_portada" })}
           className="mt-2 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-white bg-transparent px-5 py-3 text-base font-bold text-white hover:bg-brand-900"
         >
           💬 WhatsApp

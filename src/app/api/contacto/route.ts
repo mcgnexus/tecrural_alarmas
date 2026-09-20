@@ -88,7 +88,7 @@ export async function POST(req: Request) {
       }
 
       // Aviso inmediato al equipo por Telegram (nunca rompe el flujo).
-      await notificarSolicitudContacto({
+      const enviado = await notificarSolicitudContacto({
         nombre: datos.nombre,
         telefono: datos.telefono,
         mensaje: datos.origen === "asistente" ? datos.problema : `📍 ${datos.municipio} · ${datos.tipoExplotacion} · ${datos.problema}`,
@@ -98,6 +98,13 @@ export async function POST(req: Request) {
         municipio: datos.municipio,
         interesProbable: datos.origen === "asistente" ? interesProbableDesdeProblema(datos.problema) : undefined,
       });
+      if (enviado) {
+        // Evento del embudo comercial (lado servidor, log estructurado).
+        log.info("telegram_notification_sent", {
+          external_source: "telegram",
+          data: { origen: datos.origen ?? "formulario", servicioKey: datos.servicioKey ?? null },
+        });
+      }
 
       log.info("contacto.ok", {
         status: 201,
