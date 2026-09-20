@@ -3,6 +3,7 @@ import { z } from "zod";
 import { actualizarContactoLead } from "@/lib/datos/crm-repo";
 import { obtenerLeadPorVisitante } from "@/lib/datos/crm-repo";
 import { registrarSenal } from "@/lib/aplicacion/crm";
+import { notificarSolicitudContacto } from "@/lib/notificaciones/aviso-negocio";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
 
@@ -65,6 +66,14 @@ export async function POST(req: Request) {
             .join(" — "),
         });
       }
+
+      // Aviso inmediato al equipo por Telegram (nunca rompe el flujo).
+      await notificarSolicitudContacto({
+        nombre: datos.nombre,
+        telefono: datos.telefono,
+        mensaje: datos.mensaje,
+        servicioNombre: datos.servicioNombre,
+      });
 
       log.info("contacto.ok", {
         status: 201,

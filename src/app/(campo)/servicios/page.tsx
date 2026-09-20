@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { FormularioContacto } from "@/components/servicios/formulario-contacto";
+import { enlaceWhatsapp } from "@/lib/config/contacto";
 import type { InteresLead } from "@/lib/dominio/leads";
 
 interface Servicio {
@@ -123,7 +125,9 @@ export default function ServiciosPage() {
       </section>
 
       <section className="flex flex-col gap-4">
-        {servicios.map((servicio) => (
+        {servicios.map((servicio) => {
+          const wa = enlaceWhatsapp(`Hola, quiero información sobre: ${servicio.titulo}`);
+          return (
           <article
             key={servicio.servicioKey}
             id={servicio.anchor}
@@ -160,15 +164,29 @@ export default function ServiciosPage() {
             </dl>
 
             <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-brand-700">{servicio.cuando}</p>
-            {/* El formulario de la portada preselecciona este servicio. */}
-            <a
-              href={`/?servicio=${encodeURIComponent(servicio.servicioKey)}&servicioNombre=${encodeURIComponent(servicio.titulo)}&interes=${servicio.interes}#contacto`}
-              className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-brand-800 bg-brand-50 px-4 py-3 text-base font-bold text-brand-900 hover:bg-brand-100"
-            >
-              Solicitar información →
-            </a>
+
+            {/* Formulario breve con este servicio preseleccionado. */}
+            <div className="mt-4">
+              <FormularioContacto
+                servicioKey={servicio.servicioKey}
+                servicioNombre={servicio.titulo}
+                interes={servicio.interes}
+              />
+            </div>
+
+            {wa ? (
+              <a
+                href={wa}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-600 bg-white px-4 py-3 text-base font-bold text-emerald-700 hover:bg-emerald-50"
+              >
+                💬 Preguntar por WhatsApp
+              </a>
+            ) : null}
           </article>
-        ))}
+          );
+        })}
       </section>
     </>
   );

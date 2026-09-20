@@ -21,8 +21,14 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
   const [wa, setWa] = useState<string | null>(null);
 
   useEffect(() => {
-    setWa(enlaceWhatsapp("Hola, quiero información sobre los servicios de TecRural para mi explotación."));
-  }, []);
+    setWa(
+      enlaceWhatsapp(
+        servicioNombre
+          ? `Hola, quiero información sobre: ${servicioNombre}`
+          : "Hola, quiero información sobre los servicios de TecRural para mi explotación.",
+      ),
+    );
+  }, [servicioNombre]);
 
   async function enviar() {
     if (nombre.trim().length < 2) { setError("Escribe tu nombre."); return; }
