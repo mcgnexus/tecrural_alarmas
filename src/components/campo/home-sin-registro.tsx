@@ -217,7 +217,7 @@ export function HomeSinRegistro() {
       <section className="rounded-2xl border-2 border-stone-900 bg-white p-5 shadow-sm">
         <h1 className="text-2xl font-extrabold tracking-tight text-stone-900">TecRural Campo</h1>
         <p className="mt-1 text-xl font-bold leading-tight text-stone-800">¿Qué está pasando en tu zona?</p>
-        <p className="mt-2 text-base leading-snug text-stone-700">Consulta el riesgo sin crear cuenta. Fuente de datos según disponibilidad (AEMET, SiAR, Open-Meteo). Explicado para tu campo.</p>
+        <p className="mt-2 text-base leading-snug text-stone-700">Consulta el riesgo sin crear cuenta. Fuente de datos según disponibilidad (AEMET, Open-Meteo). Explicado para tu campo.</p>
       </section>
 
       <section className="flex flex-col gap-3">
@@ -302,8 +302,8 @@ export function HomeSinRegistro() {
         <section className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm">
           <h2 className="text-base font-bold text-stone-900">Tiempo en tu zona</h2>
           <p className="mt-1 text-xs font-medium text-stone-600">{haceMinutos(weather.actualizado)} · Proveedor {weather.proveedor} · error externo no rompe app</p>
-          {(weather.proveedor === "open-meteo" || (weather.proveedor !== "aemet" && weather.proveedor !== "siar")) ? (
-            <p className="mt-1 text-[11px] font-medium text-amber-700">Datos provisionales (Open-Meteo). AEMET/SiAR no disponibles en este momento.</p>
+          {weather.proveedor !== "aemet" ? (
+            <p className="mt-1 text-[11px] font-medium text-amber-700">Datos provisionales (Open-Meteo). AEMET no disponible en este momento.</p>
           ) : null}
           {esDatosCaducados(weather.actualizado, 90) ? <p role="alert" className="mt-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-2 text-center text-sm font-bold text-amber-800">⚠ Datos meteorológicos pendientes de actualización</p> : null}
           <div className={`mt-3 grid grid-cols-2 gap-2 text-center ${esDatosCaducados(weather.actualizado, 90) ? "opacity-60" : ""}`}>

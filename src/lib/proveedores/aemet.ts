@@ -1,3 +1,4 @@
+import { gunzipSync } from "node:zlib";
 import type {
   GeoPoint,
   NormalizedForecast,
@@ -243,6 +244,161 @@ function normalizarAvisos(datos: unknown): OfficialWarning[] {
 }
 
 /**
+ * AEMET publica los avisos CAP como un archivo tar (content-type
+ * `application/x-gtar`) con XML por zona, no como JSON. Se descarga el tar,
+ * se extraen los XML y se parsean los campos CAP.
+ */
+function parsearTar(buf: Buffer): { nombre: string; contenido: Buffer }[] {
+  const archivos: { nombre: string; contenido: Buffer }[] = [];
+  let offset = 0;
+  while (offset + 512 <= buf.length) {
+    const header = buf.subarray(offset, offset + 512);
+    const nombre = header
+      .subarray(0, 100)
+      .toString("latin1")
+      .replace(/\0.*$/, "")
+      .trim();
+    if (!nombre) break; // bloque final de ceros
+    const sizeOctal = header
+      .subarray(124, 136)
+      .toString("latin1")
+      .replace(/\0.*$/, "")
+      .trim();
+    const size = Number.parseInt(sizeOctal, 8) || 0;
+    const inicio = offset + 512;
+    archivos.push({ nombre, contenido: buf.subarray(inicio, inicio + size) });
+    offset = inicio + Math.ceil(size / 512) * 512;
+  }
+  return archivos;
+}
+
+function desescaparXml(texto: string): string {
+  return texto
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, codigo) => String.fromCharCode(Number(codigo)))
+    .replace(/&amp;/g, "&")
+    .trim();
+}
+
+function extraerEtiqueta(xml: string, etiqueta: string): string | null {
+  const coincidencia = xml.match(
+    new RegExp(`<${etiqueta}(?:\\s[^>]*)?>([\\s\\S]*?)</${etiqueta}>`, "i"),
+  );
+  return coincidencia ? desescaparXml(coincidencia[1]) : null;
+}
+
+/** Parsea un XML CAP (una o varias alertas) a `OfficialWarning[]`. */
+export function parsearCapXml(xml: string): OfficialWarning[] {
+  const avisos: OfficialWarning[] = [];
+  const alertas = xml.match(/<alert(?:\s[^>]*)?>[\s\S]*?<\/alert>/gi) ?? [];
+  for (const alerta of alertas) {
+    const identificador = extraerEtiqueta(alerta, "identifier") ?? "aemet-aviso";
+    const bloques = alerta.match(/<info(?:\s[^>]*)?>[\s\S]*?<\/info>/gi) ?? [];
+    for (const bloque of bloques) {
+      const event = extraerEtiqueta(bloque, "event") ?? "Aviso meteorológico";
+      const areaBloque =
+        bloque.match(/<area(?:\s[^>]*)?>[\s\S]*?<\/area>/i)?.[0] ?? "";
+      const area = extraerEtiqueta(areaBloque, "areaDesc") ?? "";
+      avisos.push({
+        id: `${identificador}-${event}`,
+        provider: PROVEEDOR,
+        phenomenon: event,
+        severity: (extraerEtiqueta(bloque, "severity") ?? "info").toLowerCase(),
+        startsAt: extraerEtiqueta(bloque, "onset") ?? extraerEtiqueta(bloque, "effective") ?? "",
+        endsAt: extraerEtiqueta(bloque, "expires") ?? "",
+        area,
+        headline: extraerEtiqueta(bloque, "headline") ?? event,
+        description: extraerEtiqueta(bloque, "description") ?? undefined,
+        sourceUrl: "https://www.aemet.es/es/eltiempo/prediccion/avisos",
+      });
+    }
+  }
+  return avisos;
+}
+
+function normalizarAvisosTar(buf: Buffer): OfficialWarning[] {
+  const xmls = parsearTar(buf)
+    .filter((archivo) => /\.xml$/i.test(archivo.nombre))
+    .map((archivo) => archivo.contenido.toString("latin1"));
+  const vistos = new Set<string>();
+  const avisos: OfficialWarning[] = [];
+  for (const xml of xmls) {
+    for (const aviso of parsearCapXml(xml)) {
+      if (vistos.has(aviso.id)) continue;
+      vistos.add(aviso.id);
+      avisos.push(aviso);
+    }
+  }
+  return avisos;
+}
+
+/** AEMET CAP usa códigos numéricos de área; `AND-*` es de otra API. */
+const AREA_CAP_POR_COMUNIDAD: Record<string, string> = {
+  AND: "61",
+  ARA: "20",
+  AST: "33",
+  BAL: "07",
+  CAN: "35",
+  CNT: "39",
+  CLM: "30",
+  CYL: "36",
+  CAT: "62",
+  EXT: "52",
+  GAL: "53",
+  MAD: "28",
+  MUR: "63",
+  NAV: "31",
+  PVA: "65",
+  RIO: "26",
+  VAL: "67",
+  CEU: "51",
+  MEL: "64",
+};
+
+function resolverAreaCap(): string {
+  const explicito = process.env.AEMET_CAP_AREA?.trim();
+  if (explicito) return explicito;
+  const area = process.env.AEMET_AREA?.trim().toUpperCase() ?? "";
+  const comunidad = area.split("-")[0] ?? "";
+  return AREA_CAP_POR_COMUNIDAD[comunidad] ?? area ?? "61";
+}
+
+async function pedirAvisosCap(
+  ruta: string,
+): Promise<{ json: unknown | null; tar: Buffer | null }> {
+  const apiKey = process.env.AEMET_API_KEY;
+  if (!apiKey) throw new Error("AEMET no configurado (falta AEMET_API_KEY)");
+
+  const separador = ruta.includes("?") ? "&" : "?";
+  const paso1 = await fetch(`${BASE}${ruta}${separador}api_key=${apiKey}`, {
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!paso1.ok) throw new Error(`AEMET HTTP ${paso1.status}`);
+
+  const metadatos = (await paso1.json()) as { datos?: string; estado?: number };
+  if (!metadatos.datos) return { json: null, tar: null }; // sin avisos activos
+
+  const paso2 = await fetch(metadatos.datos, {
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!paso2.ok) throw new Error(`AEMET datos HTTP ${paso2.status}`);
+
+  const tipo = paso2.headers.get("content-type") ?? "";
+  if (tipo.includes("json")) {
+    return { json: await paso2.json(), tar: null };
+  }
+  const bruto = Buffer.from(await paso2.arrayBuffer());
+  const descomprimido =
+    bruto[0] === 0x1f && bruto[1] === 0x8b ? gunzipSync(bruto) : bruto;
+  return { json: null, tar: descomprimido };
+}
+
+/**
  * AEMET: avisos oficiales y predicción horaria municipal. Requiere
  * `AEMET_API_KEY` y `AEMET_MUNICIPIO` (predicción) o `AEMET_AREA` (avisos).
  */
@@ -263,11 +419,12 @@ export const proveedorAemet: WeatherProvider = {
   },
 
   async getWarnings(): Promise<OfficialWarning[]> {
-    const area = process.env.AEMET_AREA?.trim();
-    if (!area) {
-      throw new Error("AEMET: falta AEMET_AREA para los avisos");
-    }
-    const datos = await pedirDatos(`/avisos_cap/ultimoelaborado/area/${area}`);
-    return normalizarAvisos(datos);
+    const area = resolverAreaCap();
+    const { json, tar } = await pedirAvisosCap(
+      `/avisos_cap/ultimoelaborado/area/${area}`,
+    );
+    if (json) return normalizarAvisos(json);
+    if (tar) return normalizarAvisosTar(tar);
+    return [];
   },
 };

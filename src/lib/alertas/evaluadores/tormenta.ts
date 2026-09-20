@@ -61,7 +61,8 @@ function nivelDeValor(valor: number, umbrales: Umbral): string {
   return "green";
 }
 
-function ventana24h(
+/** Próximas 7 días (168 h): el horizonte del pronóstico híbrido. */
+function ventana7d(
   horario: WeatherHourly[] | undefined,
   momento: Date,
 ): WeatherHourly[] {
@@ -69,7 +70,7 @@ function ventana24h(
   const desde = momento.getTime() - 60 * 60 * 1000;
   return horario
     .filter((hora) => new Date(hora.timestamp).getTime() >= desde)
-    .slice(0, 24);
+    .slice(0, 168);
 }
 
 function maximo(valores: (number | null)[], porDefecto: number): number {
@@ -123,7 +124,7 @@ export const evaluadorTormenta: RiskEvaluator = {
       red: 30,
     });
 
-    const horas = ventana24h(context.horario, context.momento);
+    const horas = ventana7d(context.horario, context.momento);
     const previsionHoy = context.clima.prevision[0];
     const probabilidad = horas.length
       ? maximo(

@@ -17,11 +17,6 @@ export const METADATOS_FUENTE: Record<string, MetadatosFuente> = {
     url: "https://www.aemet.es",
     licencia: "AEMET OpenData (reutilización permitida citando la fuente)",
   },
-  siar: {
-    nombre: "SiAR",
-    url: "https://www.mapa.gob.es/es/agricultura/temas/sistema-de-informacion-agroclimatica-para-el-regadio/",
-    licencia: "Datos agroclimáticos oficiales (SiAR)",
-  },
   raif: {
     nombre: "RAIF",
     url: "https://www.juntadeandalucia.es/agriculturapescaaguaydesarrollorural/raif",

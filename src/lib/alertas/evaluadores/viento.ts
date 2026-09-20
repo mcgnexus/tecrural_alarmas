@@ -39,7 +39,8 @@ function leerParametros(context: RiskContext): ParamsViento {
   };
 }
 
-function ventana72h(
+/** Próximas 7 días (168 h): el horizonte del pronóstico híbrido. */
+function ventana7d(
   horario: WeatherHourly[] | undefined,
   momento: Date,
 ): WeatherHourly[] {
@@ -47,7 +48,7 @@ function ventana72h(
   const desde = momento.getTime() - 60 * 60 * 1000;
   return horario
     .filter((hora) => new Date(hora.timestamp).getTime() >= desde)
-    .slice(0, 72);
+    .slice(0, 168);
 }
 
 function numeros(valores: (number | null)[]): number[] {
@@ -69,7 +70,7 @@ export const evaluadorViento: RiskEvaluator = {
   riskType: "viento",
   async evaluate(context: RiskContext): Promise<RiskEvaluation | null> {
     const params = leerParametros(context);
-    const horas = ventana72h(context.horario, context.momento);
+    const horas = ventana7d(context.horario, context.momento);
 
     const rachas = numeros(horas.map((h) => h.windGustKmh));
     const rachaMaxKmh = rachas.length

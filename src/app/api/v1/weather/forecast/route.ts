@@ -30,8 +30,11 @@ export async function GET(req: Request) {
       const horas = await obtenerClimaHorario(lat, lon);
       // La fuente (Open-Meteo) incluye past_days; no servir histórico como forecast.
       const ahora = Date.now();
-      const futuras = horas.filter((h) => new Date(h.timestamp).getTime() >= ahora);
+      const futuras = horas
+        .filter((h) => Number.isFinite(Date.parse(h.timestamp)) && Date.parse(h.timestamp) >= ahora)
+        .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
       const recortado = futuras.slice(0, hours);
+      if (recortado.length === 0) throw new Error("No hay horas futuras válidas");
       log.info("v1.weather.forecast.ok", { status: 200, duracion_ms: Date.now() - inicio, data: { horas: recortado.length } });
       return conCabeceraRequestId(NextResponse.json(recortado), requestId);
     } catch (error) {

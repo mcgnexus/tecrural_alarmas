@@ -46,8 +46,8 @@ function leerParametros(context: RiskContext): ParamsCalor {
   };
 }
 
-/** Próximas 72 h desde el momento de evaluación. */
-function ventana72h(
+/** Próximas 7 días (168 h) desde el momento de evaluación — horizonte del pronóstico. */
+function ventana7d(
   horario: WeatherHourly[] | undefined,
   momento: Date,
 ): WeatherHourly[] {
@@ -55,7 +55,7 @@ function ventana72h(
   const desde = momento.getTime() - 60 * 60 * 1000;
   return horario
     .filter((hora) => new Date(hora.timestamp).getTime() >= desde)
-    .slice(0, 72);
+    .slice(0, 168);
 }
 
 function numeros(valores: (number | null)[]): number[] {
@@ -71,7 +71,7 @@ export const evaluadorCalor: RiskEvaluator = {
   riskType: "golpe-de-calor",
   async evaluate(context: RiskContext): Promise<RiskEvaluation | null> {
     const params = leerParametros(context);
-    const horas = ventana72h(context.horario, context.momento);
+    const horas = ventana7d(context.horario, context.momento);
 
     const temperaturas = numeros(horas.map((h) => h.temperatureC));
     const tMax = temperaturas.length

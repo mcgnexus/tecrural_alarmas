@@ -18,7 +18,7 @@ export default function InicioPage() {
       </section>
 
       <p className="text-center text-sm leading-relaxed font-medium text-stone-600">
-        TecRural no sustituye a AEMET, RAIF o SiAR ni a un técnico agrícola. Te ayuda a interpretar los datos para tu parcela.
+        TecRural no sustituye a AEMET, RAIF ni a un técnico agrícola. Te ayuda a interpretar los datos para tu parcela.
       </p>
     </>
   );

@@ -108,7 +108,7 @@ export async function obtenerClimaHorario(
   return obtenerPronostico({ latitud: lat, longitud: lon });
 }
 
-/** Avisos oficiales (AEMET meteorológicos + RAIF fitosanitarios). */
+/** Avisos meteorológicos oficiales de AEMET. Las alertas calculadas son de TecRural. */
 export async function obtenerAvisosOficiales(
   lat: number,
   lon: number,
