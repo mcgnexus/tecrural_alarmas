@@ -23,8 +23,9 @@ interface Servicio {
   tipoCompra: string;
 }
 
-const NOTA_HARDWARE = "El sensor se instala como complemento de los planes Monitor y Pro.";
-const TIPO_EQUIPO_MAS_PLAN = "Equipo (pago único) + suscripción al plan Monitor o Pro";
+const NOTA_HARDWARE = "Instalación y equipamiento según parcela. Te confirmamos el precio exacto después de conocer tu explotación.";
+const PRECIO_MONITORIZACION_SENSOR = "Monitorización con sensor incluida desde 19,90 €/mes";
+const TIPO_EQUIPO_MAS_PLAN = "Suscripción mensual (equipo e instalación incluidos según parcela)";
 const TIPO_SUSCRIPCION = "Suscripción mensual";
 
 const planes = [
@@ -43,7 +44,7 @@ const servicios: Servicio[] = [
     mide: "Temperatura del aire a 1,5 m, cada 10 min, con alerta de helada.",
     incluye: ["Sensor calibrado", "Soporte y batería", "Avisos por helada en la app"],
     noIncluye: ["Instalación eléctrica", "Mantenimiento de mástil"],
-    precio: "Desde 290 € (equipo)",
+    precio: PRECIO_MONITORIZACION_SENSOR,
     comoFunciona: "Colocamos el sensor en tu parcela. Ves la temperatura real y recibes alerta si baja del umbral de tu cultivo.",
     cuando: "Para helada",
     servicioKey: "sensor_temperatura",
@@ -59,7 +60,7 @@ const servicios: Servicio[] = [
     mide: "Humedad volumétrica a 30 cm, cada 30 min.",
     incluye: ["Sonda capacitiva", "Transmisión LoRa", "Histórico en app"],
     noIncluye: ["Válvulas de riego", "Programador"],
-    precio: "Desde 340 € (equipo)",
+    precio: PRECIO_MONITORIZACION_SENSOR,
     comoFunciona: "Enterramos la sonda. Consultas humedad y decides riego con datos, no a ojo.",
     cuando: "Para demanda de agua",
     servicioKey: "sensor_humedad",
@@ -75,7 +76,7 @@ const servicios: Servicio[] = [
     mide: "Temperatura, humedad, viento, lluvia, radiación.",
     incluye: ["Estación completa", "Panel solar", "Datos cada 10 min"],
     noIncluye: ["Obra civil", "Conectividad por cable"],
-    precio: "Desde 890 € (equipo)",
+    precio: "Monitorización con estación incluida desde 19,90 €/mes",
     comoFunciona: "Instalamos la estación en punto representativo. Tus alertas usan tus datos, no los de la cuadrícula.",
     cuando: "Para precisión local",
     servicioKey: "estacion_meteorologica",

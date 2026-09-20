@@ -8,6 +8,7 @@ import type { Alerta } from "@/lib/dominio/tipos";
 import { CtaPrincipal } from "./cta-principal";
 import { esDatosCaducados, haceMinutos } from "@/lib/dominio/frescura";
 import { registrarEventoEmbudo } from "@/lib/analitica";
+import { enlaceWhatsappPersonal } from "@/lib/config/contacto";
 
 type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
 type Municipio = { name: string; province: string; region: string; latitude: number; longitude: number; aemetMunicipio?: string };
@@ -69,6 +70,11 @@ export function HomeSinRegistro() {
   const [cultivo, setCultivo] = useState<CulturaId>("almendro");
   const [mostrarCultivo, setMostrarCultivo] = useState(false);
   const [perfil, setPerfil] = useState<Perfil>("agricultor");
+  const [waHero, setWaHero] = useState<string | null>(null);
+
+  useEffect(() => {
+    setWaHero(enlaceWhatsappPersonal());
+  }, []);
 
   // Restaurar localidad elegida al volver a inicio (fix: persistencia)
   useEffect(() => {
@@ -272,15 +278,26 @@ export function HomeSinRegistro() {
         </div>
 
         <div className="mt-3 flex flex-col gap-2">
+          {waHero ? (
+            <a
+              href={waHero}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => registrarEventoEmbudo("click_whatsapp", { origen: "hero" })}
+              className="inline-flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-emerald-600 bg-emerald-600 px-5 py-4 text-base font-bold text-white shadow-sm hover:bg-emerald-700"
+            >
+              💬 Hablar ahora por WhatsApp
+            </a>
+          ) : null}
           <a
             href="#contacto"
-            className="inline-flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-brand-800 px-5 py-4 text-base font-bold text-white shadow-sm hover:bg-brand-900"
+            className="inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-brand-800 px-5 py-3.5 text-base font-bold text-white shadow-sm hover:bg-brand-900"
           >
-            💬 Hablar con TecRural
+            Quiero que me orientéis
           </a>
           <a
             href="#zona"
-            className="inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-stone-900 bg-white px-5 py-3.5 text-base font-bold text-stone-900 hover:bg-stone-50"
+            className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-stone-900 bg-white px-5 py-3 text-sm font-bold text-stone-900 hover:bg-stone-50"
           >
             📍 Consultar mi zona
           </a>
