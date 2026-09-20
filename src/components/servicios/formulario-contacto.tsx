@@ -8,7 +8,8 @@ import { enlaceWhatsapp } from "@/lib/config/contacto";
 import { registrarEventoEmbudo } from "@/lib/analitica";
 
 type Estado = "inicial" | "enviando" | "enviado" | "error";
-type Errores = Partial<Record<"nombre" | "telefono" | "municipio" | "privacidad", string>>;
+type Errores = Partial<Record<"nombre" | "telefono" | "municipio" | "perfil" | "privacidad", string>>;
+type Perfil = "agricultura" | "ganaderia" | "mixta";
 
 function municipioGuardado(): string {
   if (typeof window === "undefined") return "";
@@ -19,12 +20,25 @@ function municipioGuardado(): string {
   } catch { return ""; }
 }
 
+/** Tipo de explotacion ya indicado antes por el visitante, si consta. */
+function perfilGuardado(): Perfil | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const guardado = localStorage.getItem("tecrural:perfil");
+    if (guardado === "agricultor") return "agricultura";
+    if (guardado === "ganadero") return "ganaderia";
+    if (guardado === "agricultura" || guardado === "ganaderia" || guardado === "mixta") return guardado;
+    return null;
+  } catch { return null; }
+}
+
 export function FormularioContacto({ servicioKey, servicioNombre, interes }: { servicioKey?: string; servicioNombre?: string; interes?: InteresLead }) {
   const [estado, setEstado] = useState<Estado>("inicial");
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [municipio, setMunicipio] = useState(municipioGuardado);
   const [acepta, setAcepta] = useState(false);
+  const [perfil, setPerfil] = useState<Perfil | null>(perfilGuardado);
   const [errores, setErrores] = useState<Errores>({});
   const [leadIniciado, setLeadIniciado] = useState(false);
   const wa = useMemo(() => enlaceWhatsapp(servicioNombre ? `Hola, quiero información sobre: ${servicioNombre}` : "Hola, quiero información para mi explotación."), [servicioNombre]);
@@ -40,6 +54,7 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
     if (nombre.trim().length < 2) siguientes.nombre = "Escribe tu nombre.";
     if (!/^\+?[\d\s().-]{9,20}$/.test(telefono.trim())) siguientes.telefono = "Escribe un teléfono válido.";
     if (!municipio.trim()) siguientes.municipio = "Escribe tu municipio.";
+    if (!perfil) siguientes.perfil = "Indica el tipo de explotación.";
     if (!acepta) siguientes.privacidad = "Debes aceptar que te contactemos.";
     return siguientes;
   }
@@ -57,7 +72,7 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           dispositivoId: obtenerDispositivoId(), nombre: nombre.trim(), telefono: telefono.trim(), municipio: municipio.trim(),
-          tipoExplotacion: "agricultura", problema: servicioNombre || "Orientación inicial", servicioKey, servicioNombre, interes,
+          tipoExplotacion: perfil ?? "agricultura", problema: servicioNombre || "Orientación inicial", servicioKey, servicioNombre, interes,
           origen: "formulario", aceptaPrivacidad: true,
         }),
       });
@@ -90,6 +105,24 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
       <label className="mt-3 block text-base font-bold text-stone-900" htmlFor="contacto-municipio">Municipio</label>
       <input id="contacto-municipio" name="municipio" required autoComplete="address-level2" value={municipio} onChange={(e) => setMunicipio(e.target.value)} aria-invalid={Boolean(errores.municipio)} className="mt-1 min-h-[52px] w-full rounded-xl border-2 border-stone-300 px-4 py-3 text-base" />
       {errores.municipio ? <p className="mt-1 text-sm font-semibold text-red-700">{errores.municipio}</p> : null}
+
+      <fieldset className="mt-4">
+        <legend className="text-base font-bold text-stone-900">Tipo de explotación</legend>
+        <div className="mt-1 grid grid-cols-3 gap-2">
+          {([["agricultura", "Agricultura"], ["ganaderia", "Ganadería"], ["mixta", "Mixta"]] as const).map(([valor, etiqueta]) => (
+            <button
+              key={valor}
+              type="button"
+              aria-pressed={perfil === valor}
+              onClick={() => setPerfil(perfil === valor ? null : valor)}
+              className={`min-h-[48px] rounded-xl border-2 px-2 text-[15px] font-bold ${perfil === valor ? "border-brand-800 bg-brand-800 text-white" : "border-stone-300 text-stone-800"}`}
+            >
+              {etiqueta}
+            </button>
+          ))}
+        </div>
+        {errores.perfil ? <p className="mt-1 text-sm font-semibold text-red-700">{errores.perfil}</p> : null}
+      </fieldset>
 
       <label className="mt-4 flex min-h-[52px] cursor-pointer items-center gap-3 rounded-xl border-2 border-stone-300 p-3">
         <input type="checkbox" required checked={acepta} onChange={(e) => setAcepta(e.target.checked)} className="h-6 w-6 shrink-0 accent-brand-800" />
