@@ -13,13 +13,31 @@ type Municipio = { name: string; province: string; region: string; latitude: num
 
 const CULTIVOS = Object.keys(catalogoCultivos) as CulturaId[];
 
-const RIESGOS_ORDEN: { key: string; etiqueta: string }[] = [
-  { key: "helada", etiqueta: "Helada" },
-  { key: "golpe-de-calor", etiqueta: "Calor" },
-  { key: "lluvia", etiqueta: "Lluvia" },
-  { key: "tormenta", etiqueta: "Tormenta" },
-  { key: "viento", etiqueta: "Viento" },
-];
+const RIESGOS_POR_PERFIL: Record<Perfil, { key: string; etiqueta: string }[]> = {
+  agricultor: [
+    { key: "helada", etiqueta: "Helada" },
+    { key: "golpe-de-calor", etiqueta: "Calor" },
+    { key: "lluvia", etiqueta: "Lluvia" },
+    { key: "tormenta", etiqueta: "Tormenta" },
+    { key: "viento", etiqueta: "Viento" },
+  ],
+  ganadero: [
+    { key: "golpe-de-calor", etiqueta: "Estrés térmico" },
+    { key: "helada", etiqueta: "Frío extremo" },
+    { key: "tormenta", etiqueta: "Tormenta" },
+    { key: "lluvia", etiqueta: "Lluvia y pastos" },
+    { key: "viento", etiqueta: "Viento" },
+  ],
+};
+
+const SUBTITULO_POR_PERFIL: Record<Perfil, string> = {
+  agricultor:
+    "TecRural te ayuda a anticipar heladas, falta de agua, plagas y riesgos meteorológicos en tu parcela.",
+  ganadero:
+    "TecRural te ayuda a anticipar olas de calor, frío extremo, tormentas y agua para tu ganado, estés donde esté tu explotación.",
+};
+
+type Perfil = "agricultor" | "ganadero";
 
 function nivelColor(severidad?: string): { bg: string; dot: string; label: string } {
   switch (severidad) {
@@ -33,6 +51,7 @@ function nivelColor(severidad?: string): { bg: string; dot: string; label: strin
 const LS_UBICACION = "tecrural:ubicacion";
 const LS_CULTIVO = "tecrural:cultivo";
 const LS_ZONA = "tecrural:zona";
+const LS_PERFIL = "tecrural:perfil";
 
 export function HomeSinRegistro() {
   const [ubicacion, setUbicacion] = useState<Ubicacion | null>(null);
@@ -48,6 +67,7 @@ export function HomeSinRegistro() {
   const [weather, setWeather] = useState<{ temperatura: number | null; maxima: number | null; minima: number | null; precipitacion: number | null; viento: number | null; proveedor: string; actualizado: string } | null>(null);
   const [cultivo, setCultivo] = useState<CulturaId>("almendro");
   const [mostrarCultivo, setMostrarCultivo] = useState(false);
+  const [perfil, setPerfil] = useState<Perfil>("agricultor");
 
   // Restaurar localidad elegida al volver a inicio (fix: persistencia)
   useEffect(() => {
@@ -55,6 +75,8 @@ export function HomeSinRegistro() {
       const rawU = localStorage.getItem(LS_UBICACION);
       const rawC = localStorage.getItem(LS_CULTIVO) as CulturaId | null;
       const rawZ = localStorage.getItem(LS_ZONA) as "altiplano" | "costa" | null;
+      const rawP = localStorage.getItem(LS_PERFIL) as Perfil | null;
+      if (rawP === "agricultor" || rawP === "ganadero") setPerfil(rawP);
       if (rawZ === "altiplano" || rawZ === "costa") {
         setZona(rawZ);
         // recargar municipios de la zona guardada
@@ -86,6 +108,13 @@ export function HomeSinRegistro() {
   useEffect(() => {
     try { if (zona) localStorage.setItem(LS_ZONA, zona); } catch {}
   }, [zona]);
+  useEffect(() => {
+    try { localStorage.setItem(LS_PERFIL, perfil); } catch {}
+  }, [perfil]);
+
+  function elegirPerfil(p: Perfil) {
+    setPerfil(p);
+  }
 
   async function cargarWeather(ubi: Ubicacion) {
     try {
@@ -219,10 +248,28 @@ export function HomeSinRegistro() {
         <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-stone-900">
           Protege tu explotación antes de que llegue el problema
         </h1>
-        <p className="mt-2 text-base leading-snug text-stone-700">
-          TecRural te ayuda a anticipar heladas, falta de agua, plagas y riesgos meteorológicos en tu parcela.
-        </p>
-        <div className="mt-4 flex flex-col gap-2">
+        <p className="mt-2 text-base leading-snug text-stone-700">{SUBTITULO_POR_PERFIL[perfil]}</p>
+
+        <div className="mt-4 grid grid-cols-2 gap-2" role="group" aria-label="¿Eres agricultor o ganadero?">
+          <button
+            type="button"
+            onClick={() => elegirPerfil("agricultor")}
+            aria-pressed={perfil === "agricultor"}
+            className={`min-h-[56px] rounded-2xl border-2 px-3 py-3 text-base font-bold ${perfil === "agricultor" ? "border-brand-800 bg-brand-800 text-white" : "border-stone-300 bg-white text-stone-900"}`}
+          >
+            🌱 Soy agricultor
+          </button>
+          <button
+            type="button"
+            onClick={() => elegirPerfil("ganadero")}
+            aria-pressed={perfil === "ganadero"}
+            className={`min-h-[56px] rounded-2xl border-2 px-3 py-3 text-base font-bold ${perfil === "ganadero" ? "border-brand-800 bg-brand-800 text-white" : "border-stone-300 bg-white text-stone-900"}`}
+          >
+            🐄 Soy ganadero
+          </button>
+        </div>
+
+        <div className="mt-3 flex flex-col gap-2">
           <a
             href="#contacto"
             className="inline-flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-brand-800 px-5 py-4 text-base font-bold text-white shadow-sm hover:bg-brand-900"
@@ -336,12 +383,15 @@ export function HomeSinRegistro() {
       {ubicacion ? (
         <section className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-bold text-stone-900">Riesgos próximos</h2>
+          {perfil === "ganadero" ? (
+            <p className="mt-1 text-[11px] font-semibold text-stone-600">Orientado a bienestar animal y manejo de la explotación.</p>
+          ) : null}
           <p className="mt-1 text-[11px] text-stone-500">Fuente: {proveedorRiesgo ?? "—"}</p>
           {evaluando ? (
             <p className="mt-3 text-base font-medium text-stone-700">Evaluando…</p>
           ) : alertas ? (
             <ul className="mt-3 flex flex-col gap-2">
-              {RIESGOS_ORDEN.map((r) => {
+              {RIESGOS_POR_PERFIL[perfil].map((r) => {
                 const al = alertas.find((a) => a.tipo === r.key);
                 const estilo = nivelColor(al?.severidad);
                 return (
@@ -357,36 +407,75 @@ export function HomeSinRegistro() {
           ) : null}
 
           <div className="mt-4 rounded-xl border-2 border-brand-200 bg-brand-50 p-4">
-            <p className="text-base font-bold text-stone-900">¿Quieres afinar la alerta?</p>
-            <p className="mt-1 text-sm leading-snug text-stone-700">El cultivo y la fase cambian los umbrales.</p>
-            {!mostrarCultivo ? (
-              <button
-                type="button"
-                onClick={() => setMostrarCultivo(true)}
-                className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-base font-bold text-white hover:bg-brand-900"
-              >
-                ➕ Añade tu cultivo para personalizar las alertas
-              </button>
-            ) : (
-              <div className="mt-3 flex flex-col gap-3">
-                <label className="text-sm font-bold text-stone-900">Cultivo</label>
-                <select
-                  value={cultivo}
-                  onChange={(e) => setCultivo(e.target.value as CulturaId)}
-                  className="min-h-[48px] w-full rounded-xl border-2 border-stone-300 bg-white px-4 py-3 text-base font-medium text-stone-900"
-                >
-                  {CULTIVOS.map((id) => (
-                    <option key={id} value={id}>{catalogoCultivos[id].nombre}</option>
-                  ))}
-                </select>
+            {perfil === "ganadero" ? (
+              <>
+                <p className="text-base font-bold text-stone-900">Alertas orientadas a tu ganado</p>
+                <p className="mt-1 text-sm leading-snug text-stone-700">
+                  Estrés térmico, frío extremo, tormentas y lluvia con impacto en animales y pastos. Si además cultivas forrajes o cereal para pienso, indícalo como cultivo y afinamos los umbrales.
+                </p>
                 <button
                   type="button"
-                  onClick={personalizar}
-                  className="inline-flex min-h-[48px] items-center justify-center rounded-xl bg-brand-800 px-5 py-3 text-base font-bold text-white"
+                  onClick={() => setMostrarCultivo(true)}
+                  className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-base font-bold text-white hover:bg-brand-900"
                 >
-                  Actualizar riesgos
+                  🌾 También cultivos forraje o cereal
                 </button>
-              </div>
+                {mostrarCultivo ? (
+                  <div className="mt-3 flex flex-col gap-3">
+                    <label className="text-sm font-bold text-stone-900">Cultivo (para parcelas de forraje)</label>
+                    <select
+                      value={cultivo}
+                      onChange={(e) => setCultivo(e.target.value as CulturaId)}
+                      className="min-h-[48px] w-full rounded-xl border-2 border-stone-300 bg-white px-4 py-3 text-base font-medium text-stone-900"
+                    >
+                      {CULTIVOS.map((id) => (
+                        <option key={id} value={id}>{catalogoCultivos[id].nombre}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={personalizar}
+                      className="inline-flex min-h-[48px] items-center justify-center rounded-xl bg-brand-800 px-5 py-3 text-base font-bold text-white"
+                    >
+                      Actualizar riesgos
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <p className="text-base font-bold text-stone-900">¿Quieres afinar la alerta?</p>
+                <p className="mt-1 text-sm leading-snug text-stone-700">El cultivo y la fase cambian los umbrales.</p>
+                {!mostrarCultivo ? (
+                  <button
+                    type="button"
+                    onClick={() => setMostrarCultivo(true)}
+                    className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-base font-bold text-white hover:bg-brand-900"
+                  >
+                    ➕ Añade tu cultivo para personalizar las alertas
+                  </button>
+                ) : (
+                  <div className="mt-3 flex flex-col gap-3">
+                    <label className="text-sm font-bold text-stone-900">Cultivo</label>
+                    <select
+                      value={cultivo}
+                      onChange={(e) => setCultivo(e.target.value as CulturaId)}
+                      className="min-h-[48px] w-full rounded-xl border-2 border-stone-300 bg-white px-4 py-3 text-base font-medium text-stone-900"
+                    >
+                      {CULTIVOS.map((id) => (
+                        <option key={id} value={id}>{catalogoCultivos[id].nombre}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={personalizar}
+                      className="inline-flex min-h-[48px] items-center justify-center rounded-xl bg-brand-800 px-5 py-3 text-base font-bold text-white"
+                    >
+                      Actualizar riesgos
+                    </button>
+                  </div>
+                )}
+              </>
             )}
             <Link href="/parcelas" className="mt-3 inline-flex min-h-[44px] w-full items-center justify-center gap-1 text-sm font-semibold text-brand-800 underline underline-offset-4">
               O guarda tu parcela para recibir avisos →

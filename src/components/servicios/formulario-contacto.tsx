@@ -115,7 +115,7 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
         rows={3}
         maxLength={500}
         className="mt-1 w-full rounded-xl border-2 border-stone-300 px-4 py-3 text-base font-medium"
-        placeholder="Cuéntanos qué necesitas (cultivo, hectáreas, …)"
+        placeholder="Cuéntanos qué necesitas (explotación, tamaño, ganado o cultivos…)"
       />
 
       <label className="mt-3 flex items-start gap-3">
