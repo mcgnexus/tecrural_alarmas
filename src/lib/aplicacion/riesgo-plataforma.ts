@@ -1,6 +1,7 @@
 import { evaluarRiesgos } from "@/lib/alertas/evaluadores";
 import { catalogoCultivos, faseActiva } from "@/lib/cultivos/catalogo";
 import { obtenerClimaHorario, obtenerClimaPunto } from "@/lib/clima/motor";
+import { obtenerPronostico } from "@/lib/proveedores/registro";
 import {
   leerHorarioReciente,
   obtenerOCrearUbicacion,
@@ -96,15 +97,16 @@ export async function evaluarPlotPlataforma(
     weatherLocationId = ubicacion.id;
     horario = await leerHorarioReciente(
       ubicacion.id,
-      new Date(Date.now() - 15 * 60 * 1000),
+      new Date(Date.now() - 55 * 60 * 1000),
     );
-  } catch {
-    // La caché meteorológica es opcional para evaluar.
-  }
-  if (horario.length === 0) {
-    try {
-      horario = await obtenerClimaHorario(plot.latitud, plot.longitud);
-    } catch {
+   } catch {
+     // La caché meteorológica es opcional para evaluar.
+   }
+   if (horario.length === 0) {
+     // Si la caché es estancada, forzamos refresh antes de evaluar
+     try {
+       horario = await obtenerPronostico({ latitud: plot.latitud, longitud: plot.longitud });
+     } catch {
       // Sin serie horaria se evalúa con el modelo diario agregado.
     }
   }

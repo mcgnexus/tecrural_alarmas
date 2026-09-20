@@ -17,7 +17,9 @@ import type { OfficialWarning, WeatherHourly } from "@/lib/dominio/proveedores";
 
 const log = crearLogger("clima.motor");
 
-const TTL_CACHE_S = 15 * 60;
+// Cache alineada a la periodicidad del refresh horario (55 min) para evitar
+// servir datos a punto de caducar durante la evaluación de parcelas.
+const TTL_CACHE_S = 55 * 60;
 
 /**
  * Capa 4: consume el puerto `WeatherProvider` (formato canónico
