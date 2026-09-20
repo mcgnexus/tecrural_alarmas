@@ -8,7 +8,7 @@
 const TELEFONO = process.env.NEXT_PUBLIC_TECRURAL_TELEFONO?.trim() ?? "";
 const WHATSAPP = process.env.NEXT_PUBLIC_TECRURAL_WHATSAPP?.trim() ?? "";
 
-export const EMAIL_CONTACTO = "hola@tecrural.es";
+export const EMAIL_CONTACTO = "mcgtecrural@gmail.com";
 
 /** Teléfono en formato visible, p. ej. "600 000 000". Vacío si no hay config. */
 export const TELEFONO_VISIBLE = TELEFONO;

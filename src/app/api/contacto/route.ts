@@ -17,7 +17,9 @@ const esquema = z.object({
     .string()
     .trim()
     .regex(/^\+?[\d\s().-]{9,20}$/, "Teléfono no válido"),
-  mensaje: z.string().trim().max(500).optional(),
+  municipio: z.string().trim().min(1).max(80),
+  tipoExplotacion: z.enum(["agricultura", "ganaderia", "mixta"]),
+  problema: z.string().trim().min(1).max(80),
   servicioKey: z.string().trim().max(80).optional(),
   servicioNombre: z.string().trim().max(120).optional(),
   interes: z.enum(["SENSORS", "WEATHER_STATION", "AI_DIAGNOSIS", "IRRIGATION", "REPORTS"]).optional(),
@@ -49,6 +51,9 @@ export async function POST(req: Request) {
         metadata: {
           servicioKey: datos.servicioKey ?? null,
           servicioNombre: datos.servicioNombre ?? null,
+          municipio: datos.municipio,
+          tipoExplotacion: datos.tipoExplotacion,
+          problema: datos.problema,
         },
       });
 
@@ -60,7 +65,9 @@ export async function POST(req: Request) {
           telefono: datos.telefono,
           comentario: [
             datos.servicioNombre ? `Servicio: ${datos.servicioNombre}` : null,
-            datos.mensaje || null,
+            `Problema: ${datos.problema}`,
+            `Municipio: ${datos.municipio}`,
+            `Explotación: ${datos.tipoExplotacion}`,
           ]
             .filter(Boolean)
             .join(" — "),
@@ -71,7 +78,7 @@ export async function POST(req: Request) {
       await notificarSolicitudContacto({
         nombre: datos.nombre,
         telefono: datos.telefono,
-        mensaje: datos.mensaje,
+        mensaje: `📍 ${datos.municipio} · ${datos.tipoExplotacion} · ${datos.problema}`,
         servicioNombre: datos.servicioNombre,
       });
 

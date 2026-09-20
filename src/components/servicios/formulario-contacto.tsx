@@ -7,15 +7,32 @@ import { enlaceWhatsapp, EMAIL_CONTACTO } from "@/lib/config/contacto";
 
 type Estado = "inicial" | "enviando" | "enviado" | "error";
 
+const TIPOS_EXPLOTACION = [
+  { valor: "agricultura", etiqueta: "Agricultura (cultivos)" },
+  { valor: "ganaderia", etiqueta: "Ganadería" },
+  { valor: "mixta", etiqueta: "Mixta (agricultura y ganadería)" },
+] as const;
+
+const PROBLEMAS = [
+  "Heladas",
+  "Falta de agua / riego",
+  "Plagas o enfermedades",
+  "Calor / estrés térmico",
+  "Viento o tormentas",
+  "Otro",
+] as const;
+
 /**
- * Formulario de contacto comercial: captura nombre y teléfono reales para que
- * el equipo pueda responder. Muestra confirmación clara al enviarse.
+ * Formulario de contacto comercial: mínimo posible (6 campos) para este
+ * público. WhatsApp y teléfono por delante del email.
  */
 export function FormularioContacto({ servicioKey, servicioNombre, interes }: { servicioKey?: string; servicioNombre?: string; interes?: InteresLead }) {
   const [estado, setEstado] = useState<Estado>("inicial");
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
-  const [mensaje, setMensaje] = useState("");
+  const [municipio, setMunicipio] = useState("");
+  const [tipoExplotacion, setTipoExplotacion] = useState<string>("");
+  const [problema, setProblema] = useState<string>("");
   const [acepta, setAcepta] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [wa, setWa] = useState<string | null>(null);
@@ -33,7 +50,10 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
   async function enviar() {
     if (nombre.trim().length < 2) { setError("Escribe tu nombre."); return; }
     if (!/^[\d\s().+-]{9,20}$/.test(telefono.trim())) { setError("Escribe un teléfono válido."); return; }
-    if (!acepta) { setError("Debes aceptar la política de privacidad."); return; }
+    if (!municipio.trim()) { setError("Escribe tu municipio."); return; }
+    if (!tipoExplotacion) { setError("Indica el tipo de explotación."); return; }
+    if (!problema) { setError("Indica tu problema principal."); return; }
+    if (!acepta) { setError("Debes aceptar que te contactemos."); return; }
     setEstado("enviando");
     setError(null);
     try {
@@ -45,7 +65,9 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
           dispositivoId: obtenerDispositivoId(),
           nombre: nombre.trim(),
           telefono: telefono.trim(),
-          mensaje: mensaje.trim() || undefined,
+          municipio: municipio.trim(),
+          tipoExplotacion,
+          problema,
           servicioKey,
           servicioNombre,
           interes,
@@ -67,10 +89,20 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
         <p className="mt-1 text-base leading-snug text-emerald-900">
           Gracias, {nombre.split(" ")[0]}. Te llamaremos al {telefono.trim()} en menos de 24 h laborables.
         </p>
+        {wa ? (
+          <a
+            href={wa}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex min-h-[44px] items-center gap-2 text-sm font-bold text-emerald-800 underline underline-offset-4"
+          >
+            💬 ¿Tienes prisa? Escríbenos por WhatsApp
+          </a>
+        ) : null}
         <button
           type="button"
-          onClick={() => { setEstado("inicial"); setMensaje(""); }}
-          className="mt-3 min-h-[44px] text-sm font-bold text-emerald-800 underline underline-offset-4"
+          onClick={() => { setEstado("inicial"); }}
+          className="mt-3 block min-h-[44px] text-sm font-bold text-emerald-800 underline underline-offset-4"
         >
           Enviar otra solicitud
         </button>
@@ -86,6 +118,17 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
         {servicioNombre ? ` Sobre: ${servicioNombre}.` : ""}
       </p>
 
+      {wa ? (
+        <a
+          href={wa}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-600 bg-emerald-50 px-5 py-3 text-base font-bold text-emerald-700 hover:bg-emerald-100"
+        >
+          💬 Prefiero WhatsApp — escribir ahora
+        </a>
+      ) : null}
+
       <label className="mt-4 block text-sm font-bold text-stone-900" htmlFor="contacto-nombre">Nombre</label>
       <input
         id="contacto-nombre"
@@ -96,7 +139,7 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
         placeholder="Tu nombre"
       />
 
-      <label className="mt-3 block text-sm font-bold text-stone-900" htmlFor="contacto-telefono">Teléfono</label>
+      <label className="mt-3 block text-sm font-bold text-stone-900" htmlFor="contacto-telefono">Teléfono o WhatsApp</label>
       <input
         id="contacto-telefono"
         value={telefono}
@@ -107,21 +150,46 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
         placeholder="600 000 000"
       />
 
-      <label className="mt-3 block text-sm font-bold text-stone-900" htmlFor="contacto-mensaje">Mensaje <span className="font-normal text-stone-500">(opcional)</span></label>
-      <textarea
-        id="contacto-mensaje"
-        value={mensaje}
-        onChange={(e) => setMensaje(e.target.value)}
-        rows={3}
-        maxLength={500}
-        className="mt-1 w-full rounded-xl border-2 border-stone-300 px-4 py-3 text-base font-medium"
-        placeholder="Cuéntanos qué necesitas (explotación, tamaño, ganado o cultivos…)"
+      <label className="mt-3 block text-sm font-bold text-stone-900" htmlFor="contacto-municipio">Municipio</label>
+      <input
+        id="contacto-municipio"
+        value={municipio}
+        onChange={(e) => setMunicipio(e.target.value)}
+        autoComplete="address-level2"
+        className="mt-1 min-h-[48px] w-full rounded-xl border-2 border-stone-300 px-4 py-3 text-base font-medium"
+        placeholder="Ej. Baza, Huéscar, Motril…"
       />
+
+      <label className="mt-3 block text-sm font-bold text-stone-900" htmlFor="contacto-tipo">Tipo de explotación</label>
+      <select
+        id="contacto-tipo"
+        value={tipoExplotacion}
+        onChange={(e) => setTipoExplotacion(e.target.value)}
+        className="mt-1 min-h-[48px] w-full rounded-xl border-2 border-stone-300 bg-white px-4 py-3 text-base font-medium text-stone-900"
+      >
+        <option value="">Elige una opción…</option>
+        {TIPOS_EXPLOTACION.map((t) => (
+          <option key={t.valor} value={t.valor}>{t.etiqueta}</option>
+        ))}
+      </select>
+
+      <label className="mt-3 block text-sm font-bold text-stone-900" htmlFor="contacto-problema">Problema principal</label>
+      <select
+        id="contacto-problema"
+        value={problema}
+        onChange={(e) => setProblema(e.target.value)}
+        className="mt-1 min-h-[48px] w-full rounded-xl border-2 border-stone-300 bg-white px-4 py-3 text-base font-medium text-stone-900"
+      >
+        <option value="">Elige una opción…</option>
+        {PROBLEMAS.map((p) => (
+          <option key={p} value={p}>{p}</option>
+        ))}
+      </select>
 
       <label className="mt-3 flex items-start gap-3">
         <input type="checkbox" checked={acepta} onChange={(e) => setAcepta(e.target.checked)} className="mt-1 h-5 w-5" />
         <span className="text-sm font-medium text-stone-900">
-          Acepto la política de privacidad. Solo usaremos tus datos para responder a esta solicitud.
+          Acepto que TecRural me contacte por teléfono o WhatsApp para responder a esta solicitud.
         </span>
       </label>
 
@@ -138,22 +206,11 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
         {estado === "enviando" ? "Enviando…" : "Quiero que me llamen"}
       </button>
 
-      {wa ? (
-        <a
-          href={wa}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-600 bg-white px-5 py-3 text-base font-bold text-emerald-700 hover:bg-emerald-50"
-        >
-          💬 Escríbenos por WhatsApp
-        </a>
-      ) : null}
-
       <a
         href={`mailto:${EMAIL_CONTACTO}`}
-        className="mt-3 block text-center text-sm font-semibold text-brand-800 underline underline-offset-4"
+        className="mt-3 block text-center text-sm font-semibold text-stone-600 underline underline-offset-4"
       >
-        o escríbenos a {EMAIL_CONTACTO}
+        ¿Prefieres email? {EMAIL_CONTACTO}
       </a>
     </div>
   );
