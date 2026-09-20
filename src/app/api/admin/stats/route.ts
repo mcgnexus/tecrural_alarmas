@@ -46,7 +46,10 @@ export async function GET(req: Request) {
       const leadsTemplados = Number((leadsTempladosRows.rows[0] as { c: number })?.c ?? 0);
       const leadsCalientes = Number((leadsCalientesRows.rows[0] as { c: number })?.c ?? 0);
 
-      const solicitudesRows = await db.execute(sql`SELECT COUNT(*)::int as c FROM plataforma.commercial_contact_requests`);
+      // Las solicitudes de contacto llegan al CRM (public.leads, con contacto
+      // telefonico). La tabla plataforma.commercial_contact_requests no la
+      // escribe nadie, asi que contarla devolvia siempre 0.
+      const solicitudesRows = await db.execute(sql`SELECT COUNT(*)::int as c FROM public.leads WHERE contact_phone IS NOT NULL AND contact_phone <> ''`);
       const solicitudes = Number((solicitudesRows.rows[0] as { c: number })?.c ?? 0);
 
       const alertasRows = await db.execute(sql`SELECT risk_type as tipo, COUNT(*)::int as total FROM plataforma.risk_events GROUP BY risk_type ORDER BY total DESC LIMIT 5`);
