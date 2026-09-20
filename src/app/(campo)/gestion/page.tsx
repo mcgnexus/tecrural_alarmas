@@ -10,18 +10,13 @@ export const metadata: Metadata = {
   description: "Catálogo fenológico, Kc y reglas de riesgo por cultivo.",
 };
 
-export default async function GestionPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ secret?: string; admin_secret?: string }>;
-}) {
-  const params = await searchParams;
-  const secret = params.admin_secret?.trim() || params.secret?.trim() || "";
+export default async function GestionPage() {
+  // La sesión viaja en una cookie HttpOnly (la emite /api/admin/session desde
+  // /admin). El secreto no se acepta por parámetro de URL, así que no queda en
+  // el historial del navegador, ni en los logs del servidor, ni en el Referer.
   const cabeceras = await headers();
-  const req = new Request(`http://localhost/gestion${secret ? `?admin_secret=${encodeURIComponent(secret)}` : ""}`, {
-    headers: cabeceras,
-  });
-  if (!verificarAccesoAdmin(req).ok) redirect("/admin");
+  const peticion = new Request("http://interno/gestion", { headers: cabeceras });
+  if (!verificarAccesoAdmin(peticion).ok) redirect("/admin?next=/gestion");
 
   return (
     <>
@@ -33,8 +28,8 @@ export default async function GestionPage({
         </p>
       </section>
 
-      <GestionCatalogo adminSecret={secret} />
-      <GestionReglas adminSecret={secret} />
+      <GestionCatalogo />
+      <GestionReglas />
     </>
   );
 }

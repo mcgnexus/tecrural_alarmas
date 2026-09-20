@@ -60,8 +60,8 @@ interface DatosGestion {
 
 async function cargarDatosRemotos(): Promise<DatosGestion> {
   const [rc, rr] = await Promise.all([
-    fetch("/api/plataforma/cultivos", { cache: "no-store" }),
-    fetch("/api/reglas?todas=1", { cache: "no-store" }),
+    fetch("/api/plataforma/cultivos", { cache: "no-store", credentials: "same-origin" }),
+    fetch("/api/reglas?todas=1", { cache: "no-store", credentials: "same-origin" }),
   ]);
   if (!rc.ok || !rr.ok) throw new Error();
   return {
@@ -70,7 +70,7 @@ async function cargarDatosRemotos(): Promise<DatosGestion> {
   };
 }
 
-export function GestionReglas({ adminSecret }: { adminSecret: string }) {
+export function GestionReglas() {
   const [cultivos, setCultivos] = useState<Cultivo[]>([]);
   const [reglas, setReglas] = useState<Regla[]>([]);
   const [estados, setEstados] = useState<Estado[]>([]);
@@ -171,7 +171,8 @@ export function GestionReglas({ adminSecret }: { adminSecret: string }) {
         editandoId ? `/api/reglas/${editandoId}` : "/api/reglas",
         {
           method: editandoId ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
           body: JSON.stringify(cuerpo),
         },
       );
@@ -187,7 +188,7 @@ export function GestionReglas({ adminSecret }: { adminSecret: string }) {
   async function eliminar(id: string) {
     setError(null);
     try {
-      const resp = await fetch(`/api/reglas/${id}`, { method: "DELETE", headers: { "x-admin-secret": adminSecret } });
+      const resp = await fetch(`/api/reglas/${id}`, { method: "DELETE", credentials: "same-origin" });
       if (!resp.ok) throw new Error();
       aplicarDatos(await cargarDatosRemotos());
     } catch {

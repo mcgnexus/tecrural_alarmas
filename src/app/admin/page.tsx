@@ -40,6 +40,15 @@ export default function AdminPage() {
       }
       const j = (await r.json()) as Stats;
       setStats(j);
+      // Deja la sesión en una cookie HttpOnly, para que las páginas de
+      // administración no tengan que llevar el secreto en la URL.
+      await fetch("/api/admin/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ secret: secret.trim() }),
+      }).catch(() => {});
+      const destino = new URLSearchParams(window.location.search).get("next");
+      if (destino && destino.startsWith("/")) window.location.assign(destino);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
     } finally {
@@ -96,6 +105,12 @@ export default function AdminPage() {
           <Lista titulo="Municipios" items={stats.municipios.map((m) => ({ nombre: m.nombre, total: m.total }))} />
           <Lista titulo="CTAs más pulsados" items={stats.ctas.map((c) => ({ nombre: c.tipo, total: c.total }))} />
           <TablaLeads secret={secret} />
+          <a
+            href="/gestion"
+            className="rounded-2xl border-2 border-brand-800 bg-brand-50 px-5 py-4 text-center text-base font-bold text-brand-900 hover:bg-brand-100"
+          >
+            Ir a Gestión (catálogo, Kc y reglas de riesgo)
+          </a>
         </div>
       ) : null}
     </div>

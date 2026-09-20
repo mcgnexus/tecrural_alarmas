@@ -18,6 +18,15 @@ export async function GET(req: Request) {
   const cropId = url.searchParams.get("cropId") ?? undefined;
   const todas = url.searchParams.get("todas") === "1";
 
+  // `todas=1` incluye las reglas desactivadas: es una vista de administracion y
+  // expone los umbrales de todas las reglas, asi que exige sesion de admin.
+  if (todas) {
+    const acceso = verificarAccesoAdmin(req);
+    if (!acceso.ok) {
+      return NextResponse.json({ error: acceso.error }, { status: acceso.status });
+    }
+  }
+
   return conRequestId({ external_source: "reglas" }, async (requestId) => {
     const inicio = Date.now();
     try {
