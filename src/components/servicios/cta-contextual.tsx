@@ -64,7 +64,6 @@ export function CtaContextual({ alertas }: { alertas: Alerta[] }) {
       >
         {cta.etiqueta} →
       </Link>
-      <p className="mt-2 text-xs font-medium text-stone-600">Solo mostramos el CTA relevante a tu riesgo actual.</p>
     </div>
   );
 }

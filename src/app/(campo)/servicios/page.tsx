@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { BotonSolicitar } from "@/components/servicios/boton-solicitar";
 import type { InteresLead } from "@/lib/dominio/leads";
 
 interface Servicio {
@@ -161,7 +160,13 @@ export default function ServiciosPage() {
             </dl>
 
             <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-brand-700">{servicio.cuando}</p>
-            <BotonSolicitar servicioKey={servicio.servicioKey} interes={servicio.interes} etiqueta="Solicitar información" />
+            {/* El formulario de la portada preselecciona este servicio. */}
+            <a
+              href={`/?servicio=${encodeURIComponent(servicio.servicioKey)}&servicioNombre=${encodeURIComponent(servicio.titulo)}&interes=${servicio.interes}#contacto`}
+              className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-brand-800 bg-brand-50 px-4 py-3 text-base font-bold text-brand-900 hover:bg-brand-100"
+            >
+              Solicitar información →
+            </a>
           </article>
         ))}
       </section>

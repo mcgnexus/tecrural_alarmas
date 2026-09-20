@@ -302,7 +302,7 @@ export function HomeSinRegistro() {
       {weather ? (
         <section className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm">
           <h2 className="text-base font-bold text-stone-900">Tiempo en tu zona</h2>
-          <p className="mt-1 text-xs font-medium text-stone-600">{haceMinutos(weather.actualizado)} · Proveedor {weather.proveedor} · error externo no rompe app</p>
+          <p className="mt-1 text-xs font-medium text-stone-600">{haceMinutos(weather.actualizado)}</p>
           {weather.proveedor !== "aemet" ? (
             <p className="mt-1 text-[11px] font-medium text-amber-700">Datos provisionales (Open-Meteo). AEMET no disponible en este momento.</p>
           ) : null}
@@ -376,11 +376,11 @@ export function HomeSinRegistro() {
             </Link>
           </div>
           <div className="mt-4">
-            <CtaPrincipal ubicacion={ubicacion} />
+            <CtaPrincipal />
           </div>
         </section>
       ) : null}
-      {!ubicacion ? <CtaPrincipal ubicacion={null} /> : null}
+      {!ubicacion ? <CtaPrincipal /> : null}
     </div>
   );
 }

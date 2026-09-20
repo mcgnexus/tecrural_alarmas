@@ -10,9 +10,12 @@ export function Header() {
             Alertas y datos útiles para tu explotación.
           </p>
         </div>
-        <span className="shrink-0 rounded-full border-2 border-brand-800 bg-brand-800 px-3 py-1 text-sm font-bold text-white">
-          MVP
-        </span>
+        <a
+          href="/#contacto"
+          className="shrink-0 rounded-full border-2 border-brand-800 bg-brand-800 px-3 py-1.5 text-sm font-bold text-white hover:bg-brand-900"
+        >
+          Contacto
+        </a>
       </div>
     </header>
   );

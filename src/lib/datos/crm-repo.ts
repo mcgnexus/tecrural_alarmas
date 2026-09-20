@@ -90,6 +90,23 @@ export async function actualizarEstadoLead(
   await db.update(leadsCrm).set({ status: estado }).where(eq(leadsCrm.id, leadId));
 }
 
+/** Guarda los datos de contacto facilitados por el lead (nombre, teléfono, nota). */
+export async function actualizarContactoLead(
+  leadId: string,
+  contacto: { nombre: string; telefono: string; comentario?: string },
+): Promise<void> {
+  const db = obtenerDb();
+  await db
+    .update(leadsCrm)
+    .set({
+      contactName: contacto.nombre,
+      contactPhone: contacto.telefono,
+      comment: contacto.comentario ?? null,
+      lastEventAt: new Date(),
+    })
+    .where(eq(leadsCrm.id, leadId));
+}
+
 export async function obtenerLeadPorVisitante(
   visitorId: string,
 ): Promise<typeof leadsCrm.$inferSelect | null> {
