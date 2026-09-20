@@ -215,6 +215,28 @@ function normalizarHorarioAemet(
 
 /**
  * AEMET OpenData es una API en dos pasos: la primera petición devuelve una URL
+ * temporal con los datos, que hay que volver a solicitar. La key gratuita
+ * limita peticiones por minuto: revalidamos 1 h y reintentamos ante 429.
+ */
+const REVALIDACION_AEMET_S = 3600;
+const RETRASO_REINTENTO_MS = 2500;
+
+async function fetchConReintento429(
+  url: string,
+  signal: AbortSignal,
+  revalidateS: number = REVALIDACION_AEMET_S,
+): Promise<Response> {
+  const opciones = { signal, next: { revalidate: revalidateS } as const };
+  let respuesta = await fetch(url, opciones);
+  if (respuesta.status === 429) {
+    await new Promise((resolver) => setTimeout(resolver, RETRASO_REINTENTO_MS));
+    respuesta = await fetch(url, opciones);
+  }
+  return respuesta;
+}
+
+/**
+ * AEMET OpenData es una API en dos pasos: la primera petición devuelve una URL
  * temporal con los datos, que hay que volver a solicitar.
  */
 async function pedirDatos(ruta: string): Promise<unknown> {
@@ -222,19 +244,19 @@ async function pedirDatos(ruta: string): Promise<unknown> {
   if (!apiKey) throw new Error("AEMET no configurado (falta AEMET_API_KEY)");
 
   const separador = ruta.includes("?") ? "&" : "?";
-  const paso1 = await fetch(`${BASE}${ruta}${separador}api_key=${apiKey}`, {
-    signal: AbortSignal.timeout(10_000),
-    next: { revalidate: 900 },
-  });
+  const paso1 = await fetchConReintento429(
+    `${BASE}${ruta}${separador}api_key=${apiKey}`,
+    AbortSignal.timeout(15_000),
+  );
   if (!paso1.ok) throw new Error(`AEMET HTTP ${paso1.status}`);
 
   const metadatos = (await paso1.json()) as { datos?: string };
   if (!metadatos.datos) throw new Error("AEMET no devolvió una URL de datos");
 
-  const paso2 = await fetch(metadatos.datos, {
-    signal: AbortSignal.timeout(10_000),
-    next: { revalidate: 900 },
-  });
+  const paso2 = await fetchConReintento429(
+    metadatos.datos,
+    AbortSignal.timeout(10_000),
+  );
   if (!paso2.ok) throw new Error(`AEMET datos HTTP ${paso2.status}`);
   return paso2.json();
 }
@@ -399,19 +421,21 @@ async function pedirAvisosCap(
   if (!apiKey) throw new Error("AEMET no configurado (falta AEMET_API_KEY)");
 
   const separador = ruta.includes("?") ? "&" : "?";
-  const paso1 = await fetch(`${BASE}${ruta}${separador}api_key=${apiKey}`, {
-    signal: AbortSignal.timeout(10_000),
-    next: { revalidate: 900 },
-  });
+  const paso1 = await fetchConReintento429(
+    `${BASE}${ruta}${separador}api_key=${apiKey}`,
+    AbortSignal.timeout(10_000),
+    900,
+  );
   if (!paso1.ok) throw new Error(`AEMET HTTP ${paso1.status}`);
 
   const metadatos = (await paso1.json()) as { datos?: string; estado?: number };
   if (!metadatos.datos) return { json: null, tar: null }; // sin avisos activos
 
-  const paso2 = await fetch(metadatos.datos, {
-    signal: AbortSignal.timeout(15_000),
-    next: { revalidate: 900 },
-  });
+  const paso2 = await fetchConReintento429(
+    metadatos.datos,
+    AbortSignal.timeout(15_000),
+    900,
+  );
   if (!paso2.ok) throw new Error(`AEMET datos HTTP ${paso2.status}`);
 
   const tipo = paso2.headers.get("content-type") ?? "";

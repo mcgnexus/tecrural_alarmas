@@ -27,79 +27,96 @@ const TTL_CACHE_S = 55 * 60;
  * (`plataforma.weather_locations` + `weather_hourly`) y agrega al modelo
  * diario `ClimaPunto`.
  */
+/**
+ * Serie horaria con caché en BD (55 min) y respaldo stale (24 h): evita
+ * golpear AEMET en cada petición — su API key gratuita limita peticiones/min.
+ */
+async function cargarSerie(
+  lat: number,
+  lon: number,
+  aemetMunicipio?: string,
+): Promise<WeatherHourly[]> {
+  let ubicacion: { id: string } | null = null;
+  try {
+    ubicacion = await obtenerOCrearUbicacion(lat, lon);
+  } catch (error) {
+    log.warn("clima.motor.ubicacion.error", {}, error);
+  }
+
+  if (ubicacion) {
+    try {
+      const recientes = await leerHorarioReciente(
+        ubicacion.id,
+        new Date(Date.now() - TTL_CACHE_S * 1000),
+      );
+      if (recientes.length > 0) {
+        log.debug("clima.motor.cache.acierto", {
+          external_source: recientes[0]?.provider ?? "desconocido",
+        });
+        return recientes;
+      }
+    } catch (error) {
+      log.warn("clima.motor.cache.error", {}, error);
+    }
+  }
+
+  const inicio = Date.now();
+  try {
+    const horas = await obtenerPronostico({ latitud: lat, longitud: lon, aemetMunicipio });
+    if (ubicacion) {
+      try {
+        await guardarHorario(ubicacion.id, horas);
+      } catch (error) {
+        log.warn("clima.motor.persistencia.error", {}, error);
+      }
+    }
+    log.info("clima.motor.ok", {
+      external_source: horas[0]?.provider ?? "desconocido",
+      duracion_ms: Date.now() - inicio,
+      data: { horas: horas.length },
+    });
+    return horas;
+  } catch (error) {
+    // Resiliencia: si todos los proveedores fallan, intentar cache stale (24h) antes de NO_DATA
+    if (ubicacion) {
+      try {
+        const stale = await leerHorarioReciente(ubicacion.id, new Date(Date.now() - 24 * 60 * 60 * 1000));
+        if (stale.length > 0) {
+          log.warn("clima.motor.fallback.stale", { external_source: "cache-stale", duracion_ms: Date.now() - inicio }, error);
+          return stale;
+        }
+      } catch {
+        // ignorar
+      }
+    }
+    const noData = new Error("NO_DATA: Datos temporalmente no disponibles");
+    (noData as unknown as Record<string, unknown>).cause = error;
+    (noData as unknown as Record<string, unknown>).code = "NO_DATA";
+    log.error(
+      "clima.motor.error",
+      {
+        external_source: proveedorPrincipal().id,
+        duracion_ms: Date.now() - inicio,
+      },
+      error,
+    );
+    throw noData;
+  }
+}
+
 export async function obtenerClimaPunto(
   lat: number,
   lon: number,
   aemetMunicipio?: string,
 ): Promise<ClimaPunto> {
   return previsionEnPunto(lat, lon, async () => {
-    let ubicacion: { id: string } | null = null;
-    try {
-      ubicacion = await obtenerOCrearUbicacion(lat, lon);
-    } catch (error) {
-      log.warn("clima.motor.ubicacion.error", {}, error);
-    }
-
-    if (ubicacion) {
-      try {
-        const recientes = await leerHorarioReciente(
-          ubicacion.id,
-          new Date(Date.now() - TTL_CACHE_S * 1000),
-        );
-        if (recientes.length > 0) {
-          log.debug("clima.motor.cache.acierto", {
-            external_source: recientes[0]?.provider ?? "desconocido",
-          });
-          return agregarHorario(recientes);
-        }
-      } catch (error) {
-        log.warn("clima.motor.cache.error", {}, error);
-      }
-    }
-
-    const inicio = Date.now();
-    try {
-      const horas = await obtenerPronostico({ latitud: lat, longitud: lon, aemetMunicipio });
-      if (ubicacion) {
-        try {
-          await guardarHorario(ubicacion.id, horas);
-        } catch (error) {
-          log.warn("clima.motor.persistencia.error", {}, error);
-        }
-      }
-      const punto = agregarHorario(horas);
-      log.info("clima.motor.ok", {
-        external_source: punto.fuente.id,
-        duracion_ms: Date.now() - inicio,
-        data: { horas: horas.length },
-      });
-      return punto;
-    } catch (error) {
-      // Resiliencia: si todos los proveedores fallan, intentar cache stale (24h) antes de NO_DATA
-      if (ubicacion) {
-        try {
-          const stale = await leerHorarioReciente(ubicacion.id, new Date(Date.now() - 24 * 60 * 60 * 1000));
-          if (stale.length > 0) {
-            log.warn("clima.motor.fallback.stale", { external_source: "cache-stale", duracion_ms: Date.now() - inicio }, error);
-            return agregarHorario(stale);
-          }
-        } catch {
-          // ignorar
-        }
-      }
-      const noData = new Error("NO_DATA: Datos temporalmente no disponibles");
-      (noData as unknown as Record<string, unknown>).cause = error;
-      (noData as unknown as Record<string, unknown>).code = "NO_DATA";
-      log.error(
-        "clima.motor.error",
-        {
-          external_source: proveedorPrincipal().id,
-          duracion_ms: Date.now() - inicio,
-        },
-        error,
-      );
-      throw noData;
-    }
+    const horas = await cargarSerie(lat, lon, aemetMunicipio);
+    const punto = agregarHorario(horas);
+    log.debug("clima.motor.agregado", {
+      external_source: punto.fuente.id,
+      data: { horas: horas.length },
+    });
+    return punto;
   });
 }
 
@@ -109,7 +126,7 @@ export async function obtenerClimaHorario(
   lon: number,
   aemetMunicipio?: string,
 ): Promise<WeatherHourly[]> {
-  return obtenerPronostico({ latitud: lat, longitud: lon, aemetMunicipio });
+  return cargarSerie(lat, lon, aemetMunicipio);
 }
 
 /** Avisos meteorológicos oficiales de AEMET. Las alertas calculadas son de TecRural. */
