@@ -12,13 +12,14 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const lat = Number(url.searchParams.get("lat"));
   const lon = Number(url.searchParams.get("lon"));
+  const aemetMunicipio = url.searchParams.get("aemetMunicipio")?.trim() || undefined;
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
     return NextResponse.json({ error: "Coordenadas no válidas." }, { status: 400 });
   }
   return conRequestId({}, async (requestId) => {
     const inicio = Date.now();
     try {
-      const horas = await obtenerClimaHorario(lat, lon);
+      const horas = await obtenerClimaHorario(lat, lon, aemetMunicipio);
       const actual = horaMasCercana(horas);
       log.info("v1.weather.current.ok", { status: 200, duracion_ms: Date.now() - inicio });
       return conCabeceraRequestId(NextResponse.json(actual), requestId);

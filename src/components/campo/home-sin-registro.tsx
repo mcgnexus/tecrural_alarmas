@@ -8,8 +8,8 @@ import type { Alerta } from "@/lib/dominio/tipos";
 import { CtaPrincipal } from "./cta-principal";
 import { esDatosCaducados, haceMinutos } from "@/lib/dominio/frescura";
 
-type Ubicacion = { lat: number; lon: number; nombre: string };
-type Municipio = { name: string; province: string; region: string; latitude: number; longitude: number };
+type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
+type Municipio = { name: string; province: string; region: string; latitude: number; longitude: number; aemetMunicipio?: string };
 
 const CULTIVOS = Object.keys(catalogoCultivos) as CulturaId[];
 
@@ -89,11 +89,12 @@ export function HomeSinRegistro() {
 
   async function cargarWeather(ubi: Ubicacion) {
     try {
-      const r = await fetch(`/api/v1/weather/current?lat=${ubi.lat}&lon=${ubi.lon}`, { cache: "no-store" });
+      const codigo = ubi.aemetMunicipio ? `&aemetMunicipio=${ubi.aemetMunicipio}` : "";
+      const r = await fetch(`/api/v1/weather/current?lat=${ubi.lat}&lon=${ubi.lon}${codigo}`, { cache: "no-store" });
       if (!r.ok) return;
       const j = await r.json() as { temperatureC: number | null; provider: string; fetchedAt: string; precipitationMm?: number | null; windSpeedKmh?: number | null };
       // also fetch forecast for max/min
-      const rf = await fetch(`/api/v1/weather/forecast?lat=${ubi.lat}&lon=${ubi.lon}&hours=24`, { cache: "no-store" });
+      const rf = await fetch(`/api/v1/weather/forecast?lat=${ubi.lat}&lon=${ubi.lon}&hours=24${codigo}`, { cache: "no-store" });
       let maxima: number | null = null, minima: number | null = null;
       if (rf.ok) {
         const horas = await rf.json() as { temperatureC: number | null }[];
@@ -111,7 +112,7 @@ export function HomeSinRegistro() {
       const resp = await fetch("/api/riesgo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ latitud: ubi.lat, longitud: ubi.lon, cultivo: cult }),
+        body: JSON.stringify({ latitud: ubi.lat, longitud: ubi.lon, cultivo: cult, aemetMunicipio: ubi.aemetMunicipio }),
       });
       if (!resp.ok) {
         const j = (await resp.json().catch(() => ({}))) as { code?: string };
@@ -191,7 +192,7 @@ export function HomeSinRegistro() {
   }
 
   function elegirMunicipio(m: Municipio) {
-    const ubi: Ubicacion = { lat: Number(m.latitude), lon: Number(m.longitude), nombre: `${m.name}, ${m.province}` };
+    const ubi: Ubicacion = { lat: Number(m.latitude), lon: Number(m.longitude), nombre: `${m.name}, ${m.province}`, aemetMunicipio: m.aemetMunicipio };
     setUbicacion(ubi);
     setMunicipios([]);
     setQuery("");

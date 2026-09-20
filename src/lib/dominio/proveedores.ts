@@ -1,6 +1,8 @@
 export interface GeoPoint {
   latitud: number;
   longitud: number;
+  /** Código AEMET del municipio, cuando la ubicación procede del selector. */
+  aemetMunicipio?: string;
 }
 
 /** Formato interno canónico para datos horarios, vengan de donde vengan. */

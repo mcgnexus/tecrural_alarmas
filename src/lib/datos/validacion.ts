@@ -29,6 +29,7 @@ export const esquemaCuerpoRiesgo = z.object({
   longitud: z.number().gte(-180).lte(180),
   cultivo: z.enum(idsCultivos),
   fenofaseId: z.string().optional(),
+  aemetMunicipio: z.string().regex(/^\d{5}$/).optional(),
 });
 
 export type CuerpoRiesgo = z.infer<typeof esquemaCuerpoRiesgo>;

@@ -15,6 +15,7 @@ export interface SolicitudRiesgo {
   longitud: number;
   cultivo: CulturaId;
   fenofaseId?: string;
+  aemetMunicipio?: string;
 }
 
 export async function evaluarRiesgo(
@@ -26,7 +27,7 @@ export async function evaluarRiesgo(
     throw new Error(`Cultivo desconocido: ${solicitud.cultivo}`);
   }
 
-  const clima = await obtenerClimaPunto(solicitud.latitud, solicitud.longitud);
+  const clima = await obtenerClimaPunto(solicitud.latitud, solicitud.longitud, solicitud.aemetMunicipio);
   const momento = new Date();
 
   const fenofase =

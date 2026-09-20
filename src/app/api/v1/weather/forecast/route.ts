@@ -11,6 +11,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const lat = Number(url.searchParams.get("lat"));
   const lon = Number(url.searchParams.get("lon"));
+  const aemetMunicipio = url.searchParams.get("aemetMunicipio")?.trim() || undefined;
   const horasParam = Number(url.searchParams.get("hours") ?? "72");
   if (
     !Number.isFinite(horasParam) ||
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
   return conRequestId({}, async (requestId) => {
     const inicio = Date.now();
     try {
-      const horas = await obtenerClimaHorario(lat, lon);
+      const horas = await obtenerClimaHorario(lat, lon, aemetMunicipio);
       // La fuente (Open-Meteo) incluye past_days; no servir histórico como forecast.
       const ahora = Date.now();
       const futuras = horas

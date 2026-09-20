@@ -407,8 +407,8 @@ export const proveedorAemet: WeatherProvider = {
   capacidades: { forecast: true, current: false, warnings: true },
   configurado: () => Boolean(process.env.AEMET_API_KEY),
 
-  async getForecast({ latitud, longitud }: GeoPoint): Promise<NormalizedForecast> {
-    const municipio = process.env.AEMET_MUNICIPIO?.trim();
+  async getForecast({ latitud, longitud, aemetMunicipio }: GeoPoint): Promise<NormalizedForecast> {
+    const municipio = aemetMunicipio?.trim() || process.env.AEMET_MUNICIPIO?.trim();
     if (!municipio) {
       throw new Error("AEMET: falta AEMET_MUNICIPIO para la predicción");
     }

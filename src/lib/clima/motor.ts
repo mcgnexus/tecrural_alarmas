@@ -28,6 +28,7 @@ const TTL_CACHE_S = 15 * 60;
 export async function obtenerClimaPunto(
   lat: number,
   lon: number,
+  aemetMunicipio?: string,
 ): Promise<ClimaPunto> {
   return previsionEnPunto(lat, lon, async () => {
     let ubicacion: { id: string } | null = null;
@@ -56,7 +57,7 @@ export async function obtenerClimaPunto(
 
     const inicio = Date.now();
     try {
-      const horas = await obtenerPronostico({ latitud: lat, longitud: lon });
+      const horas = await obtenerPronostico({ latitud: lat, longitud: lon, aemetMunicipio });
       if (ubicacion) {
         try {
           await guardarHorario(ubicacion.id, horas);
@@ -104,8 +105,9 @@ export async function obtenerClimaPunto(
 export async function obtenerClimaHorario(
   lat: number,
   lon: number,
+  aemetMunicipio?: string,
 ): Promise<WeatherHourly[]> {
-  return obtenerPronostico({ latitud: lat, longitud: lon });
+  return obtenerPronostico({ latitud: lat, longitud: lon, aemetMunicipio });
 }
 
 /** Avisos meteorológicos oficiales de AEMET. Las alertas calculadas son de TecRural. */

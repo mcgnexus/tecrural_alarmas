@@ -6,11 +6,11 @@ const log = crearLogger("api.v1.locations.search");
 
 export const dynamic = "force-dynamic";
 
-type Municipio = { name: string; slug: string; region: string; province: string; latitude: number; longitude: number; zona: string };
+type Municipio = { name: string; slug: string; region: string; province: string; latitude: number; longitude: number; zona: string; aemetMunicipio?: string };
 
 const ALTIPLANO: Municipio[] = [
-  { name: "Huéscar", slug: "huescar", region: "Altiplano de Granada", province: "Granada", latitude: 37.8106, longitude: -2.5412, zona: "altiplano" },
-  { name: "Baza", slug: "baza", region: "Altiplano de Granada", province: "Granada", latitude: 37.4897, longitude: -2.7735, zona: "altiplano" },
+  { name: "Huéscar", slug: "huescar", region: "Altiplano de Granada", province: "Granada", latitude: 37.8106, longitude: -2.5412, zona: "altiplano", aemetMunicipio: "18098" },
+  { name: "Baza", slug: "baza", region: "Altiplano de Granada", province: "Granada", latitude: 37.4897, longitude: -2.7735, zona: "altiplano", aemetMunicipio: "18023" },
   { name: "Puebla de Don Fadrique", slug: "puebla-de-don-fadrique", region: "Altiplano de Granada", province: "Granada", latitude: 37.9587, longitude: -2.4354, zona: "altiplano" },
   { name: "Castril", slug: "castril", region: "Altiplano de Granada", province: "Granada", latitude: 37.7969, longitude: -2.9415, zona: "altiplano" },
   { name: "Orce", slug: "orce", region: "Altiplano de Granada", province: "Granada", latitude: 37.6425, longitude: -2.4788, zona: "altiplano" },
