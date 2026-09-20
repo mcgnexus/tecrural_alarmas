@@ -77,6 +77,26 @@ function sumaPrecipitacion(horas: WeatherHourly[]): number {
   );
 }
 
+function maxSumaVentana(horas: WeatherHourly[], ancho: number): number {
+  let maximo = 0;
+  for (let i = 0; i < horas.length; i++) {
+    maximo = Math.max(maximo, sumaPrecipitacion(horas.slice(i, i + ancho)));
+  }
+  return maximo;
+}
+
+function fechaAviso(valor: string, fallback: Date): Date {
+  const tiempo = Date.parse(valor);
+  return Number.isFinite(tiempo) ? new Date(tiempo) : fallback;
+}
+
+function avisoEnSemana(aviso: OfficialWarning, ahora: Date): boolean {
+  const inicio = Date.parse(aviso.startsAt);
+  const fin = Date.parse(aviso.endsAt);
+  const limite = ahora.getTime() + 7 * 24 * 60 * 60 * 1000;
+  return (!Number.isFinite(inicio) || inicio <= limite) && (!Number.isFinite(fin) || fin >= ahora.getTime());
+}
+
 /**
  * Riesgo de lluvia. **Prioridad absoluta**: si existe un aviso oficial de
  * lluvia activo, se muestra tal cual (sin reinterpretar su nivel). En su
@@ -85,7 +105,7 @@ function sumaPrecipitacion(horas: WeatherHourly[]): number {
 export const evaluadorLluvia: RiskEvaluator = {
   riskType: "lluvia",
   async evaluate(context: RiskContext): Promise<RiskEvaluation | null> {
-    const oficial = (context.avisosOficiales ?? []).find(esAvisoDeLluvia);
+    const oficial = (context.avisosOficiales ?? []).find((aviso) => esAvisoDeLluvia(aviso) && avisoEnSemana(aviso, context.momento));
     if (oficial) {
       const level = nivelDesdeSeveridadTexto(oficial.severity);
       if (level === "green") return null;
@@ -104,8 +124,8 @@ export const evaluadorLluvia: RiskEvaluator = {
           startsAt: oficial.startsAt,
           endsAt: oficial.endsAt,
         },
-        startsAt: context.momento,
-        endsAt: null,
+        startsAt: fechaAviso(oficial.startsAt, context.momento),
+        endsAt: oficial.endsAt ? fechaAviso(oficial.endsAt, context.momento) : null,
       };
     }
 
@@ -127,17 +147,18 @@ export const evaluadorLluvia: RiskEvaluator = {
     const h1 = ventana(context.horario, context.momento, 1);
     const h3 = ventana(context.horario, context.momento, 3);
     const h6 = ventana(context.horario, context.momento, 6);
-    const h24 = ventana(context.horario, context.momento, 24);
+    const horizonte = ventana(context.horario, context.momento, 168);
+    const h24 = horizonte.slice(0, 24);
 
     const rain1h = sumaPrecipitacion(h1);
     const rain3h = sumaPrecipitacion(h3);
     const rain6h = sumaPrecipitacion(h6);
-    const rain24h = context.horario?.length
-      ? sumaPrecipitacion(h24)
+    const rain24h = horizonte.length
+      ? maxSumaVentana(horizonte, 24)
       : (context.clima.prevision[0]?.precipitacionTotal ?? 0);
-    const probabilidad = h24.length
+    const probabilidad = horizonte.length
       ? Math.max(
-          ...h24.map((hora) => hora.precipitationProbabilityPct ?? 0),
+          ...horizonte.map((hora) => hora.precipitationProbabilityPct ?? 0),
         )
       : (context.clima.prevision[0]?.probPrecipitacionMax ?? 0);
 
@@ -172,8 +193,8 @@ export const evaluadorLluvia: RiskEvaluator = {
         precipitationProbabilityPct: probabilidad,
         thresholds: { rain1h: u1, rain3h: u3, rain6h: u6, rain24h: u24 },
       },
-      startsAt: context.momento,
-      endsAt: null,
+        startsAt: horizonte[0] ? new Date(horizonte[0].timestamp) : context.momento,
+        endsAt: horizonte.at(-1) ? new Date(horizonte.at(-1)!.timestamp) : null,
     };
   },
 };

@@ -61,6 +61,18 @@ function nivelDeValor(valor: number, umbrales: Umbral): string {
   return "green";
 }
 
+function fechaAviso(valor: string, fallback: Date): Date {
+  const tiempo = Date.parse(valor);
+  return Number.isFinite(tiempo) ? new Date(tiempo) : fallback;
+}
+
+function avisoEnSemana(aviso: OfficialWarning, ahora: Date): boolean {
+  const inicio = Date.parse(aviso.startsAt);
+  const fin = Date.parse(aviso.endsAt);
+  const limite = ahora.getTime() + 7 * 24 * 60 * 60 * 1000;
+  return (!Number.isFinite(inicio) || inicio <= limite) && (!Number.isFinite(fin) || fin >= ahora.getTime());
+}
+
 /** Próximas 7 días (168 h): el horizonte del pronóstico híbrido. */
 function ventana7d(
   horario: WeatherHourly[] | undefined,
@@ -87,7 +99,7 @@ function maximo(valores: (number | null)[], porDefecto: number): number {
 export const evaluadorTormenta: RiskEvaluator = {
   riskType: "tormenta",
   async evaluate(context: RiskContext): Promise<RiskEvaluation | null> {
-    const oficial = (context.avisosOficiales ?? []).find(esAvisoDeTormenta);
+    const oficial = (context.avisosOficiales ?? []).find((aviso) => esAvisoDeTormenta(aviso) && avisoEnSemana(aviso, context.momento));
     if (oficial) {
       const level = nivelDesdeSeveridadTexto(oficial.severity);
       if (level === "green") return null;
@@ -106,8 +118,8 @@ export const evaluadorTormenta: RiskEvaluator = {
           startsAt: oficial.startsAt,
           endsAt: oficial.endsAt,
         },
-        startsAt: context.momento,
-        endsAt: null,
+          startsAt: fechaAviso(oficial.startsAt, context.momento),
+          endsAt: oficial.endsAt ? fechaAviso(oficial.endsAt, context.momento) : null,
       };
     }
 
@@ -178,8 +190,8 @@ export const evaluadorTormenta: RiskEvaluator = {
           "No se predice granizo, tornado ni rayos sin una fuente que lo soporte.",
         ],
       },
-      startsAt: context.momento,
-      endsAt: null,
+      startsAt: horas[0] ? new Date(horas[0].timestamp) : context.momento,
+      endsAt: horas.at(-1) ? new Date(horas.at(-1)!.timestamp) : null,
     };
   },
 };

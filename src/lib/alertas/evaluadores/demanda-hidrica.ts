@@ -88,7 +88,7 @@ export const evaluadorDemandaHidrica: RiskEvaluator = {
     const futuras = enVentana(
       context.horario,
       ahora - 60 * 60 * 1000,
-      ahora + 72 * 60 * 60 * 1000,
+      ahora + 168 * 60 * 60 * 1000,
     );
     const temperaturasFuturas = numeros(
       futuras.map((hora) => hora.temperatureC),
@@ -146,6 +146,7 @@ export const evaluadorDemandaHidrica: RiskEvaluator = {
         forecastHeatModifier,
         score,
         temperatureMaxNext72hC,
+        forecastHorizonHours: 168,
         forecastHeatThresholdC: heatThresholdC,
         effectiveRainFactor: factor,
         crop: context.cultivo,
