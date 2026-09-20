@@ -4,6 +4,7 @@ import { obtenerDb } from "@/lib/datos/db";
 import { verificarAccesoAdmin } from "@/lib/admin/auth";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
+import { sqlClasificarLead } from "@/lib/datos/clasificacion-lead";
 
 const log = crearLogger("api.admin.stats");
 export const dynamic = "force-dynamic";
@@ -39,12 +40,32 @@ export async function GET(req: Request) {
       const activos30Rows = await db.execute(sql`SELECT COUNT(DISTINCT user_id)::int as c FROM plataforma.lead_events WHERE user_id IS NOT NULL AND created_at > NOW() - INTERVAL '30 days'`);
       const activos30 = Number((activos30Rows.rows[0] as { c: number })?.c ?? 0);
 
-      const leadsFriosRows = await db.execute(sql`SELECT COUNT(*)::int as c FROM plataforma.lead_scores WHERE classification IN ('frio','lead frío','frío')`);
-      const leadsTempladosRows = await db.execute(sql`SELECT COUNT(*)::int as c FROM plataforma.lead_scores WHERE classification IN ('templado','lead templado')`);
-      const leadsCalientesRows = await db.execute(sql`SELECT COUNT(*)::int as c FROM plataforma.lead_scores WHERE classification IN ('caliente','lead caliente')`);
-      const leadsFrios = Number((leadsFriosRows.rows[0] as { c: number })?.c ?? 0);
-      const leadsTemplados = Number((leadsTempladosRows.rows[0] as { c: number })?.c ?? 0);
-      const leadsCalientes = Number((leadsCalientesRows.rows[0] as { c: number })?.c ?? 0);
+      // Clasificación comercial unificada: se puntúan con los mismos rangos
+      // (`RANGOS_LEAD`) los usuarios de `plataforma.lead_scores` y los
+      // contactos anónimos capturados en `public.leads`.
+      const clasificacionSql = sqlClasificarLead("score");
+      const leadsBucketsRows = await db.execute(sql`
+        SELECT clasificacion, COUNT(*)::int AS c FROM (
+          SELECT ${sql.raw(clasificacionSql)} AS clasificacion
+          FROM plataforma.lead_scores
+          UNION ALL
+          SELECT ${sql.raw(clasificacionSql)} AS clasificacion
+          FROM public.leads
+          WHERE merged_into_lead_id IS NULL
+            AND user_id IS NULL
+            AND COALESCE(contact_phone, '') <> ''
+        ) t
+        GROUP BY clasificacion
+      `);
+      const buckets = new Map(
+        (leadsBucketsRows.rows as { clasificacion: string; c: number }[]).map((r) => [
+          r.clasificacion,
+          Number(r.c),
+        ]),
+      );
+      const leadsFrios = buckets.get("frio") ?? 0;
+      const leadsTemplados = buckets.get("templado") ?? 0;
+      const leadsCalientes = buckets.get("caliente") ?? 0;
 
       // Las solicitudes de contacto llegan al CRM (public.leads, con contacto
       // telefonico). La tabla plataforma.commercial_contact_requests no la

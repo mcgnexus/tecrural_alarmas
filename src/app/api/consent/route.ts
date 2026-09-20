@@ -4,10 +4,11 @@ import { obtenerDb } from "@/lib/datos/db";
 import { usuarios } from "@/lib/datos/plataforma-schema";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
+import { VERSION_CONSENTIMIENTO } from "@/lib/privacidad/consentimiento";
 
 const log = crearLogger("api.consent");
 export const dynamic = "force-dynamic";
-const CURRENT_VERSION = "v1-2024-05";
+const CURRENT_VERSION = VERSION_CONSENTIMIENTO;
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as {

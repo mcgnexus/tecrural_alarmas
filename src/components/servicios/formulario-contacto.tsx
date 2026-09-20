@@ -6,6 +6,7 @@ import { asegurarSesionDispositivo, obtenerDispositivoId } from "@/lib/datos/dis
 import type { InteresLead } from "@/lib/dominio/leads";
 import { enlaceWhatsapp } from "@/lib/config/contacto";
 import { registrarEventoEmbudo } from "@/lib/analitica";
+import { VERSION_CONSENTIMIENTO } from "@/lib/privacidad/consentimiento";
 
 type Estado = "inicial" | "enviando" | "enviado" | "error";
 type Errores = Partial<Record<"nombre" | "telefono" | "municipio" | "perfil" | "privacidad", string>>;
@@ -39,6 +40,7 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
   const [municipio, setMunicipio] = useState(municipioGuardado);
   const [acepta, setAcepta] = useState(false);
   const [perfil, setPerfil] = useState<Perfil | null>(perfilGuardado);
+  const [website, setWebsite] = useState("");
   const [errores, setErrores] = useState<Errores>({});
   const [leadIniciado, setLeadIniciado] = useState(false);
   const wa = useMemo(() => enlaceWhatsapp(servicioNombre ? `Hola, quiero información sobre: ${servicioNombre}` : "Hola, quiero información para mi explotación."), [servicioNombre]);
@@ -73,7 +75,7 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
         body: JSON.stringify({
           dispositivoId: obtenerDispositivoId(), nombre: nombre.trim(), telefono: telefono.trim(), municipio: municipio.trim(),
           tipoExplotacion: perfil ?? "agricultura", problema: servicioNombre || "Orientación inicial", servicioKey, servicioNombre, interes,
-          origen: "formulario", aceptaPrivacidad: true,
+          origen: "formulario", aceptaPrivacidad: true, consentVersion: VERSION_CONSENTIMIENTO, marketingConsent: false, website,
         }),
       });
       if (!resp.ok) throw new Error();
@@ -92,6 +94,10 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
     <form onSubmit={enviar} noValidate className="rounded-2xl border-2 border-brand-800 bg-white p-5 shadow-sm">
       <h3 className="text-xl font-extrabold text-stone-900">Te llamamos</h3>
       <p className="mt-1 text-base text-stone-700">Solo necesitamos tres datos. Sin compromiso.</p>
+      <div className="sr-only" aria-hidden="true">
+        <label htmlFor="contacto-website">No rellenar</label>
+        <input id="contacto-website" name="website" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} />
+      </div>
       {wa ? <a href={wa} target="_blank" rel="noopener noreferrer" onClick={() => registrarEventoEmbudo("click_whatsapp", { origen: "formulario", servicioKey: servicioKey ?? null })} className="mt-4 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-emerald-700 px-5 py-3 text-base font-extrabold text-white hover:bg-emerald-800">Escribir por WhatsApp</a> : null}
 
       <label className="mt-4 block text-base font-bold text-stone-900" htmlFor="contacto-nombre">Nombre</label>

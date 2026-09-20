@@ -93,7 +93,7 @@ export async function actualizarEstadoLead(
 /** Guarda los datos de contacto facilitados por el lead (nombre, teléfono, nota). */
 export async function actualizarContactoLead(
   leadId: string,
-  contacto: { nombre: string; telefono: string; comentario?: string },
+  contacto: { nombre: string; telefono: string; comentario?: string; notas?: string },
 ): Promise<void> {
   const db = obtenerDb();
   await db
@@ -102,6 +102,7 @@ export async function actualizarContactoLead(
       contactName: contacto.nombre,
       contactPhone: contacto.telefono,
       comment: contacto.comentario ?? null,
+      ...(contacto.notas !== undefined ? { notes: contacto.notas } : {}),
       lastEventAt: new Date(),
     })
     .where(eq(leadsCrm.id, leadId));
@@ -114,10 +115,35 @@ export async function obtenerLeadPorVisitante(
   const [lead] = await db
     .select()
     .from(leadsCrm)
-    .where(eq(leadsCrm.visitorId, visitorId))
+    .where(
+      and(eq(leadsCrm.visitorId, visitorId), isNull(leadsCrm.mergedIntoLeadId)),
+    )
     .orderBy(desc(leadsCrm.createdAt))
     .limit(1);
   return lead ?? null;
+}
+
+/**
+ * ¿Existe ya una solicitud de contacto de este visitante dentro de la ventana
+ * indicada? Sirve para no duplicar eventos ni reenviar el aviso a Telegram.
+ */
+export async function existeSolicitudReciente(
+  visitorId: string,
+  minutos: number,
+): Promise<boolean> {
+  const db = obtenerDb();
+  const [fila] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(leadEvents)
+    .innerJoin(leadsCrm, eq(leadEvents.leadId, leadsCrm.id))
+    .where(
+      and(
+        eq(leadsCrm.visitorId, visitorId),
+        eq(leadEvents.type, "solicitar_informacion"),
+        sql`${leadEvents.createdAt} > now() - (${minutos} * interval '1 minute')`,
+      ),
+    );
+  return (fila?.total ?? 0) > 0;
 }
 
 export async function listarInteresesLead(leadId: string): Promise<string[]> {

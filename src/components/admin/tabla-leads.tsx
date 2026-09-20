@@ -14,6 +14,7 @@ type Lead = {
   contacto: string;
   consentVersion: string | null;
   consentTimestamp: string | null;
+  origen: string;
 };
 
 export function TablaLeads({ secret }: { secret: string }) {
@@ -81,12 +82,14 @@ export function TablaLeads({ secret }: { secret: string }) {
               <th className="px-3 py-2 font-bold">Última actividad</th>
               <th className="px-3 py-2 font-bold">Interés</th>
               <th className="px-3 py-2 font-bold">Contacto</th>
+              <th className="px-3 py-2 font-bold">Origen</th>
+              <th className="px-3 py-2 font-bold">Consentimiento</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-200">
             {leads.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-3 py-4 text-center text-sm text-stone-600">Sin resultados. Pulsa Filtrar.</td>
+                <td colSpan={11} className="px-3 py-4 text-center text-sm text-stone-600">Sin resultados. Pulsa Filtrar.</td>
               </tr>
             ) : (
               leads.map((l, i) => (
@@ -100,6 +103,16 @@ export function TablaLeads({ secret }: { secret: string }) {
                   <td className="px-3 py-2 text-xs">{l.ultimaActividad ? new Date(l.ultimaActividad).toLocaleDateString("es-ES") : "—"}</td>
                   <td className="px-3 py-2 text-xs">{l.interes}</td>
                   <td className="px-3 py-2 text-xs">{l.contacto}</td>
+                  <td className="px-3 py-2 text-xs">
+                    <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${l.origen === "contacto" ? "bg-emerald-100 text-emerald-800" : "bg-stone-100 text-stone-700"}`}>
+                      {l.origen === "contacto" ? "Contacto" : "Cuenta"}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-xs">
+                    {l.consentTimestamp
+                      ? `${l.consentVersion ?? "—"} · ${new Date(l.consentTimestamp).toLocaleDateString("es-ES")}`
+                      : "—"}
+                  </td>
                 </tr>
               ))
             )}

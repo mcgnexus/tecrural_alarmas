@@ -22,14 +22,18 @@ let sesionEnCurso: Promise<void> | null = null;
 
 /**
  * Registra el dispositivoId en el servidor para obtener la cookie de sesión
- * firmada (HttpOnly). Se ejecuta una sola vez por carga de página; las
- * autorizaciones posteriores las hace el servidor contra la cookie.
+ * firmada (HttpOnly). Crea el identificador si aún no existe, de modo que
+ * `await asegurarSesionDispositivo()` deja la cookie lista antes de cualquier
+ * petición protegida. Se ejecuta una sola vez por carga de página.
  */
 export function asegurarSesionDispositivo(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
   if (sesionEnCurso) return sesionEnCurso;
-  const id = window.localStorage.getItem(CLAVE);
-  if (!id) return Promise.resolve();
+  let id = window.localStorage.getItem(CLAVE);
+  if (!id) {
+    id = uuid();
+    window.localStorage.setItem(CLAVE, id);
+  }
   sesionEnCurso = fetch("/api/sesion/dispositivo", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

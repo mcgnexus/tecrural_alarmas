@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-const CURRENT_VERSION = "v1-2024-05";
+import { VERSION_CONSENTIMIENTO as CURRENT_VERSION } from "@/lib/privacidad/consentimiento";
 
 export function Consentimiento({ userId, onAceptado }: { userId: string; onAceptado?: () => void }) {
   const [privacy, setPrivacy] = useState(false);

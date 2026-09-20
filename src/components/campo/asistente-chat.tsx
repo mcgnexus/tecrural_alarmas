@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { asegurarSesionDispositivo, obtenerDispositivoId } from "@/lib/datos/dispositivo";
 import { registrarEventoEmbudo } from "@/lib/analitica";
+import { VERSION_CONSENTIMIENTO } from "@/lib/privacidad/consentimiento";
 
 interface Mensaje {
   de: "bot" | "usuario";
@@ -100,6 +102,8 @@ export function AsistenteChat() {
           problema,
           origen: "asistente",
           aceptaPrivacidad: true,
+          consentVersion: VERSION_CONSENTIMIENTO,
+          marketingConsent: false,
         }),
       });
       if (!resp.ok) throw new Error();
@@ -183,6 +187,11 @@ export function AsistenteChat() {
                 {paso === "error" ? (
                   <p role="alert" className="text-xs font-semibold text-red-700">Revisa los datos (nombre, teléfono y municipio) e inténtalo de nuevo.</p>
                 ) : null}
+                <p className="text-[11px] leading-snug text-stone-500">
+                  Al enviar aceptas que te contactemos y la{" "}
+                  <Link href="/privacidad" className="font-bold text-brand-800 underline">política de privacidad</Link>{" "}
+                  ({VERSION_CONSENTIMIENTO}).
+                </p>
                 <button
                   type="button"
                   onClick={enviar}

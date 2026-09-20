@@ -12,9 +12,31 @@ export async function GET(req: Request) {
   const auth = verificarAccesoAdmin(req);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   return conRequestId({ external_source: "admin" }, async (requestId) => {
+    const inicio = Date.now();
     try {
       const db = obtenerDb();
-      const r = await db.execute(sql`SELECT ccr.id, ccr.service, ccr.preferred_channel, ccr.message, ccr.created_at, ccr.anonymous_id, u.name as usuario, u.email FROM plataforma.commercial_contact_requests ccr LEFT JOIN plataforma.users u ON u.id=ccr.user_id ORDER BY ccr.created_at DESC LIMIT 100`);
+      // Las solicitudes comerciales reales viven en el CRM (`public.leads`),
+      // con el contacto telefónico y los datos estructurados en `notes`.
+      const r = await db.execute(sql`
+        SELECT
+          l.id,
+          l.contact_name AS nombre,
+          l.contact_phone AS telefono,
+          l.score,
+          l.status,
+          l.source,
+          l.created_at,
+          (CASE WHEN l.notes LIKE '{%' THEN l.notes::jsonb ELSE NULL END ->> 'municipio') AS municipio,
+          (CASE WHEN l.notes LIKE '{%' THEN l.notes::jsonb ELSE NULL END ->> 'servicioNombre') AS servicio,
+          (CASE WHEN l.notes LIKE '{%' THEN l.notes::jsonb ELSE NULL END ->> 'problema') AS problema,
+          (CASE WHEN l.notes LIKE '{%' THEN l.notes::jsonb ELSE NULL END ->> 'tipoExplotacion') AS tipo_explotacion
+        FROM public.leads l
+        WHERE l.merged_into_lead_id IS NULL
+          AND COALESCE(l.contact_phone, '') <> ''
+        ORDER BY l.created_at DESC
+        LIMIT 100
+      `);
+      log.info("admin.solicitudes.ok", { status: 200, duracion_ms: Date.now() - inicio, data: { total: r.rows.length } });
       return conCabeceraRequestId(NextResponse.json({ solicitudes: r.rows }), requestId);
     } catch (e) {
       log.error("admin.solicitudes.error", {}, e);

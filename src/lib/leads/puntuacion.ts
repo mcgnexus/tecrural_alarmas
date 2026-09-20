@@ -1,11 +1,20 @@
+import { clasificarLead } from "@/lib/dominio/lead-scores";
+import type { LeadClassification } from "@/lib/dominio/lead-scores";
 import type { EstadoLead, NivelLead } from "@/lib/dominio/leads";
 
-/** Umbrales de score para cualificar un lead (configurables en un solo punto). */
-export const UMBRALES_NIVEL = {
-  tibio: 20,
-  caliente: 50,
-  cualificado: 90,
-} as const;
+/**
+ * Umbral de cualificación: tier superior de negocio, por encima de la
+ * clasificación comercial (ver `RANGOS_LEAD`). Único punto de ajuste.
+ */
+export const UMBRAL_CUALIFICADO = 90;
+
+/** Traduce la clasificación comercial canónica a los niveles del CRM. */
+const NIVEL_POR_CLASIFICACION: Record<LeadClassification, NivelLead> = {
+  usuario: "frio",
+  frio: "frio",
+  templado: "tibio",
+  caliente: "caliente",
+};
 
 const ESTADO_POR_NIVEL: Record<NivelLead, EstadoLead> = {
   frio: "NEW",
@@ -24,10 +33,8 @@ export const ORDEN_ESTADO: Record<string, number> = {
 };
 
 export function nivelDesdeScore(score: number): NivelLead {
-  if (score >= UMBRALES_NIVEL.cualificado) return "cualificado";
-  if (score >= UMBRALES_NIVEL.caliente) return "caliente";
-  if (score >= UMBRALES_NIVEL.tibio) return "tibio";
-  return "frio";
+  if (score >= UMBRAL_CUALIFICADO) return "cualificado";
+  return NIVEL_POR_CLASIFICACION[clasificarLead(score)];
 }
 
 export function estadoDesdeNivel(nivel: NivelLead): EstadoLead {
