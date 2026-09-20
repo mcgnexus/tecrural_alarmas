@@ -216,12 +216,29 @@ export function HomeSinRegistro() {
   return (
     <div className="flex flex-col gap-5">
       <section className="rounded-2xl border-2 border-stone-900 bg-white p-5 shadow-sm">
-        <h1 className="text-2xl font-extrabold tracking-tight text-stone-900">TecRural Campo</h1>
-        <p className="mt-1 text-xl font-bold leading-tight text-stone-800">¿Qué está pasando en tu zona?</p>
-        <p className="mt-2 text-base leading-snug text-stone-700">Consulta el riesgo sin crear cuenta. Fuente de datos según disponibilidad (AEMET, Open-Meteo). Explicado para tu campo.</p>
+        <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-stone-900">
+          Protege tu explotación antes de que llegue el problema
+        </h1>
+        <p className="mt-2 text-base leading-snug text-stone-700">
+          TecRural te ayuda a anticipar heladas, falta de agua, plagas y riesgos meteorológicos en tu parcela.
+        </p>
+        <div className="mt-4 flex flex-col gap-2">
+          <a
+            href="#contacto"
+            className="inline-flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-brand-800 px-5 py-4 text-base font-bold text-white shadow-sm hover:bg-brand-900"
+          >
+            💬 Hablar con TecRural
+          </a>
+          <a
+            href="#zona"
+            className="inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-stone-900 bg-white px-5 py-3.5 text-base font-bold text-stone-900 hover:bg-stone-50"
+          >
+            📍 Consultar mi zona
+          </a>
+        </div>
       </section>
 
-      <section className="flex flex-col gap-3">
+      <section id="zona" className="flex scroll-mt-20 flex-col gap-3">
         <h2 className="text-sm font-bold uppercase tracking-wide text-stone-700">Elige ubicación</h2>
         <button
           type="button"
