@@ -224,6 +224,7 @@ async function pedirDatos(ruta: string): Promise<unknown> {
   const separador = ruta.includes("?") ? "&" : "?";
   const paso1 = await fetch(`${BASE}${ruta}${separador}api_key=${apiKey}`, {
     signal: AbortSignal.timeout(10_000),
+    next: { revalidate: 900 },
   });
   if (!paso1.ok) throw new Error(`AEMET HTTP ${paso1.status}`);
 
@@ -232,6 +233,7 @@ async function pedirDatos(ruta: string): Promise<unknown> {
 
   const paso2 = await fetch(metadatos.datos, {
     signal: AbortSignal.timeout(10_000),
+    next: { revalidate: 900 },
   });
   if (!paso2.ok) throw new Error(`AEMET datos HTTP ${paso2.status}`);
   return paso2.json();
@@ -399,6 +401,7 @@ async function pedirAvisosCap(
   const separador = ruta.includes("?") ? "&" : "?";
   const paso1 = await fetch(`${BASE}${ruta}${separador}api_key=${apiKey}`, {
     signal: AbortSignal.timeout(10_000),
+    next: { revalidate: 900 },
   });
   if (!paso1.ok) throw new Error(`AEMET HTTP ${paso1.status}`);
 
@@ -407,6 +410,7 @@ async function pedirAvisosCap(
 
   const paso2 = await fetch(metadatos.datos, {
     signal: AbortSignal.timeout(15_000),
+    next: { revalidate: 900 },
   });
   if (!paso2.ok) throw new Error(`AEMET datos HTTP ${paso2.status}`);
 
