@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HomeSinRegistro } from "@/components/campo/home-sin-registro";
 import { SeccionContacto } from "@/components/campo/seccion-contacto";
+import { AsistenteChat } from "@/components/campo/asistente-chat";
 
 export default function InicioPage() {
   return (
@@ -23,6 +24,8 @@ export default function InicioPage() {
       <p className="text-center text-sm leading-relaxed font-medium text-stone-600">
         TecRural no sustituye a AEMET, RAIF ni a un técnico agrícola. Te ayuda a interpretar los datos para tu parcela.
       </p>
+
+      <AsistenteChat />
     </>
   );
 }

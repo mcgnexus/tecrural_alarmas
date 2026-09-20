@@ -9,33 +9,14 @@ export interface SolicitudContacto {
   telefono: string;
   mensaje?: string;
   servicioNombre?: string;
+  /** Datos del asistente conversacional: cambian el formato del aviso. */
+  origen?: "formulario" | "asistente";
+  perfil?: "agricultura" | "ganaderia" | "mixta";
+  municipio?: string;
+  interesProbable?: string;
 }
 
-/**
- * Notifica al equipo (chat de Telegram del negocio) una solicitud de contacto
- * entrante. Degradación elegante: si no hay `TELEGRAM_BOT_TOKEN` o
- * `TELEGRAM_CHAT_ID_NEGOCIO`, se registra y se ignora — nunca rompe el flujo.
- */
-export async function notificarSolicitudContacto(
-  solicitud: SolicitudContacto,
-): Promise<boolean> {
-  const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
-  const chatId = process.env.TELEGRAM_CHAT_ID_NEGOCIO?.trim();
-  if (!token || !chatId) {
-    log.warn("negocio.telegram.no_configurado", {
-      data: { telegram: Boolean(token), chat: Boolean(chatId) },
-    });
-    return false;
-  }
-
-  const lineas = [
-    "🌱 Nueva solicitud de información",
-    `👤 ${solicitud.nombre}`,
-    `📞 ${solicitud.telefono}`,
-  ];
-  if (solicitud.servicioNombre) lineas.push(`🛠 ${solicitud.servicioNombre}`);
-  if (solicitud.mensaje) lineas.push(`💬 ${solicitud.mensaje}`);
-
+async function enviarTelegram(chatId: string, token: string, texto: string): Promise<boolean> {
   const inicio = Date.now();
   try {
     const respuesta = await fetch(`${ENDPOINT}/bot${token}/sendMessage`, {
@@ -43,7 +24,7 @@ export async function notificarSolicitudContacto(
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         chat_id: chatId,
-        text: lineas.join("\n"),
+        text: texto,
         disable_web_page_preview: true,
       }),
       signal: AbortSignal.timeout(10_000),
@@ -60,4 +41,55 @@ export async function notificarSolicitudContacto(
     log.warn("negocio.telegram.error", { external_source: "telegram" }, error);
     return false;
   }
+}
+
+/**
+ * Notifica al equipo (chat de Telegram del negocio) una solicitud de contacto
+ * entrante. Con `origen: "asistente"` usa el resumen tipo lead del chat.
+ * Degradación elegante: sin `TELEGRAM_BOT_TOKEN` o `TELEGRAM_CHAT_ID_NEGOCIO`
+ * se registra y se ignora — nunca rompe el flujo.
+ */
+export async function notificarSolicitudContacto(
+  solicitud: SolicitudContacto,
+): Promise<boolean> {
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  const chatId = process.env.TELEGRAM_CHAT_ID_NEGOCIO?.trim();
+  if (!token || !chatId) {
+    log.warn("negocio.telegram.no_configurado", {
+      data: { telegram: Boolean(token), chat: Boolean(chatId) },
+    });
+    return false;
+  }
+
+  let lineas: string[];
+  if (solicitud.origen === "asistente") {
+    const perfilLegible =
+      solicitud.perfil === "ganaderia"
+        ? "Ganadero"
+        : solicitud.perfil === "mixta"
+          ? "Mixto (agri + gana)"
+          : "Agricultor";
+    lineas = [
+      "🌱 Nuevo lead TecRural",
+      `👤 ${perfilLegible}${solicitud.municipio ? ` · ${solicitud.municipio}` : ""}`,
+      `⚠ Problema: ${solicitud.mensaje ?? "—"}`,
+      `📞 Contacto: WhatsApp — ${solicitud.telefono} (${solicitud.nombre})`,
+    ];
+    if (solicitud.interesProbable) {
+      lineas.push(`🎯 Interés probable: ${solicitud.interesProbable}`);
+    }
+    if (solicitud.servicioNombre) {
+      lineas.push(`🛠 Servicio consultado: ${solicitud.servicioNombre}`);
+    }
+  } else {
+    lineas = [
+      "🌱 Nueva solicitud de información",
+      `👤 ${solicitud.nombre}`,
+      `📞 ${solicitud.telefono}`,
+    ];
+    if (solicitud.servicioNombre) lineas.push(`🛠 ${solicitud.servicioNombre}`);
+    if (solicitud.mensaje) lineas.push(`💬 ${solicitud.mensaje}`);
+  }
+
+  return enviarTelegram(chatId, token, lineas.join("\n"));
 }

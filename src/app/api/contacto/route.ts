@@ -23,8 +23,21 @@ const esquema = z.object({
   servicioKey: z.string().trim().max(80).optional(),
   servicioNombre: z.string().trim().max(120).optional(),
   interes: z.enum(["SENSORS", "WEATHER_STATION", "AI_DIAGNOSIS", "IRRIGATION", "REPORTS"]).optional(),
+  origen: z.enum(["formulario", "asistente"]).optional(),
   aceptaPrivacidad: z.literal(true),
 });
+
+/** Interés de plan probable según el problema declarado en el asistente. */
+function interesProbableDesdeProblema(problema: string): string {
+  const p = problema.toLowerCase();
+  if (p.includes("helada")) return "Monitor";
+  if (p.includes("riego") || p.includes("agua")) return "Monitor";
+  if (p.includes("plaga") || p.includes("enfermedad")) return "Pro";
+  if (p.includes("calor") || p.includes("termico") || p.includes("término")) return "Monitor";
+  if (p.includes("tiempo") || p.includes("meteorolog")) return "Monitor";
+  if (p.includes("sensor")) return "Pro";
+  return "Esencial";
+}
 
 /**
  * Solicitud de contacto comercial: guarda nombre y teléfono en el lead del CRM
@@ -78,8 +91,12 @@ export async function POST(req: Request) {
       await notificarSolicitudContacto({
         nombre: datos.nombre,
         telefono: datos.telefono,
-        mensaje: `📍 ${datos.municipio} · ${datos.tipoExplotacion} · ${datos.problema}`,
+        mensaje: datos.origen === "asistente" ? datos.problema : `📍 ${datos.municipio} · ${datos.tipoExplotacion} · ${datos.problema}`,
         servicioNombre: datos.servicioNombre,
+        origen: datos.origen,
+        perfil: datos.tipoExplotacion,
+        municipio: datos.municipio,
+        interesProbable: datos.origen === "asistente" ? interesProbableDesdeProblema(datos.problema) : undefined,
       });
 
       log.info("contacto.ok", {
