@@ -101,7 +101,6 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
   }
 
   async function guardar() {
-    await asegurarSesionDispositivo();
     if (!ubicacionOk || !cultivo || !nombre.trim()) {
       setError("Completa ubicación, cultivo y nombre.");
       return;
@@ -110,6 +109,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
       setError("Debes aceptar la política de privacidad para continuar.");
       return;
     }
+    await asegurarSesionDispositivo();
     setGuardando(true);
     setError(null);
     try {

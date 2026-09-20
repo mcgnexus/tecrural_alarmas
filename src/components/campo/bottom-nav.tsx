@@ -73,7 +73,7 @@ export function BottomNav() {
 
   return (
     <nav className="sticky bottom-0 z-10 border-t-2 border-stone-900/10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/95">
-      <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-1 px-2 pb-[env(safe-area-inset-bottom)] pt-1">
+      <div className="mx-auto grid w-full max-w-5xl grid-cols-5 gap-1 px-2 pb-[env(safe-area-inset-bottom)] pt-1">
         {items.map((item) => {
           const activo =
             item.href === "/"
@@ -85,7 +85,7 @@ export function BottomNav() {
               href={item.href}
               aria-current={activo ? "page" : undefined}
               aria-label={item.etiqueta}
-              className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[13px] font-semibold leading-none ${
+              className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-sm font-semibold leading-none ${
                 activo
                   ? "bg-brand-800 text-white shadow-sm"
                   : "text-stone-700 hover:bg-stone-100 active:bg-stone-200"

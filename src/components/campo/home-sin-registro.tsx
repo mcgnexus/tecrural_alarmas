@@ -1,508 +1,69 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { catalogoCultivos } from "@/lib/cultivos/catalogo";
-import type { CulturaId } from "@/lib/cultivos/catalogo";
-import type { Alerta } from "@/lib/dominio/tipos";
-import { CtaPrincipal } from "./cta-principal";
-import { esDatosCaducados, haceMinutos } from "@/lib/dominio/frescura";
+import { useMemo, useState } from "react";
+import { enlaceWhatsapp } from "@/lib/config/contacto";
 import { registrarEventoEmbudo } from "@/lib/analitica";
-import { enlaceWhatsappPersonal } from "@/lib/config/contacto";
 
-type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
 type Municipio = { name: string; province: string; region: string; latitude: number; longitude: number; aemetMunicipio?: string };
+type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
 
-const CULTIVOS = Object.keys(catalogoCultivos) as CulturaId[];
-
-const RIESGOS_POR_PERFIL: Record<Perfil, { key: string; etiqueta: string }[]> = {
-  agricultor: [
-    { key: "helada", etiqueta: "Helada" },
-    { key: "golpe-de-calor", etiqueta: "Calor" },
-    { key: "lluvia", etiqueta: "Lluvia" },
-    { key: "tormenta", etiqueta: "Tormenta" },
-    { key: "viento", etiqueta: "Viento" },
-  ],
-  ganadero: [
-    { key: "golpe-de-calor", etiqueta: "Estrés térmico" },
-    { key: "helada", etiqueta: "Frío extremo" },
-    { key: "tormenta", etiqueta: "Tormenta" },
-    { key: "lluvia", etiqueta: "Lluvia y pastos" },
-    { key: "viento", etiqueta: "Viento" },
-  ],
-};
-
-const SUBTITULO_POR_PERFIL: Record<Perfil, string> = {
-  agricultor:
-    "TecRural te ayuda a anticipar heladas, falta de agua, plagas y riesgos meteorológicos en tu parcela.",
-  ganadero:
-    "TecRural te ayuda a anticipar olas de calor, frío extremo, tormentas y agua para tu ganado, estés donde esté tu explotación.",
-};
-
-type Perfil = "agricultor" | "ganadero";
-
-function nivelColor(severidad?: string): { bg: string; dot: string; label: string } {
-  switch (severidad) {
-    case "critica": return { bg: "bg-red-100 border-red-300", dot: "🔴", label: "Rojo" };
-    case "alerta": return { bg: "bg-amber-100 border-amber-300", dot: "🟠", label: "Naranja" };
-    case "aviso": return { bg: "bg-yellow-100 border-yellow-300", dot: "🟡", label: "Amarillo" };
-    default: return { bg: "bg-emerald-100 border-emerald-300", dot: "🟢", label: "Verde" };
-  }
-}
-
-const LS_UBICACION = "tecrural:ubicacion";
-const LS_CULTIVO = "tecrural:cultivo";
-const LS_ZONA = "tecrural:zona";
-const LS_PERFIL = "tecrural:perfil";
+const servicios = [
+  { titulo: "Alertas de campo", texto: "Heladas, calor, lluvia y viento explicados con claridad.", href: "/alertas" },
+  { titulo: "Riego con criterio", texto: "Decide cuándo regar con datos de tu parcela y tu cultivo.", href: "/servicios#sensor-humedad" },
+  { titulo: "Seguimiento técnico", texto: "Un técnico revisa contigo lo importante de la campaña.", href: "/servicios#seguimiento" },
+];
 
 export function HomeSinRegistro() {
-  const [ubicacion, setUbicacion] = useState<Ubicacion | null>(null);
-  const [buscandoGeo, setBuscandoGeo] = useState(false);
-  const [query, setQuery] = useState("");
   const [zona, setZona] = useState<"altiplano" | "costa" | null>(null);
+  const [query, setQuery] = useState("");
   const [municipios, setMunicipios] = useState<Municipio[]>([]);
-  const [buscandoMun, setBuscandoMun] = useState(false);
+  const [ubicacion, setUbicacion] = useState<Ubicacion | null>(null);
+  const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [evaluando, setEvaluando] = useState(false);
-  const [alertas, setAlertas] = useState<Alerta[] | null>(null);
-  const [proveedorRiesgo, setProveedorRiesgo] = useState<string | null>(null);
-  const [weather, setWeather] = useState<{ temperatura: number | null; maxima: number | null; minima: number | null; precipitacion: number | null; viento: number | null; proveedor: string; actualizado: string } | null>(null);
-  const [cultivo, setCultivo] = useState<CulturaId>("almendro");
-  const [mostrarCultivo, setMostrarCultivo] = useState(false);
-  const [perfil, setPerfil] = useState<Perfil>("agricultor");
-  const [waHero, setWaHero] = useState<string | null>(null);
+  const wa = useMemo(() => enlaceWhatsapp(ubicacion ? `Hola, soy de ${ubicacion.nombre} y quiero orientación para mi explotación.` : "Hola, quiero orientación para mi explotación."), [ubicacion]);
 
-  useEffect(() => {
-    setWaHero(enlaceWhatsappPersonal());
-  }, []);
-
-  // Restaurar localidad elegida al volver a inicio (fix: persistencia)
-  useEffect(() => {
+  async function cargarMunicipios(z?: "altiplano" | "costa") {
+    const zonaElegida = z ?? zona;
+    if (z) setZona(z);
+    if (!zonaElegida && query.trim().length < 2) { setError("Elige una zona o escribe al menos dos letras."); return; }
+    setCargando(true); setError(null);
     try {
-      const rawU = localStorage.getItem(LS_UBICACION);
-      const rawC = localStorage.getItem(LS_CULTIVO) as CulturaId | null;
-      const rawZ = localStorage.getItem(LS_ZONA) as "altiplano" | "costa" | null;
-      const rawP = localStorage.getItem(LS_PERFIL) as Perfil | null;
-      if (rawP === "agricultor" || rawP === "ganadero") setPerfil(rawP);
-      if (rawZ === "altiplano" || rawZ === "costa") {
-        setZona(rawZ);
-        // recargar municipios de la zona guardada
-        fetch(`/api/v1/locations/search?zona=${rawZ}`)
-          .then((r) => (r.ok ? r.json() : []))
-          .then((d) => { if (Array.isArray(d)) setMunicipios(d as Municipio[]); })
-          .catch(() => {});
-      }
-      if (rawC && (Object.keys(catalogoCultivos) as string[]).includes(rawC)) setCultivo(rawC);
-      if (rawU) {
-        const ubi = JSON.parse(rawU) as Ubicacion;
-        if (typeof ubi.lat === "number" && typeof ubi.lon === "number") {
-          setUbicacion(ubi);
-          // re-evaluar sin bloquear UI
-          setTimeout(() => evaluarCon(ubi, (rawC as CulturaId) ?? "almendro"), 0);
-        }
-      }
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    try {
-      if (ubicacion) localStorage.setItem(LS_UBICACION, JSON.stringify(ubicacion));
-    } catch {}
-  }, [ubicacion]);
-  useEffect(() => {
-    try { localStorage.setItem(LS_CULTIVO, cultivo); } catch {}
-  }, [cultivo]);
-  useEffect(() => {
-    try { if (zona) localStorage.setItem(LS_ZONA, zona); } catch {}
-  }, [zona]);
-  useEffect(() => {
-    try { localStorage.setItem(LS_PERFIL, perfil); } catch {}
-  }, [perfil]);
-
-  function elegirPerfil(p: Perfil) {
-    setPerfil(p);
-  }
-
-  async function cargarWeather(ubi: Ubicacion) {
-    try {
-      const codigo = ubi.aemetMunicipio ? `&aemetMunicipio=${ubi.aemetMunicipio}` : "";
-      const r = await fetch(`/api/v1/weather/current?lat=${ubi.lat}&lon=${ubi.lon}${codigo}`, { cache: "no-store" });
-      if (!r.ok) return;
-      const j = await r.json() as { temperatureC: number | null; provider: string; fetchedAt: string; precipitationMm?: number | null; windSpeedKmh?: number | null };
-      // also fetch forecast for max/min
-      const rf = await fetch(`/api/v1/weather/forecast?lat=${ubi.lat}&lon=${ubi.lon}&hours=24${codigo}`, { cache: "no-store" });
-      let maxima: number | null = null, minima: number | null = null;
-      if (rf.ok) {
-        const horas = await rf.json() as { temperatureC: number | null }[];
-        const temps = (Array.isArray(horas) ? horas : []).map((h) => h.temperatureC).filter((v): v is number => typeof v === "number");
-        if (temps.length) { maxima = Math.max(...temps); minima = Math.min(...temps); }
-      }
-      setWeather({ temperatura: j.temperatureC ?? null, maxima, minima, precipitacion: (j as unknown as { precipitationMm: number | null }).precipitationMm ?? null, viento: (j as unknown as { windSpeedKmh: number | null }).windSpeedKmh ?? null, proveedor: j.provider, actualizado: j.fetchedAt });
-    } catch { /* error externo no rompe app — se ignora y se muestra NO_DATA si aplica */ }
-  }
-
-  async function evaluarCon(ubi: Ubicacion, cult: CulturaId) {
-    setEvaluando(true);
-    setError(null);
-    try {
-      const resp = await fetch("/api/riesgo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ latitud: ubi.lat, longitud: ubi.lon, cultivo: cult, aemetMunicipio: ubi.aemetMunicipio }),
-      });
-      if (!resp.ok) {
-        const j = (await resp.json().catch(() => ({}))) as { code?: string };
-        if (j.code === "NO_DATA") throw new Error("NO_DATA");
-        throw new Error();
-      }
-      const datos = (await resp.json()) as { alertas: Alerta[]; fuente?: { nombre?: string; id?: string } };
-      setAlertas(datos.alertas as Alerta[]);
-      if (datos.fuente?.nombre) setProveedorRiesgo(datos.fuente.nombre);
-      else setProveedorRiesgo(datos.fuente?.id ?? null);
-      cargarWeather(ubi);
-    } catch (e) {
-      if (e instanceof Error && e.message === "NO_DATA") setError("NO_DATA");
-      else setError("No se pudo obtener el riesgo ahora. Inténtalo de nuevo.");
-    } finally {
-      setEvaluando(false);
-    }
-  }
-
-  function usarUbicacion() {
-    if (!("geolocation" in navigator)) {
-      setError("Tu navegador no permite ubicación.");
-      return;
-    }
-    setBuscandoGeo(true);
-    setError(null);
-    navigator.geolocation.getCurrentPosition(
-      (p) => {
-        const ubi: Ubicacion = { lat: p.coords.latitude, lon: p.coords.longitude, nombre: `${p.coords.latitude.toFixed(3)}, ${p.coords.longitude.toFixed(3)}` };
-        setUbicacion(ubi);
-        setBuscandoGeo(false);
-        evaluarCon(ubi, cultivo);
-      },
-      () => {
-        setBuscandoGeo(false);
-        setError("No pudimos obtener tu ubicación. Elige un municipio.");
-      },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 },
-    );
-  }
-
-  async function cargarZona(z: "altiplano" | "costa") {
-    setZona(z);
-    setBuscandoMun(true);
-    setError(null);
-    try {
-      const r = await fetch(`/api/v1/locations/search?zona=${z}`);
+      const qs = new URLSearchParams();
+      if (zonaElegida) qs.set("zona", zonaElegida);
+      if (query.trim()) qs.set("q", query.trim());
+      const r = await fetch(`/api/v1/locations/search?${qs.toString()}`);
       if (!r.ok) throw new Error();
-      const datos = (await r.json()) as Municipio[];
+      const datos = await r.json() as Municipio[];
       setMunicipios(datos);
-    } catch {
-      setError("No se pudo cargar municipios de la zona.");
-    } finally {
-      setBuscandoMun(false);
-    }
+      if (!datos.length) setError("No encontramos ese municipio.");
+    } catch { setError("No pudimos cargar los municipios. Inténtalo de nuevo."); }
+    finally { setCargando(false); }
   }
 
-  async function buscarMunicipio() {
-    if (query.trim().length < 2) {
-      setError("Escribe al menos 2 letras.");
-      return;
-    }
-    setBuscandoMun(true);
-    setError(null);
-    try {
-      const url = zona ? `/api/v1/locations/search?q=${encodeURIComponent(query.trim())}&zona=${zona}` : `/api/v1/locations/search?q=${encodeURIComponent(query.trim())}`;
-      const r = await fetch(url);
-      if (!r.ok) throw new Error();
-      const datos = (await r.json()) as Municipio[];
-      setMunicipios(datos);
-      if (datos.length === 0) setError("Sin resultados. Prueba otro nombre.");
-    } catch {
-      setError("No se pudo buscar municipios.");
-    } finally {
-      setBuscandoMun(false);
-    }
+  function elegir(m: Municipio) {
+    const u = { lat: Number(m.latitude), lon: Number(m.longitude), nombre: `${m.name}, ${m.province}`, aemetMunicipio: m.aemetMunicipio };
+    setUbicacion(u); setMunicipios([]); setQuery("");
+    try { localStorage.setItem("tecrural:ubicacion", JSON.stringify(u)); localStorage.setItem("tecrural:zona", zona ?? m.region); } catch {}
+    registrarEventoEmbudo("municipality_selected", { municipio: m.name, zona: zona ?? m.region });
   }
 
-  function elegirMunicipio(m: Municipio) {
-    registrarEventoEmbudo("municipality_selected", { municipio: m.name, zona: m.region });
-    const ubi: Ubicacion = { lat: Number(m.latitude), lon: Number(m.longitude), nombre: `${m.name}, ${m.province}`, aemetMunicipio: m.aemetMunicipio };
-    setUbicacion(ubi);
-    setMunicipios([]);
-    setQuery("");
-    evaluarCon(ubi, cultivo);
-  }
+  return <div className="flex flex-col gap-5">
+    <section className="rounded-3xl border-2 border-earth-700 bg-wheat-50 p-6 shadow-sm md:grid md:grid-cols-[1.4fr_.6fr] md:items-center md:gap-8">
+      <div><p className="text-[15px] font-bold uppercase tracking-wider text-olive-700">TecRural Campo</p><h1 className="mt-2 text-[30px] font-black leading-tight text-stone-950">Decide a tiempo. Protege tu campo.</h1><p className="mt-3 text-lg leading-relaxed text-stone-700">Avisos claros y ayuda cercana para agricultores y ganaderos.</p></div>
+      <a href="#zona" className="mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl border-2 border-earth-700 bg-white px-5 py-3 text-base font-bold text-earth-900 md:mt-0">Elegir mi zona</a>
+    </section>
 
-  function personalizar() {
-    if (!ubicacion) return;
-    evaluarCon(ubicacion, cultivo);
-    setMostrarCultivo(false);
-  }
+    <section id="zona" className="scroll-mt-24 rounded-2xl border-2 border-olive-700 bg-white p-5 shadow-sm">
+      <p className="text-[15px] font-bold uppercase tracking-wide text-olive-700">Primero, tu ubicación</p><h2 className="mt-1 text-xl font-extrabold text-stone-950">¿En qué municipio está tu explotación?</h2><p className="mt-1 text-base text-stone-700">Así podremos orientarte con datos de tu zona.</p>
+      <div className="mt-4 grid grid-cols-2 gap-2"><button type="button" onClick={() => void cargarMunicipios("altiplano")} className={`min-h-[52px] rounded-xl border-2 px-3 text-[15px] font-bold ${zona === "altiplano" ? "border-olive-800 bg-olive-800 text-white" : "border-stone-300"}`}>Altiplano</button><button type="button" onClick={() => void cargarMunicipios("costa")} className={`min-h-[52px] rounded-xl border-2 px-3 text-[15px] font-bold ${zona === "costa" ? "border-olive-800 bg-olive-800 text-white" : "border-stone-300"}`}>Costa Tropical</button></div>
+      <label htmlFor="municipio-home" className="mt-4 block text-base font-bold text-stone-900">Buscar municipio</label><div className="mt-1 flex gap-2"><input id="municipio-home" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void cargarMunicipios(); }} autoComplete="address-level2" className="min-h-[52px] min-w-0 flex-1 rounded-xl border-2 border-stone-300 px-4 text-base" placeholder="Ej. Baza o Motril"/><button type="button" onClick={() => void cargarMunicipios()} disabled={cargando} className="min-h-[52px] rounded-xl bg-olive-800 px-4 text-base font-bold text-white">{cargando ? "…" : "Buscar"}</button></div>
+      {municipios.length ? <ul className="mt-3 divide-y divide-stone-200 rounded-xl border-2 border-stone-200">{municipios.slice(0,8).map((m) => <li key={`${m.name}-${m.latitude}`}><button type="button" onClick={() => elegir(m)} className="min-h-[52px] w-full px-4 text-left text-base font-semibold">{m.name} · <span className="text-stone-600">{m.province}</span></button></li>)}</ul> : null}
+      {ubicacion ? <p role="status" className="mt-3 rounded-xl bg-brand-50 p-3 text-base font-bold text-brand-900">Ubicación elegida: {ubicacion.nombre}</p> : null}{error ? <p role="alert" className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 p-3 text-[15px] font-semibold text-red-800">{error}</p> : null}
+    </section>
 
-  function limpiarUbicacion() {
-    setUbicacion(null);
-    setAlertas(null);
-    setWeather(null);
-    setError(null);
-    try { localStorage.removeItem(LS_UBICACION); } catch {}
-  }
+    <section className="rounded-2xl bg-olive-900 p-5 text-white"><h2 className="text-xl font-extrabold">Cuéntanos qué necesitas</h2><p className="mt-1 text-base text-wheat-100">Te responde una persona, sin menús ni complicaciones.</p>{wa ? <a href={wa} target="_blank" rel="noopener noreferrer" onClick={() => registrarEventoEmbudo("click_whatsapp", { origen: "home", municipio: ubicacion?.nombre ?? null })} className="mt-4 inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-lg font-black text-white hover:bg-emerald-700">Hablar por WhatsApp</a> : <a href="#contacto" className="mt-4 inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-wheat-100 px-5 py-3 text-lg font-black text-olive-950">Pedir una llamada</a>}</section>
 
-  return (
-    <div className="flex flex-col gap-5">
-      <section className="rounded-2xl border-2 border-stone-900 bg-white p-5 shadow-sm">
-        <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-stone-900">
-          Protege tu explotación antes de que llegue el problema
-        </h1>
-        <p className="mt-2 text-base leading-snug text-stone-700">{SUBTITULO_POR_PERFIL[perfil]}</p>
-
-        <div className="mt-4 grid grid-cols-2 gap-2" role="group" aria-label="¿Eres agricultor o ganadero?">
-          <button
-            type="button"
-            onClick={() => elegirPerfil("agricultor")}
-            aria-pressed={perfil === "agricultor"}
-            className={`min-h-[56px] rounded-2xl border-2 px-3 py-3 text-base font-bold ${perfil === "agricultor" ? "border-brand-800 bg-brand-800 text-white" : "border-stone-300 bg-white text-stone-900"}`}
-          >
-            🌱 Soy agricultor
-          </button>
-          <button
-            type="button"
-            onClick={() => elegirPerfil("ganadero")}
-            aria-pressed={perfil === "ganadero"}
-            className={`min-h-[56px] rounded-2xl border-2 px-3 py-3 text-base font-bold ${perfil === "ganadero" ? "border-brand-800 bg-brand-800 text-white" : "border-stone-300 bg-white text-stone-900"}`}
-          >
-            🐄 Soy ganadero
-          </button>
-        </div>
-
-        <div className="mt-3 flex flex-col gap-2">
-          {waHero ? (
-            <a
-              href={waHero}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => registrarEventoEmbudo("click_whatsapp", { origen: "hero" })}
-              className="inline-flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-emerald-600 bg-emerald-600 px-5 py-4 text-base font-bold text-white shadow-sm hover:bg-emerald-700"
-            >
-              💬 Hablar ahora por WhatsApp
-            </a>
-          ) : null}
-          <a
-            href="#contacto"
-            className="inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-brand-800 px-5 py-3.5 text-base font-bold text-white shadow-sm hover:bg-brand-900"
-          >
-            Quiero que me orientéis
-          </a>
-          <a
-            href="#zona"
-            className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-stone-900 bg-white px-5 py-3 text-sm font-bold text-stone-900 hover:bg-stone-50"
-          >
-            📍 Consultar mi zona
-          </a>
-        </div>
-      </section>
-
-      <section id="zona" className="flex scroll-mt-20 flex-col gap-3">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-stone-700">Elige ubicación</h2>
-        <button
-          type="button"
-          onClick={usarUbicacion}
-          disabled={buscandoGeo || evaluando}
-          className="inline-flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-brand-800 px-5 py-4 text-base font-bold text-white shadow-sm hover:bg-brand-900 active:bg-brand-950 disabled:opacity-60"
-        >
-          <span aria-hidden="true">📍</span> {buscandoGeo ? "Localizando…" : "Usar mi ubicación"}
-        </button>
-
-        <div className="rounded-2xl border-2 border-stone-200 bg-white p-4 shadow-sm">
-          <label className="mb-1.5 block text-sm font-bold text-stone-900">Elegir municipio</label>
-          <p className="mb-2 text-xs font-medium text-stone-600">Primero elige zona, luego municipio</p>
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => cargarZona("altiplano")} className={`min-h-[56px] rounded-xl border-2 px-3 py-3 text-sm font-bold ${zona === "altiplano" ? "border-brand-800 bg-brand-800 text-white" : "border-stone-300 bg-white text-stone-900"}`}>🏔️ Altiplano de Granada</button>
-            <button type="button" onClick={() => cargarZona("costa")} className={`min-h-[56px] rounded-xl border-2 px-3 py-3 text-sm font-bold ${zona === "costa" ? "border-brand-800 bg-brand-800 text-white" : "border-stone-300 bg-white text-stone-900"}`}>🏖️ Costa Tropical</button>
-          </div>
-          <div className="mt-3 flex gap-2">
-            <input
-              id="municipio"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") buscarMunicipio(); }}
-              placeholder="Ej. Baza, Huéscar…"
-              className="min-h-[48px] w-full rounded-xl border-2 border-stone-300 bg-white px-4 py-3 text-base font-medium text-stone-900 placeholder:text-stone-500 focus:border-brand-700"
-            />
-            <button
-              type="button"
-              onClick={buscarMunicipio}
-              disabled={buscandoMun}
-              className="inline-flex min-h-[48px] shrink-0 items-center justify-center gap-1 rounded-xl border-2 border-stone-900 bg-white px-4 py-3 text-base font-bold text-stone-900 hover:bg-stone-50 disabled:opacity-50"
-            >
-              {buscandoMun ? "…" : "🔍 Buscar"}
-            </button>
-          </div>
-          {municipios.length > 0 ? (
-            <ul className="mt-3 max-h-56 overflow-auto rounded-xl border-2 border-stone-200 divide-y divide-stone-200">
-              {municipios.map((m) => (
-                <li key={`${m.name}-${m.latitude}`}>
-                  <button
-                    type="button"
-                    onClick={() => elegirMunicipio(m)}
-                    className="flex min-h-[48px] w-full items-center justify-between gap-2 px-4 py-3 text-left hover:bg-stone-50"
-                  >
-                    <span className="text-base font-semibold text-stone-900">{m.name} <span className="text-sm font-medium text-stone-600">· {m.province}</span></span>
-                    <span aria-hidden="true">→</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-
-        {ubicacion ? (
-          <div className="flex items-center gap-2">
-            <p className="flex-1 rounded-xl border-2 border-brand-200 bg-brand-50 px-4 py-3 text-base font-semibold text-brand-900">
-              📍 {ubicacion.nombre}
-            </p>
-            <button
-              type="button"
-              onClick={limpiarUbicacion}
-              aria-label="Cambiar ubicación"
-              className="inline-flex min-h-[48px] shrink-0 items-center justify-center gap-1 rounded-xl border-2 border-stone-900 bg-white px-4 py-3 text-base font-bold text-stone-900 hover:bg-stone-50"
-            >
-              Cambiar
-            </button>
-          </div>
-        ) : null}
-        {error ? (
-          error === "NO_DATA" ? (
-            <p role="alert" className="rounded-xl border-2 border-stone-300 bg-stone-100 p-4 text-center text-base font-bold text-stone-700">Datos temporalmente no disponibles — no es “sin riesgo”.</p>
-          ) : (
-            <p role="alert" className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-base font-semibold text-red-800">{error}</p>
-          )
-        ) : null}
-      </section>
-
-      {weather ? (
-        <section className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm">
-          <h2 className="text-base font-bold text-stone-900">Tiempo en tu zona</h2>
-          <p className="mt-1 text-xs font-medium text-stone-600">{haceMinutos(weather.actualizado)}</p>
-          {esDatosCaducados(weather.actualizado, 90) ? <p role="alert" className="mt-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-2 text-center text-sm font-bold text-amber-800">⚠ Datos meteorológicos pendientes de actualización</p> : null}
-          <div className={`mt-3 grid grid-cols-2 gap-2 text-center ${esDatosCaducados(weather.actualizado, 90) ? "opacity-60" : ""}`}>
-            <div className="rounded-xl border-2 border-stone-200 p-3"><p className="text-xs font-bold uppercase text-stone-600">Temperatura</p><p className="text-lg font-extrabold">{weather.temperatura !== null ? `${weather.temperatura}°C` : "—"}</p></div>
-            <div className="rounded-xl border-2 border-stone-200 p-3"><p className="text-xs font-bold uppercase text-stone-600">Máxima</p><p className="text-lg font-extrabold">{weather.maxima !== null ? `${weather.maxima}°C` : "—"}</p></div>
-            <div className="rounded-xl border-2 border-stone-200 p-3"><p className="text-xs font-bold uppercase text-stone-600">Mínima</p><p className="text-lg font-extrabold">{weather.minima !== null ? `${weather.minima}°C` : "—"}</p></div>
-            <div className="rounded-xl border-2 border-stone-200 p-3"><p className="text-xs font-bold uppercase text-stone-600">Precipitación</p><p className="text-lg font-extrabold">{weather.precipitacion !== null ? `${weather.precipitacion} mm` : "—"}</p></div>
-            <div className="col-span-2 rounded-xl border-2 border-stone-200 p-3"><p className="text-xs font-bold uppercase text-stone-600">Viento</p><p className="text-lg font-extrabold">{weather.viento !== null ? `${weather.viento} km/h` : "—"}</p></div>
-          </div>
-        </section>
-      ) : null}
-      {ubicacion ? (
-        <section className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-stone-900">Riesgos próximos</h2>
-          {perfil === "ganadero" ? (
-            <p className="mt-1 text-[11px] font-semibold text-stone-600">Orientado a bienestar animal y manejo de la explotación.</p>
-          ) : null}
-          <p className="mt-1 text-[11px] text-stone-500">Fuente: {proveedorRiesgo ?? "—"}</p>
-          {evaluando ? (
-            <p className="mt-3 text-base font-medium text-stone-700">Evaluando…</p>
-          ) : alertas ? (
-            <ul className="mt-3 flex flex-col gap-2">
-              {RIESGOS_POR_PERFIL[perfil].map((r) => {
-                const al = alertas.find((a) => a.tipo === r.key);
-                const estilo = nivelColor(al?.severidad);
-                return (
-                  <li key={r.key} className={`flex items-center justify-between rounded-xl border-2 px-4 py-3 ${estilo.bg}`}>
-                    <span className="flex items-center gap-2 text-base font-bold text-stone-900">
-                      <span aria-hidden="true" className="text-lg">{estilo.dot}</span> {r.etiqueta}
-                    </span>
-                    <span className="text-sm font-semibold uppercase tracking-wide text-stone-800">{estilo.label}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : null}
-
-          <div className="mt-4 rounded-xl border-2 border-brand-200 bg-brand-50 p-4">
-            {perfil === "ganadero" ? (
-              <>
-                <p className="text-base font-bold text-stone-900">Alertas orientadas a tu ganado</p>
-                <p className="mt-1 text-sm leading-snug text-stone-700">
-                  Estrés térmico, frío extremo, tormentas y lluvia con impacto en animales y pastos. Si además cultivas forrajes o cereal para pienso, indícalo como cultivo y afinamos los umbrales.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setMostrarCultivo(true)}
-                  className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-base font-bold text-white hover:bg-brand-900"
-                >
-                  🌾 También cultivos forraje o cereal
-                </button>
-                {mostrarCultivo ? (
-                  <div className="mt-3 flex flex-col gap-3">
-                    <label className="text-sm font-bold text-stone-900">Cultivo (para parcelas de forraje)</label>
-                    <select
-                      value={cultivo}
-                      onChange={(e) => setCultivo(e.target.value as CulturaId)}
-                      className="min-h-[48px] w-full rounded-xl border-2 border-stone-300 bg-white px-4 py-3 text-base font-medium text-stone-900"
-                    >
-                      {CULTIVOS.map((id) => (
-                        <option key={id} value={id}>{catalogoCultivos[id].nombre}</option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={personalizar}
-                      className="inline-flex min-h-[48px] items-center justify-center rounded-xl bg-brand-800 px-5 py-3 text-base font-bold text-white"
-                    >
-                      Actualizar riesgos
-                    </button>
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <>
-                <p className="text-base font-bold text-stone-900">¿Quieres afinar la alerta?</p>
-                <p className="mt-1 text-sm leading-snug text-stone-700">El cultivo y la fase cambian los umbrales.</p>
-                {!mostrarCultivo ? (
-                  <button
-                    type="button"
-                    onClick={() => setMostrarCultivo(true)}
-                    className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-base font-bold text-white hover:bg-brand-900"
-                  >
-                    ➕ Añade tu cultivo para personalizar las alertas
-                  </button>
-                ) : (
-                  <div className="mt-3 flex flex-col gap-3">
-                    <label className="text-sm font-bold text-stone-900">Cultivo</label>
-                    <select
-                      value={cultivo}
-                      onChange={(e) => setCultivo(e.target.value as CulturaId)}
-                      className="min-h-[48px] w-full rounded-xl border-2 border-stone-300 bg-white px-4 py-3 text-base font-medium text-stone-900"
-                    >
-                      {CULTIVOS.map((id) => (
-                        <option key={id} value={id}>{catalogoCultivos[id].nombre}</option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={personalizar}
-                      className="inline-flex min-h-[48px] items-center justify-center rounded-xl bg-brand-800 px-5 py-3 text-base font-bold text-white"
-                    >
-                      Actualizar riesgos
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-            <Link href="/parcelas" className="mt-3 inline-flex min-h-[44px] w-full items-center justify-center gap-1 text-sm font-semibold text-brand-800 underline underline-offset-4">
-              O guarda tu parcela para recibir avisos →
-            </Link>
-          </div>
-          <div className="mt-4">
-            <CtaPrincipal />
-          </div>
-        </section>
-      ) : null}
-      {!ubicacion ? <CtaPrincipal /> : null}
-    </div>
-  );
+    <section><h2 className="text-xl font-extrabold text-stone-950">Ayuda práctica para tu explotación</h2><div className="mt-3 grid gap-3 md:grid-cols-3">{servicios.map((s) => <article key={s.titulo} className="rounded-2xl border-2 border-earth-200 bg-white p-4"><h3 className="text-lg font-extrabold text-stone-950">{s.titulo}</h3><p className="mt-1 text-[15px] leading-relaxed text-stone-700">{s.texto}</p><Link href={s.href} className="mt-3 inline-flex min-h-[44px] items-center font-bold text-olive-800 underline">Ver cómo ayuda</Link></article>)}</div></section>
+  </div>;
 }
