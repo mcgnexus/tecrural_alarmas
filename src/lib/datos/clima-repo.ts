@@ -77,6 +77,10 @@ export async function guardarHorario(
 ): Promise<void> {
   if (horas.length === 0) return;
   const db = obtenerDb();
+  // Una sola marca de tiempo para toda la tanda: en la serie híbrida cada
+  // proveedor trae su propio `fetchedAt` y, si se guardan distintos, la lectura
+  // por "última tanda" descartaría las filas del otro proveedor.
+  const marcaTanda = new Date();
   const valores = horas.map((hora) => ({
     weatherLocationId: locationId,
     provider: hora.provider,
@@ -93,7 +97,7 @@ export async function guardarHorario(
     cloudCoverPct: hora.cloudCoverPct,
     solarRadiationWm2: hora.solarRadiationWm2,
     et0Mm: hora.et0Mm,
-    fetchedAt: new Date(hora.fetchedAt),
+    fetchedAt: marcaTanda,
   }));
 
   await db
@@ -153,9 +157,13 @@ export async function leerHorarioReciente(
 
   if (filas.length === 0) return [];
 
+  // Una "tanda" es la descarga más reciente. Se admite una pequeña tolerancia
+  // porque los proveedores de la serie híbrida (AEMET + Open-Meteo) se guardan
+  // con segundos de diferencia; sin ella se perdería la parte de corto plazo.
+  const TOLERANCIA_TANDA_MS = 2 * 60 * 1000;
   const ultimaTanda = filas[0]!.fila.fetchedAt.getTime();
   return filas
-    .filter((f) => f.fila.fetchedAt.getTime() === ultimaTanda)
+    .filter((f) => f.fila.fetchedAt.getTime() >= ultimaTanda - TOLERANCIA_TANDA_MS)
     .map((f) => aHourly(f.fila, f.lat, f.lon))
     .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 }
