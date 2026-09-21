@@ -485,10 +485,26 @@ ALTER TABLE plataforma.lead_scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE plataforma.notification_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE plataforma.notifications ENABLE ROW LEVEL SECURITY;
 
--- Políticas: anonymous solo lectura crops/rules, user solo sus datos, admin todo (via service_role)
-CREATE POLICY users_own ON plataforma.users FOR ALL USING (auth.uid() = id OR current_setting('app.role', true) = 'admin');
-CREATE POLICY farms_own ON plataforma.farms FOR ALL USING (user_id = auth.uid() OR current_setting('app.role', true) = 'admin');
-CREATE POLICY plots_own ON plataforma.plots FOR ALL USING (farm_id IN (SELECT id FROM plataforma.farms WHERE user_id = auth.uid()) OR current_setting('app.role', true) = 'admin');
--- RLS para lecturas públicas de catálogo
-CREATE POLICY crops_public_read ON plataforma.crops FOR SELECT USING (true);
-CREATE POLICY risk_rules_public_read ON plataforma.risk_rules FOR SELECT USING (true);
+-- Políticas: anonymous solo lectura crops/rules, user solo sus datos, admin todo.
+-- Estas políticas usan auth.uid() (específico de Supabase). En bases de datos sin
+-- el esquema `auth` se omiten para no romper la migración. Idempotente.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'auth') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'plataforma' AND policyname = 'users_own') THEN
+      CREATE POLICY users_own ON plataforma.users FOR ALL USING (auth.uid() = id OR current_setting('app.role', true) = 'admin');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'plataforma' AND policyname = 'farms_own') THEN
+      CREATE POLICY farms_own ON plataforma.farms FOR ALL USING (user_id = auth.uid() OR current_setting('app.role', true) = 'admin');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'plataforma' AND policyname = 'plots_own') THEN
+      CREATE POLICY plots_own ON plataforma.plots FOR ALL USING (farm_id IN (SELECT id FROM plataforma.farms WHERE user_id = auth.uid()) OR current_setting('app.role', true) = 'admin');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'plataforma' AND policyname = 'crops_public_read') THEN
+      CREATE POLICY crops_public_read ON plataforma.crops FOR SELECT USING (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'plataforma' AND policyname = 'risk_rules_public_read') THEN
+      CREATE POLICY risk_rules_public_read ON plataforma.risk_rules FOR SELECT USING (true);
+    END IF;
+  END IF;
+END $$;
