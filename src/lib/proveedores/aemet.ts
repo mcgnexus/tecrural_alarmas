@@ -32,6 +32,55 @@ function municipioAemetPorCoordenadas(lat: number, lon: number): string | undefi
   return distancia <= 0.04 ** 2 ? mejor : undefined;
 }
 
+// AEMET publica los avisos CAP por zona del Plan Meteoalerta. Sin este filtro
+// un municipio granadino recibiría avisos de toda Andalucía (p. ej. Campiña
+// gaditana). Las zonas granadinas son "Guadix y Baza" y "Costa granadina".
+const ZONA_CAP_POR_MUNICIPIO: Record<string, string> = {
+  "18098": "Guadix y Baza",
+  "18023": "Guadix y Baza",
+  "18164": "Guadix y Baza",
+  "18046": "Guadix y Baza",
+  "18145": "Guadix y Baza",
+  "18077": "Guadix y Baza",
+  "18057": "Guadix y Baza",
+  "18056": "Guadix y Baza",
+  "18017": "Costa granadina",
+  "18173": "Costa granadina",
+  "18140": "Costa granadina",
+};
+
+function normalizarZona(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function zonaDeUbicacion(location: GeoPoint): string | undefined {
+  const codigo =
+    location.aemetMunicipio?.trim() ||
+    municipioAemetPorCoordenadas(location.latitud, location.longitud);
+  if (!codigo) return undefined;
+  const zona = ZONA_CAP_POR_MUNICIPIO[codigo];
+  return zona ? normalizarZona(zona) : undefined;
+}
+
+/** Descarta avisos de otras zonas cuando conocemos la del municipio. */
+function filtrarAvisosPorZona(
+  avisos: OfficialWarning[],
+  location: GeoPoint,
+): OfficialWarning[] {
+  const zona = zonaDeUbicacion(location);
+  if (!zona) return avisos;
+  return avisos.filter((aviso) =>
+    normalizarZona(aviso.area)
+      .split(/[;,]/)
+      .some((area) => area.trim() === zona),
+  );
+}
+
 function numero(valor: unknown): number | null {
   if (typeof valor === "number" && Number.isFinite(valor)) return valor;
   if (typeof valor === "string" && valor.trim() !== "") {
@@ -370,7 +419,7 @@ export function parsearCapXml(xml: string): OfficialWarning[] {
 function normalizarAvisosTar(buf: Buffer): OfficialWarning[] {
   const xmls = parsearTar(buf)
     .filter((archivo) => /\.xml$/i.test(archivo.nombre))
-    .map((archivo) => archivo.contenido.toString("latin1"));
+    .map((archivo) => archivo.contenido.toString("utf8"));
   const vistos = new Set<string>();
   const avisos: OfficialWarning[] = [];
   for (const xml of xmls) {
@@ -468,13 +517,16 @@ export const proveedorAemet: WeatherProvider = {
     return normalizarHorarioAemet(datos, latitud, longitud);
   },
 
-  async getWarnings(): Promise<OfficialWarning[]> {
+  async getWarnings(location: GeoPoint): Promise<OfficialWarning[]> {
     const area = resolverAreaCap();
     const { json, tar } = await pedirAvisosCap(
       `/avisos_cap/ultimoelaborado/area/${area}`,
     );
-    if (json) return normalizarAvisos(json);
-    if (tar) return normalizarAvisosTar(tar);
-    return [];
+    const avisos = json
+      ? normalizarAvisos(json)
+      : tar
+        ? normalizarAvisosTar(tar)
+        : [];
+    return filtrarAvisosPorZona(avisos, location);
   },
 };
