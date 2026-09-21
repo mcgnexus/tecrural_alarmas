@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { obtenerClimaHorario } from "@/lib/clima/motor";
+import { inicioDelDiaMadrid } from "@/lib/normalizacion/horario";
 import { crearLogger } from "@/lib/log/logger";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 
@@ -29,13 +30,14 @@ export async function GET(req: Request) {
     const inicio = Date.now();
     try {
       const horas = await obtenerClimaHorario(lat, lon, aemetMunicipio);
-      // La fuente (Open-Meteo) incluye past_days; no servir histórico como forecast.
-      const ahora = Date.now();
-      const futuras = horas
-        .filter((h) => Number.isFinite(Date.parse(h.timestamp)) && Date.parse(h.timestamp) >= ahora)
+      // Se sirve el día en curso completo (con las horas ya pasadas) para poder
+      // calcular mínimas y máximas diarias; no se sirve histórico de días previos.
+      const desde = inicioDelDiaMadrid().getTime();
+      const delDia = horas
+        .filter((h) => Number.isFinite(Date.parse(h.timestamp)) && Date.parse(h.timestamp) >= desde)
         .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
-      const recortado = futuras.slice(0, hours);
-      if (recortado.length === 0) throw new Error("No hay horas futuras válidas");
+      const recortado = delDia.slice(0, hours);
+      if (recortado.length === 0) throw new Error("No hay horas válidas");
       log.info("v1.weather.forecast.ok", { status: 200, duracion_ms: Date.now() - inicio, data: { horas: recortado.length } });
       return conCabeceraRequestId(NextResponse.json(recortado), requestId);
     } catch (error) {

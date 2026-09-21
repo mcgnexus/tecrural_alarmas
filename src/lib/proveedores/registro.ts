@@ -69,14 +69,18 @@ export async function obtenerPronostico(
   if (!oficial) return extension as NormalizedForecast;
   if (!extension) return oficial;
 
-  // AEMET aporta el tramo oficial; Open-Meteo solo rellena lo posterior.
+  // AEMET aporta el tramo oficial; Open-Meteo rellena lo anterior y lo
+  // posterior, de modo que el día en curso quede completo (con las horas ya
+  // pasadas) para calcular mínimas/máximas diarias.
+  const inicioOficial = Math.min(...oficial.map((h) => Date.parse(h.timestamp)));
   const corte = Math.max(...oficial.map((h) => Date.parse(h.timestamp)));
+  const cabeza = extension.filter((h) => Date.parse(h.timestamp) < inicioOficial);
   const cola = extension.filter((h) => Date.parse(h.timestamp) > corte);
-  const serie = [...oficial, ...cola].sort(
+  const serie = [...cabeza, ...oficial, ...cola].sort(
     (a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp),
   );
   log.info("proveedores.pronostico.hibrido", {
-    data: { oficial: oficial.length, extension: cola.length },
+    data: { oficial: oficial.length, cabeza: cabeza.length, cola: cola.length },
   });
   return serie;
 }
