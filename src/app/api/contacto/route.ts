@@ -19,11 +19,12 @@ const VENTANA_DEDUP_MIN = 5;
 const esquema = z.object({
   dispositivoId: z.string().trim().min(1).max(128),
   nombre: z.string().trim().min(2).max(80),
-  telefono: z
-    .string()
-    .trim()
-    .regex(/^\+?[\d\s().-]{9,20}$/, "Teléfono no válido"),
+  telefono: z.string().trim().refine((value) => {
+    const limpio = value.replace(/[\s().-]/g, "").replace(/^0034/, "+34");
+    return /^(?:\+34)?[6789]\d{8}$/.test(limpio);
+  }, "Teléfono español no válido"),
   municipio: z.string().trim().min(1).max(80),
+  cultivo: z.string().trim().min(1).max(40),
   tipoExplotacion: z.enum(["agricultura", "ganaderia", "mixta"]),
   problema: z.string().trim().min(1).max(80),
   servicioKey: z.string().trim().max(80).optional(),
@@ -102,6 +103,7 @@ export async function POST(req: Request) {
             servicioKey: datos.servicioKey ?? null,
             servicioNombre: datos.servicioNombre ?? null,
             municipio: datos.municipio,
+            cultivo: datos.cultivo,
             tipoExplotacion: datos.tipoExplotacion,
             problema: datos.problema,
             consentimiento: {
@@ -124,6 +126,7 @@ export async function POST(req: Request) {
             datos.servicioNombre ? `Servicio: ${datos.servicioNombre}` : null,
             `Problema: ${datos.problema}`,
             `Municipio: ${datos.municipio}`,
+            `Cultivo: ${datos.cultivo}`,
             `Explotación: ${datos.tipoExplotacion}`,
           ]
             .filter(Boolean)
@@ -131,6 +134,7 @@ export async function POST(req: Request) {
           // Datos estructurados (y consentimiento) para consultas y admin.
           notas: JSON.stringify({
             municipio: datos.municipio,
+            cultivo: datos.cultivo,
             tipoExplotacion: datos.tipoExplotacion,
             problema: datos.problema,
             servicioKey: datos.servicioKey ?? null,

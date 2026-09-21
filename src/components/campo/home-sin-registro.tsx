@@ -9,6 +9,7 @@ import { AvisosOficialesAemet } from "@/components/campo/avisos-oficiales";
 import { ListaAvisosFitosanitarios } from "@/components/fitosanitario/lista-avisos";
 import { catalogoCultivos } from "@/lib/cultivos/catalogo";
 import type { CulturaId } from "@/lib/cultivos/catalogo";
+import { CtaWhatsapp } from "@/components/campo/cta-whatsapp";
 
 type Municipio = { name: string; province: string; region: string; latitude: number; longitude: number; aemetMunicipio?: string };
 type Ubicacion = { lat: number; lon: number; nombre: string; province?: string; aemetMunicipio?: string };
@@ -59,14 +60,14 @@ export function HomeSinRegistro() {
   function elegir(m: Municipio) {
     const u = { lat: Number(m.latitude), lon: Number(m.longitude), nombre: `${m.name}, ${m.province}`, province: m.province, aemetMunicipio: m.aemetMunicipio };
     setUbicacion(u); setMunicipios([]); setQuery("");
-    try { localStorage.setItem("tecrural:ubicacion", JSON.stringify(u)); localStorage.setItem("tecrural:zona", zona ?? m.region); } catch {}
+     try { localStorage.setItem("tecrural:ubicacion", JSON.stringify(u)); localStorage.setItem("tecrural:zona", zona ?? m.region); window.dispatchEvent(new Event("tecrural:datos-actualizados")); } catch {}
     registrarEventoEmbudo("municipality_selected", { municipio: m.name, zona: zona ?? m.region });
   }
 
   return <div className="flex flex-col gap-5">
     <section className="rounded-3xl border-2 border-earth-700 bg-wheat-50 p-6 shadow-sm md:grid md:grid-cols-[1.4fr_.6fr] md:items-center md:gap-8">
-      <div><p className="text-[15px] font-bold uppercase tracking-wider text-olive-700">TecRural Campo</p><h1 className="mt-2 text-[30px] font-black leading-tight text-stone-950">Decide a tiempo. Protege tu campo.</h1><p className="mt-3 text-lg leading-relaxed text-stone-700">Avisos claros y ayuda cercana para agricultores y ganaderos.</p></div>
-      <a href="#zona" className="mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl border-2 border-earth-700 bg-white px-5 py-3 text-base font-bold text-earth-900 md:mt-0">Elegir mi zona</a>
+       <div><p className="text-[15px] font-bold uppercase tracking-wider text-olive-700">TecRural Campo</p><h1 className="mt-2 text-[30px] font-black leading-tight text-stone-950">Recibe avisos útiles para proteger tu explotación.</h1><p className="mt-3 text-lg leading-relaxed text-stone-700">Podrás recibir por WhatsApp avisos claros sobre heladas, calor, lluvia, viento y riesgos para tu cultivo, adaptados a tu municipio.</p><ul className="mt-4 grid gap-2 text-[15px] font-semibold text-stone-800"><li className="flex gap-2"><span aria-hidden="true" className="text-olive-700">✓</span>Avisos cuando haya riesgo relevante para tu zona.</li><li className="flex gap-2"><span aria-hidden="true" className="text-olive-700">✓</span>Recomendaciones fáciles de entender.</li><li className="flex gap-2"><span aria-hidden="true" className="text-olive-700">✓</span>Información adaptada a tu cultivo.</li><li className="flex gap-2"><span aria-hidden="true" className="text-olive-700">✓</span>Sin recibir mensajes innecesarios.</li><li className="flex gap-2"><span aria-hidden="true" className="text-olive-700">✓</span>Servicio gratuito durante esta fase.</li></ul><p className="mt-4 text-sm leading-relaxed text-stone-700">Recibirás avisos solo cuando haya información relevante para tu zona o cultivo; no enviamos mensajes diarios si no son necesarios.</p><div className="mt-5"><CtaWhatsapp /></div></div>
+       <a href="#zona" className="mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl border-2 border-earth-700 bg-white px-5 py-3 text-base font-bold text-earth-900 md:mt-0">Elegir mi zona</a>
     </section>
 
     <section id="zona" className="scroll-mt-24 rounded-2xl border-2 border-olive-700 bg-white p-5 shadow-sm">
@@ -92,11 +93,11 @@ export function HomeSinRegistro() {
       <h2 className="text-xl font-extrabold">Avisos de tu cultivo por WhatsApp</h2>
       <p className="mt-1 text-base text-wheat-100">Dinos qué cultivas y te avisamos gratis cuando haya riesgo de helada, calor o plagas.</p>
       <label htmlFor="cultivo-home" className="mt-4 block text-base font-bold text-wheat-100">Tu cultivo</label>
-      <select id="cultivo-home" value={cultivo} onChange={(e) => { const v = e.target.value as CulturaId | ""; setCultivo(v); if (v) registrarEventoEmbudo("crop_selected", { cultivo: v, municipio: ubicacion?.nombre ?? null }); }} className="mt-1 min-h-[52px] w-full rounded-xl border-2 border-wheat-100 bg-white px-4 text-base font-semibold text-stone-900">
+     <select id="cultivo-home" value={cultivo} onChange={(e) => { const v = e.target.value as CulturaId | ""; setCultivo(v); try { localStorage.setItem("tecrural:cultivo", v ? catalogoCultivos[v].nombre : ""); window.dispatchEvent(new Event("tecrural:datos-actualizados")); } catch {} if (v) registrarEventoEmbudo("crop_selected", { cultivo: v, municipio: ubicacion?.nombre ?? null }); }} className="mt-1 min-h-[52px] w-full rounded-xl border-2 border-wheat-100 bg-white px-4 text-base font-semibold text-stone-900">
         <option value="">Elige tu cultivo</option>
         {idsCultivos.map((id) => <option key={id} value={id}>{catalogoCultivos[id].nombre}</option>)}
       </select>
-      {wa ? <a href={wa} target="_blank" rel="noopener noreferrer" onClick={() => registrarEventoEmbudo("click_whatsapp", { origen: "home", municipio: ubicacion?.nombre ?? null, cultivo: cultivo || null })} className="mt-4 inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-lg font-black text-white hover:bg-emerald-700">Quiero avisos de mi cultivo por WhatsApp</a> : <a href="#contacto" className="mt-4 inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-wheat-100 px-5 py-3 text-lg font-black text-olive-950">Pedir una llamada</a>}
+       {wa ? <a href={wa} target="_blank" rel="noopener noreferrer" onClick={() => registrarEventoEmbudo("click_whatsapp", { origen: "home", municipio: ubicacion?.nombre ?? null, cultivo: cultivo || null })} className="mt-4 inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-lg font-black text-white hover:bg-emerald-700" aria-label="Recibe avisos gratis por WhatsApp sobre mi cultivo">Recibe avisos gratis por WhatsApp</a> : <a href="#contacto" className="mt-4 inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-wheat-100 px-5 py-3 text-lg font-black text-olive-950">Recibe avisos gratis por WhatsApp</a>}
       <p className="mt-2 text-[12px] leading-relaxed text-wheat-100">Sin compromiso. Solo te avisamos de lo importante para tu cultivo.</p>
     </section>
 
