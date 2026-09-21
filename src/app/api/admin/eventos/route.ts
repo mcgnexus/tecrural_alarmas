@@ -9,7 +9,7 @@ const log = crearLogger("api.admin.eventos");
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  const auth = verificarAccesoAdmin(req);
+  const auth = await verificarAccesoAdmin(req);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   return conRequestId({ external_source: "admin" }, async (requestId) => {
     try {

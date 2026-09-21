@@ -16,7 +16,7 @@ export async function PATCH(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const acceso = verificarAccesoAdmin(req);
+  const acceso = await verificarAccesoAdmin(req);
   if (!acceso.ok) return NextResponse.json({ error: acceso.error }, { status: acceso.status });
   const { id } = await ctx.params;
   const cuerpo = (await req.json().catch(() => null)) as unknown;
@@ -60,7 +60,7 @@ export async function DELETE(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const acceso = verificarAccesoAdmin(req);
+  const acceso = await verificarAccesoAdmin(req);
   if (!acceso.ok) return NextResponse.json({ error: acceso.error }, { status: acceso.status });
   const { id } = await ctx.params;
 

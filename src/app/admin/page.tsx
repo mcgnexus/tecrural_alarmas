@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TablaLeads } from "@/components/admin/tabla-leads";
 
 type Stats = {
@@ -18,11 +18,43 @@ type Stats = {
 
 export default function AdminPage() {
   const [secret, setSecret] = useState("");
+  const [autenticado, setAutenticado] = useState<boolean | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
 
-  async function cargar() {
+  async function cargarStats() {
+    const r = await fetch("/api/admin/stats", { cache: "no-store" });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error((j as { error?: string }).error ?? `HTTP ${r.status}`);
+    }
+    setStats((await r.json()) as Stats);
+  }
+
+  // Al abrir /admin, si ya hay sesión en cookie, entra sin pedir el secreto.
+  useEffect(() => {
+    let activo = true;
+    fetch("/api/admin/session", { cache: "no-store" })
+      .then((r) => r.json() as Promise<{ autenticado?: boolean }>)
+      .then(async (j) => {
+        if (!activo) return;
+        if (j.autenticado) {
+          setAutenticado(true);
+          try {
+            await cargarStats();
+          } catch (e) {
+            if (activo) setError(e instanceof Error ? e.message : "Error");
+          }
+        } else {
+          setAutenticado(false);
+        }
+      })
+      .catch(() => { if (activo) setAutenticado(false); });
+    return () => { activo = false; };
+  }, []);
+
+  async function entrar() {
     if (!secret.trim()) {
       setError("Introduce el secreto de administrador.");
       return;
@@ -30,23 +62,19 @@ export default function AdminPage() {
     setCargando(true);
     setError(null);
     try {
-      const r = await fetch("/api/admin/stats", {
-        headers: { "x-admin-secret": secret.trim() },
-        cache: "no-store",
-      });
-      if (!r.ok) {
-        const j = await r.json().catch(() => ({}));
-        throw new Error((j as { error?: string }).error ?? `HTTP ${r.status}`);
-      }
-      const j = (await r.json()) as Stats;
-      setStats(j);
-      // Deja la sesión en una cookie HttpOnly, para que las páginas de
-      // administración no tengan que llevar el secreto en la URL.
-      await fetch("/api/admin/session", {
+      // Canjea el secreto por una sesión (cookie HttpOnly con token revocable).
+      const sesion = await fetch("/api/admin/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ secret: secret.trim() }),
-      }).catch(() => {});
+      });
+      if (!sesion.ok) {
+        const j = await sesion.json().catch(() => ({}));
+        throw new Error((j as { error?: string }).error ?? `HTTP ${sesion.status}`);
+      }
+      setSecret("");
+      setAutenticado(true);
+      await cargarStats();
       const destino = new URLSearchParams(window.location.search).get("next");
       if (destino && destino.startsWith("/")) window.location.assign(destino);
     } catch (e) {
@@ -56,6 +84,12 @@ export default function AdminPage() {
     }
   }
 
+  async function salir() {
+    await fetch("/api/admin/session", { method: "DELETE" }).catch(() => {});
+    setStats(null);
+    setAutenticado(false);
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6">
       <header className="rounded-2xl border-2 border-stone-900 bg-white p-5 shadow-sm">
@@ -63,22 +97,31 @@ export default function AdminPage() {
         <p className="mt-1 text-sm font-medium text-stone-600">Solo administradores. Requiere ADMIN_SECRET.</p>
       </header>
 
-      <div className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm">
-        <label className="text-sm font-bold text-stone-900">Secreto administrador</label>
-        <div className="mt-2 flex gap-2">
-          <input
-            value={secret}
-            onChange={(e) => setSecret(e.target.value)}
-            type="password"
-            placeholder="ADMIN_SECRET"
-            className="min-h-[48px] w-full rounded-xl border-2 border-stone-300 px-4 py-3 text-base font-medium"
-          />
-          <button onClick={cargar} disabled={cargando} className="min-h-[48px] shrink-0 rounded-xl bg-stone-900 px-5 py-3 text-base font-bold text-white hover:bg-black disabled:opacity-60">
-            {cargando ? "Cargando…" : "Entrar"}
+      {autenticado ? (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-4">
+          <p className="text-sm font-bold text-emerald-900">Sesión de administración activa.</p>
+          <button onClick={salir} className="min-h-[44px] shrink-0 rounded-xl border-2 border-stone-900 bg-white px-4 py-2 text-sm font-bold text-stone-900 hover:bg-stone-50">
+            Cerrar sesión
           </button>
         </div>
-        {error ? <p role="alert" className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</p> : null}
-      </div>
+      ) : (
+        <div className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm">
+          <label className="text-sm font-bold text-stone-900">Secreto administrador</label>
+          <div className="mt-2 flex gap-2">
+            <input
+              value={secret}
+              onChange={(e) => setSecret(e.target.value)}
+              type="password"
+              placeholder="ADMIN_SECRET"
+              className="min-h-[48px] w-full rounded-xl border-2 border-stone-300 px-4 py-3 text-base font-medium"
+            />
+            <button onClick={entrar} disabled={cargando} className="min-h-[48px] shrink-0 rounded-xl bg-stone-900 px-5 py-3 text-base font-bold text-white hover:bg-black disabled:opacity-60">
+              {cargando ? "Cargando…" : "Entrar"}
+            </button>
+          </div>
+        </div>
+      )}
+      {error ? <p role="alert" className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</p> : null}
 
       {stats ? (
         <div className="grid gap-4">
@@ -104,7 +147,7 @@ export default function AdminPage() {
           <Lista titulo="Cultivos" items={stats.cultivos.map((c) => ({ nombre: c.nombre, total: c.total }))} />
           <Lista titulo="Municipios" items={stats.municipios.map((m) => ({ nombre: m.nombre, total: m.total }))} />
           <Lista titulo="CTAs más pulsados" items={stats.ctas.map((c) => ({ nombre: c.tipo, total: c.total }))} />
-          <TablaLeads secret={secret} />
+          <TablaLeads />
           <a
             href="/gestion"
             className="rounded-2xl border-2 border-brand-800 bg-brand-50 px-5 py-4 text-center text-base font-bold text-brand-900 hover:bg-brand-100"

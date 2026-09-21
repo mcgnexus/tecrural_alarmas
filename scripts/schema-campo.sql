@@ -109,3 +109,12 @@ CREATE INDEX IF NOT EXISTS notificaciones_dedup_idx
 
 CREATE INDEX IF NOT EXISTS notificaciones_suscripcion_idx
   ON campo.notificaciones (suscripcion_id, creada_en DESC);
+
+-- Cuentas de usuario: se añade user_id (nullable) para que las filas creadas
+-- como anónimas puedan reclamarse al iniciar sesión. `dispositivo_id` se mantiene.
+ALTER TABLE campo.parcelas ADD COLUMN IF NOT EXISTS user_id uuid;
+ALTER TABLE campo.suscripciones_aviso ADD COLUMN IF NOT EXISTS user_id uuid;
+
+CREATE INDEX IF NOT EXISTS parcelas_usuario_idx ON campo.parcelas (user_id);
+CREATE INDEX IF NOT EXISTS suscripciones_usuario_idx
+  ON campo.suscripciones_aviso (user_id, activa);

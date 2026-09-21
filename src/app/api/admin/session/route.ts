@@ -2,19 +2,22 @@ import { NextResponse } from "next/server";
 import {
   cookieDeCierre,
   cookieDeSesion,
+  tokenDePeticion,
   verificarAccesoAdmin,
+  verificarSecretoAdmin,
 } from "@/lib/admin/auth";
+import { crearSesionAdmin, revocarSesionAdmin } from "@/lib/datos/admin-sesiones-repo";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Sesion de administracion por cookie HttpOnly.
  *
- * El secreto llega en el cuerpo (nunca en la URL) y se devuelve como cookie, de
- * modo que las paginas que necesitan administracion no lo ponen en el enlace.
+ * El secreto llega en el cuerpo (nunca en la URL) y se canjea por un token de
+ * sesión aleatorio y revocable; la cookie no guarda el ADMIN_SECRET.
  */
 export async function GET(req: Request) {
-  const auth = verificarAccesoAdmin(req);
+  const auth = await verificarAccesoAdmin(req);
   return NextResponse.json({ autenticado: auth.ok, error: auth.ok ? null : auth.error }, { status: auth.ok ? 200 : 401 });
 }
 
@@ -25,17 +28,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Falta el secreto." }, { status: 400 });
   }
 
-  const auth = verificarAccesoAdmin(new Request(req.url, { headers: { "x-admin-secret": secret } }));
+  const auth = verificarSecretoAdmin(secret);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const respuesta = NextResponse.json({ ok: true, caducaEn: 60 * 60 * 8 });
-  respuesta.headers.append("Set-Cookie", cookieDeSesion(secret));
+  const { token, expiresAt } = await crearSesionAdmin();
+  const maxAge = Math.max(1, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
+  const respuesta = NextResponse.json({ ok: true, caducaEn: maxAge });
+  respuesta.headers.append("Set-Cookie", cookieDeSesion(token, maxAge));
   return respuesta;
 }
 
-export async function DELETE() {
+export async function DELETE(req: Request) {
+  await revocarSesionAdmin(tokenDePeticion(req));
   const respuesta = NextResponse.json({ ok: true });
   respuesta.headers.append("Set-Cookie", cookieDeCierre());
   return respuesta;

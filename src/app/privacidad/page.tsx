@@ -18,8 +18,10 @@ export default function PrivacidadPage() {
         <p className="mt-1 text-sm leading-snug text-stone-700">Debes marcar la casilla de privacidad. La alerta no equivale a publicidad.</p>
         <h2 className="mt-4 text-base font-bold text-stone-900">Comunicaciones comerciales</h2>
         <p className="mt-1 text-sm leading-snug text-stone-700">Casilla separada, opcional y revocable. Guardamos consent_version y consent_timestamp.</p>
+        <h2 className="mt-4 text-base font-bold text-stone-900">Tu cuenta</h2>
+        <p className="mt-1 text-sm leading-snug text-stone-700">Si activas tu cuenta, guardamos tus consultas, parcelas y avisos asociados para que los tengas siempre disponibles. Puedes descargar tus datos o borrar tu cuenta desde <a href="/cuenta" className="font-semibold underline">Mi cuenta</a>.</p>
         <h2 className="mt-4 text-base font-bold text-stone-900">Derechos</h2>
-        <p className="mt-1 text-sm leading-snug text-stone-700">Acceso, rectificación, supresión y oposición en hola@tecrural.es</p>
+        <p className="mt-1 text-sm leading-snug text-stone-700">Acceso, rectificación, supresión y oposición en hola@tecrural.es o desde Mi cuenta.</p>
       </section>
     </div>
   );

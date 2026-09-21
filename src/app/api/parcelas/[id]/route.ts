@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { eliminarParcela } from "@/lib/datos/parcelas-repo";
 import { exigirDispositivo } from "@/lib/datos/sesion-dispositivo";
+import { usuarioAutenticado } from "@/lib/datos/sesion-usuario";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
 
@@ -18,13 +19,14 @@ export async function DELETE(
     return NextResponse.json({ error: identidad.error }, { status: identidad.status });
   }
   const idDispositivo = identidad.dispositivoId;
+  const userId = usuarioAutenticado(req);
 
   return conRequestId(
-    { user_id: idDispositivo, plot_id: id },
+    { user_id: userId ?? idDispositivo, plot_id: id },
     async (requestId) => {
       const inicio = Date.now();
       try {
-        const eliminada = await eliminarParcela(id, idDispositivo);
+        const eliminada = await eliminarParcela(id, idDispositivo, userId);
         if (!eliminada) {
           log.warn("parcelas.eliminar.no_encontrada", {
             status: 404,

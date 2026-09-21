@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { crearParcela, listarParcelas } from "@/lib/datos/parcelas-repo";
 import { cuerpoParcelaValido } from "@/lib/datos/validacion";
 import { exigirDispositivo } from "@/lib/datos/sesion-dispositivo";
+import { usuarioAutenticado } from "@/lib/datos/sesion-usuario";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
 import { registrarSenalSegura } from "@/lib/aplicacion/crm";
@@ -54,11 +55,12 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: identidad.error }, { status: identidad.status });
   }
   const idDispositivo = identidad.dispositivoId;
+  const userId = usuarioAutenticado(req);
 
-  return conRequestId({ user_id: idDispositivo }, async (requestId) => {
+  return conRequestId({ user_id: userId ?? idDispositivo }, async (requestId) => {
     const inicio = Date.now();
     try {
-      const listadas = await listarParcelas(idDispositivo);
+      const listadas = await listarParcelas(idDispositivo, userId);
       const { parcelas, refrescadas } = await refrescarCaducadas(listadas, idDispositivo);
       log.info("parcelas.listar.ok", {
         status: 200,
@@ -93,12 +95,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: identidad.error }, { status: identidad.status });
   }
   const idDispositivo = identidad.dispositivoId;
+  const userId = usuarioAutenticado(req);
 
-  return conRequestId({ user_id: idDispositivo }, async (requestId) => {
+  return conRequestId({ user_id: userId ?? idDispositivo }, async (requestId) => {
     const inicio = Date.now();
     try {
       const parcela = await crearParcela({
         dispositivoId: idDispositivo,
+        userId,
         nombre: cuerpo.nombre,
         cultivo: cuerpo.cultivo,
         latitud: cuerpo.latitud,

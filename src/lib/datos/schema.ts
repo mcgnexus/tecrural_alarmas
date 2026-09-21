@@ -27,6 +27,7 @@ export const parcelas = campo.table(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     dispositivoId: text("dispositivo_id").notNull(),
+    userId: uuid("user_id"),
     nombre: text("nombre").notNull(),
     cultivoSlug: text("cultivo_slug").notNull(),
     latitud: doublePrecision("latitud").notNull(),
@@ -35,6 +36,7 @@ export const parcelas = campo.table(
   },
   (t) => [
     index("parcelas_dispositivo_idx").on(t.dispositivoId),
+    index("parcelas_usuario_idx").on(t.userId),
     check(
       "parcelas_coords_ok",
       sql`${t.latitud} BETWEEN -90 AND 90 AND ${t.longitud} BETWEEN -180 AND 180`,
@@ -93,6 +95,7 @@ export const suscripcionesAviso = campo.table(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     dispositivoId: text("dispositivo_id").notNull(),
+    userId: uuid("user_id"),
     parcelaId: uuid("parcela_id").references(() => parcelas.id, {
       onDelete: "cascade",
     }),
@@ -110,6 +113,7 @@ export const suscripcionesAviso = campo.table(
   },
   (t) => [
     index("suscripciones_dispositivo_idx").on(t.dispositivoId, t.activa),
+    index("suscripciones_usuario_idx").on(t.userId, t.activa),
   ],
 );
 

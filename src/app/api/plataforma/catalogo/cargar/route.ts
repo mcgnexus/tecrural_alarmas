@@ -9,7 +9,7 @@ const log = crearLogger("api.plataforma.catalogo.cargar");
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const acceso = verificarAccesoAdmin(req);
+  const acceso = await verificarAccesoAdmin(req);
   if (!acceso.ok) return NextResponse.json({ error: acceso.error }, { status: acceso.status });
   return conRequestId({ external_source: "catalogo" }, async (requestId) => {
     const inicio = Date.now();

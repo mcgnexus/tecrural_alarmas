@@ -22,6 +22,29 @@ CREATE TABLE IF NOT EXISTS plataforma.users (
 ALTER TABLE plataforma.users ADD COLUMN IF NOT EXISTS consent_version text;
 ALTER TABLE plataforma.users ADD COLUMN IF NOT EXISTS consent_timestamp timestamptz;
 
+-- Sesiones de administración: solo se guarda el hash del token (nunca el token ni el secreto).
+CREATE TABLE IF NOT EXISTS plataforma.admin_sessions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  token_hash text NOT NULL UNIQUE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL,
+  revoked_at timestamptz,
+  last_used_at timestamptz
+);
+CREATE INDEX IF NOT EXISTS admin_sessions_expira_idx ON plataforma.admin_sessions (expires_at);
+
+-- Tokens de un solo uso para dar acceso a una cuenta (solo el hash).
+CREATE TABLE IF NOT EXISTS plataforma.auth_tokens (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES plataforma.users(id) ON DELETE CASCADE,
+  token_hash text NOT NULL UNIQUE,
+  tipo text NOT NULL DEFAULT 'invite',
+  expires_at timestamptz NOT NULL,
+  used_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS auth_tokens_usuario_idx ON plataforma.auth_tokens (user_id);
+
 CREATE TABLE IF NOT EXISTS plataforma.farms (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES plataforma.users(id) ON DELETE CASCADE,

@@ -343,6 +343,35 @@ export const lecturasSensores = plataforma.table("sensor_readings", {
   rawPayload: jsonb("raw_payload").$type<Record<string, unknown>>().notNull().default({}),
 });
 
+/**
+ * Tokens de un solo uso para dar acceso a una cuenta (invitaciones creadas por
+ * el equipo). Solo se guarda el hash; nunca el token en claro.
+ */
+export const tokensUsuario = plataforma.table("auth_tokens", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => usuarios.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  tipo: text("tipo").notNull().default("invite"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const sesionesAdmin = plataforma.table("admin_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tokenHash: text("token_hash").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+});
+
 export const esquemaPlataforma = {
   plataforma,
   usuarios,
@@ -364,4 +393,6 @@ export const esquemaPlataforma = {
   solicitudesContacto,
   sensores,
   lecturasSensores,
+  tokensUsuario,
+  sesionesAdmin,
 };

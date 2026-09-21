@@ -16,7 +16,7 @@ export default async function GestionPage() {
   // el historial del navegador, ni en los logs del servidor, ni en el Referer.
   const cabeceras = await headers();
   const peticion = new Request("http://interno/gestion", { headers: cabeceras });
-  if (!verificarAccesoAdmin(peticion).ok) redirect("/admin?next=/gestion");
+  if (!(await verificarAccesoAdmin(peticion)).ok) redirect("/admin?next=/gestion");
 
   return (
     <>

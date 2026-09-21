@@ -17,7 +17,7 @@ type Lead = {
   origen: string;
 };
 
-export function TablaLeads({ secret }: { secret: string }) {
+export function TablaLeads() {
   const [filtros, setFiltros] = useState({ municipio: "", cultivo: "", scoreMin: "", scoreMax: "", servicio: "", desde: "", hasta: "" });
   const [leads, setLeads] = useState<Lead[]>([]);
   const [cargando, setCargando] = useState(false);
@@ -36,7 +36,7 @@ export function TablaLeads({ secret }: { secret: string }) {
       if (filtros.desde) qs.set("desde", filtros.desde);
       if (filtros.hasta) qs.set("hasta", filtros.hasta);
       qs.set("limit", "100");
-      const r = await fetch(`/api/admin/leads?${qs.toString()}`, { headers: { "x-admin-secret": secret }, cache: "no-store" });
+      const r = await fetch(`/api/admin/leads?${qs.toString()}`, { cache: "no-store" });
       if (!r.ok) {
         const j = await r.json().catch(() => ({}));
         throw new Error((j as { error?: string }).error ?? `HTTP ${r.status}`);

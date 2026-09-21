@@ -1,6 +1,6 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { obtenerDb } from "./db";
-import { alertas, evaluaciones, parcelas } from "./schema";
+import { alertas, evaluaciones, parcelas, suscripcionesAviso } from "./schema";
 import type { CulturaId } from "@/lib/cultivos/catalogo";
 import type { ParcelaDto } from "./tipos";
 import type { ResultadoEvaluacion } from "@/lib/dominio/tipos";
@@ -64,12 +64,21 @@ function ordenarPorSeveridad(alertasLista: ResultadoEvaluacion["alertas"]) {
   );
 }
 
-export async function listarParcelas(dispositivoId: string): Promise<ParcelaDto[]> {
+export async function listarParcelas(
+  dispositivoId: string,
+  userId?: string | null,
+): Promise<ParcelaDto[]> {
   const db = obtenerDb();
+  const filtro = userId
+    ? or(
+        eq(parcelas.userId, userId),
+        and(isNull(parcelas.userId), eq(parcelas.dispositivoId, dispositivoId)),
+      )
+    : eq(parcelas.dispositivoId, dispositivoId);
   const filas = await db
     .select()
     .from(parcelas)
-    .where(eq(parcelas.dispositivoId, dispositivoId))
+    .where(filtro)
     .orderBy(desc(parcelas.creadaEn));
 
   if (filas.length === 0) return [];
@@ -125,6 +134,7 @@ export async function obtenerParcela(id: string): Promise<FilaParcela | null> {
 
 export async function crearParcela(input: {
   dispositivoId: string;
+  userId?: string | null;
   nombre: string;
   cultivo: CulturaId;
   latitud: number;
@@ -135,6 +145,7 @@ export async function crearParcela(input: {
     .insert(parcelas)
     .values({
       dispositivoId: input.dispositivoId,
+      userId: input.userId ?? null,
       nombre: input.nombre,
       cultivoSlug: input.cultivo,
       latitud: input.latitud,
@@ -145,13 +156,53 @@ export async function crearParcela(input: {
   return aParcelaDto(fila);
 }
 
-export async function eliminarParcela(id: string, dispositivoId: string): Promise<boolean> {
+export async function eliminarParcela(
+  id: string,
+  dispositivoId: string,
+  userId?: string | null,
+): Promise<boolean> {
   const db = obtenerDb();
+  const dueno = userId
+    ? or(
+        eq(parcelas.userId, userId),
+        and(isNull(parcelas.userId), eq(parcelas.dispositivoId, dispositivoId)),
+      )
+    : eq(parcelas.dispositivoId, dispositivoId);
   const borradas = await db
     .delete(parcelas)
-    .where(and(eq(parcelas.id, id), eq(parcelas.dispositivoId, dispositivoId)))
+    .where(and(eq(parcelas.id, id), dueno))
     .returning({ id: parcelas.id });
   return borradas.length > 0;
+}
+
+/** Vincula a la cuenta las parcelas creadas antes como anónimas en un dispositivo. */
+export async function reclamarParcelasDeDispositivo(
+  userId: string,
+  dispositivoId: string,
+): Promise<number> {
+  const db = obtenerDb();
+  const filas = await db
+    .update(parcelas)
+    .set({ userId })
+    .where(and(eq(parcelas.dispositivoId, dispositivoId), isNull(parcelas.userId)))
+    .returning({ id: parcelas.id });
+  await db
+    .update(suscripcionesAviso)
+    .set({ userId })
+    .where(and(eq(suscripcionesAviso.dispositivoId, dispositivoId), isNull(suscripcionesAviso.userId)));
+  return filas.length;
+}
+
+/** Borra (anonimiza) todas las parcelas de una cuenta. */
+export async function eliminarParcelasDeUsuario(userId: string): Promise<void> {
+  const db = obtenerDb();
+  await db.delete(parcelas).where(eq(parcelas.userId, userId));
+}
+
+/** Borra las suscripciones de aviso de una cuenta. */
+export async function eliminarSuscripcionesDeUsuario(userId: string): Promise<void> {
+  const db = obtenerDb();
+  await db.delete(suscripcionesAviso).where(eq(suscripcionesAviso.userId, userId));
 }
 
 /** Persistencia pura: guarda una evaluación ya calculada y sus alertas. */

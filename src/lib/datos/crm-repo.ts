@@ -146,6 +146,40 @@ export async function existeSolicitudReciente(
   return (fila?.total ?? 0) > 0;
 }
 
+/** Vincula a la cuenta los leads/consultas creados antes como anónimos por dispositivo. */
+export async function vincularLeadsAUsuario(
+  visitorId: string,
+  userId: string,
+): Promise<number> {
+  const db = obtenerDb();
+  const filas = await db
+    .update(leadsCrm)
+    .set({ userId })
+    .where(and(eq(leadsCrm.visitorId, visitorId), isNull(leadsCrm.userId)))
+    .returning({ id: leadsCrm.id });
+  return filas.length;
+}
+
+export async function listarLeadsDeUsuario(
+  userId: string,
+): Promise<(typeof leadsCrm.$inferSelect)[]> {
+  const db = obtenerDb();
+  return db
+    .select()
+    .from(leadsCrm)
+    .where(and(eq(leadsCrm.userId, userId), isNull(leadsCrm.mergedIntoLeadId)))
+    .orderBy(desc(leadsCrm.lastEventAt));
+}
+
+/** Anonimiza (borra datos personales) las consultas de una cuenta. */
+export async function anonimizarLeadsDeUsuario(userId: string): Promise<void> {
+  const db = obtenerDb();
+  await db
+    .update(leadsCrm)
+    .set({ userId: null, contactName: null, contactPhone: null, comment: null, notes: null })
+    .where(eq(leadsCrm.userId, userId));
+}
+
 export async function listarInteresesLead(leadId: string): Promise<string[]> {
   const db = obtenerDb();
   const filas = await db

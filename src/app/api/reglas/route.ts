@@ -21,7 +21,7 @@ export async function GET(req: Request) {
   // `todas=1` incluye las reglas desactivadas: es una vista de administracion y
   // expone los umbrales de todas las reglas, asi que exige sesion de admin.
   if (todas) {
-    const acceso = verificarAccesoAdmin(req);
+    const acceso = await verificarAccesoAdmin(req);
     if (!acceso.ok) {
       return NextResponse.json({ error: acceso.error }, { status: acceso.status });
     }
@@ -59,7 +59,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const acceso = verificarAccesoAdmin(req);
+  const acceso = await verificarAccesoAdmin(req);
   if (!acceso.ok) return NextResponse.json({ error: acceso.error }, { status: acceso.status });
   const cuerpo = (await req.json().catch(() => null)) as unknown;
   if (!reglaRiesgoValida(cuerpo)) {
