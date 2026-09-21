@@ -47,7 +47,7 @@ export function DashboardParcela({ alertas, evaluadoEl }: { alertas: Alerta[]; e
   {
     const a = porTipo.get("helada");
     const sev = severidadDe(a);
-    const temp = a ? extraerTemperatura(a.mensaje) ?? "-1,7 °C" : null;
+    const temp = a ? extraerTemperatura(a.mensaje) ?? a.titulo : null;
     const tempNum = a ? extraerTemperaturaNumero(a.mensaje) : null;
     bloques.push({
       key: "helada",

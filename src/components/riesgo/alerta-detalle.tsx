@@ -3,31 +3,15 @@
 import { CtaContextual } from "@/components/servicios/cta-contextual";
 import { esDatosCaducados, haceMinutos } from "@/lib/dominio/frescura";
 import type { Alerta } from "@/lib/dominio/tipos";
+import { metricasDeAlerta, subtituloDeAlerta } from "@/lib/alertas/metricas";
 import { colorTemperatura, etiquetaTermica } from "@/lib/ui/temperatura";
-
-function extraer(mensaje: string, re: RegExp): string | null {
-  const m = mensaje.match(re);
-  return m ? m[1]! : null;
-}
-
-function temperaturaDe(texto: string): number | null {
-  const m = texto.match(/(-?\d+(?:[.,]\d+)?)\s*°C/);
-  if (!m) return null;
-  const n = Number(m[1]!.replace(",", "."));
-  return Number.isFinite(n) ? n : null;
-}
 
 export function AlertaDetalle({ alerta }: { alerta: Alerta }) {
   const esCritica = alerta.severidad === "critica";
   const tituloUpper = alerta.titulo.toUpperCase();
   const icon = esCritica ? "🔴" : alerta.severidad === "alerta" ? "🟠" : alerta.severidad === "aviso" ? "🟡" : "🟢";
 
-  const minima = extraer(alerta.mensaje, /(-?\d+[.,]\d+)\s*°C/) ?? "-1,7 °C";
-  const minimaNum = temperaturaDe(minima);
-  // periodo: buscar 04:30–07:00 o similar, fallback
-  const periodo = extraer(alerta.mensaje, /(\d{1,2}:\d{2}).*?(\d{1,2}:\d{2})/) ? (alerta.mensaje.match(/(\d{1,2}:\d{2}[–-]\d{1,2}:\d{2})/)?.[1] ?? "04:30–07:00") : "04:30–07:00";
-  const viento = extraer(alerta.mensaje, /(\d+(?:[.,]\d+)?)\s*km\/h/) ?? "5";
-  const nubosidad = extraer(alerta.mensaje, /(\d+(?:[.,]\d+)?)\s*%/) ?? "12";
+  const metricas = metricasDeAlerta(alerta.tipo, alerta.mensaje);
 
   const fecha = new Date(alerta.emisorAt);
   const actualizacion = fecha.toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -41,26 +25,23 @@ export function AlertaDetalle({ alerta }: { alerta: Alerta }) {
         <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-stone-700">
           <span aria-hidden="true" className="text-lg">{icon}</span> {tituloUpper}
         </p>
-        <p className="mt-1 text-base font-semibold text-stone-900">Esta madrugada</p>
+        <p className="mt-1 text-base font-semibold text-stone-900">{subtituloDeAlerta(alerta.tipo)}</p>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-xl bg-white p-4 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wide text-stone-600">Mínima prevista</p>
-            <p title={etiquetaTermica(minimaNum)} className={`mt-1 text-2xl font-extrabold ${colorTemperatura(minimaNum)}`}>{minima}</p>
+        {metricas.length > 0 ? (
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {metricas.map((metrica) => (
+              <div key={metrica.etiqueta} className="rounded-xl bg-white p-4 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-wide text-stone-600">{metrica.etiqueta}</p>
+                <p
+                  title={metrica.temperaturaC !== undefined ? etiquetaTermica(metrica.temperaturaC) : undefined}
+                  className={`mt-1 text-2xl font-extrabold ${metrica.temperaturaC !== undefined ? colorTemperatura(metrica.temperaturaC) : "text-stone-900"}`}
+                >
+                  {metrica.valor}
+                </p>
+              </div>
+            ))}
           </div>
-          <div className="rounded-xl bg-white p-4 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wide text-stone-600">Periodo de mayor riesgo</p>
-            <p className="mt-1 text-lg font-bold text-stone-900">{periodo}</p>
-          </div>
-          <div className="rounded-xl bg-white p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-stone-600">Viento</p>
-            <p className="mt-1 flex items-center gap-1 text-base font-bold text-stone-900"><span aria-hidden="true">💨</span> {viento} km/h</p>
-          </div>
-          <div className="rounded-xl bg-white p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-stone-600">Nubosidad</p>
-            <p className="mt-1 flex items-center gap-1 text-base font-bold text-stone-900"><span aria-hidden="true">☁️</span> {nubosidad} %</p>
-          </div>
-        </div>
+        ) : null}
       </header>
 
       <section className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm">
