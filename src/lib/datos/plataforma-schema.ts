@@ -170,10 +170,56 @@ export const alertasFitosanitarias = plataforma.table("phytosanitary_alerts", {
     .notNull()
     .defaultNow(),
   sourceUrl: text("source_url"),
+  sourceArticleUrl: text("source_article_url"),
+  sourcePdfUrl: text("source_pdf_url"),
+  sourceDocumentId: text("source_document_id"),
+  sourceHash: text("source_hash"),
+  sourcePage: integer("source_page"),
+  sourcePublishedAt: timestamp("source_published_at", { withTimezone: true }),
+  coverage: text("coverage"),
+  region: text("region"),
+  pestOrDisease: text("pest_or_disease"),
+  recommendation: text("recommendation"),
+  validFrom: timestamp("valid_from", { withTimezone: true }),
+  validTo: timestamp("valid_to", { withTimezone: true }),
+  extractionVersion: text("extraction_version"),
+  extractionStatus: text("extraction_status").notNull().default("article"),
+  extractionConfidence: doublePrecision("extraction_confidence"),
+  evidenceText: text("evidence_text"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   rawPayload: jsonb("raw_payload").$type<Record<string, unknown> | null>(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+});
+
+/** Versiones de documentos RAIF detectados desde el RSS. */
+export const raifDocuments = plataforma.table("raif_documents", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  provider: text("provider").notNull(),
+  rssGuid: text("rss_guid").notNull(),
+  documentKey: text("document_key").notNull().unique(),
+  articleUrl: text("article_url").notNull(),
+  pdfUrl: text("pdf_url"),
+  pdfHash: text("pdf_hash"),
+  version: integer("version").notNull().default(1),
+  previousDocumentId: uuid("previous_document_id"),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const raifIngestions = plataforma.table("raif_ingestions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  status: text("status").notNull(),
+  fetched: integer("fetched").notNull().default(0),
+  processed: integer("processed").notNull().default(0),
+  saved: integer("saved").notNull().default(0),
+  skipped: integer("skipped").notNull().default(0),
+  failed: integer("failed").notNull().default(0),
+  errorSummary: text("error_summary"),
 });
 
 export const reglasRiesgo = plataforma.table("risk_rules", {
@@ -383,6 +429,8 @@ export const esquemaPlataforma = {
   climaHorario,
   avisosOficiales,
   alertasFitosanitarias,
+  raifDocuments,
+  raifIngestions,
   reglasRiesgo,
   eventosRiesgo,
   eventosLead,

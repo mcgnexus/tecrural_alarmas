@@ -10,5 +10,21 @@ export interface PhytosanitaryAlert {
   severity?: string | null;
   publishedAt: string;
   sourceUrl?: string | null;
+  sourceArticleUrl?: string | null;
+  sourcePdfUrl?: string | null;
+  sourceDocumentId?: string | null;
+  sourceHash?: string | null;
+  sourcePage?: number | null;
+  sourcePublishedAt?: string | null;
+  coverage?: string | null;
+  region?: string | null;
+  pestOrDisease?: string | null;
+  recommendation?: string | null;
+  validFrom?: string | null;
+  validTo?: string | null;
+  extractionVersion?: string | null;
+  extractionStatus?: string | null;
+  extractionConfidence?: number | null;
+  evidenceText?: string | null;
   rawPayload?: Record<string, unknown> | null;
 }

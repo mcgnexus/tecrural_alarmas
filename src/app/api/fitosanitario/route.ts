@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { listarAvisosFitosanitariosOficiales } from "@/lib/aplicacion/fitosanitario";
+import { metadatosFitosanitarios } from "@/lib/datos/fitosanitario-repo";
 import { proveedorRaif } from "@/lib/proveedores/raif";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
@@ -12,14 +13,20 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const cropId = url.searchParams.get("cropId") ?? undefined;
   const province = url.searchParams.get("province") ?? undefined;
+  const municipality = url.searchParams.get("municipality") ?? undefined;
+  const region = url.searchParams.get("region") ?? undefined;
+  const pest = url.searchParams.get("pest") ?? undefined;
+  const from = url.searchParams.get("from") ?? undefined;
+  const to = url.searchParams.get("to") ?? undefined;
+  const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 50) || 50, 1), 100);
 
   return conRequestId({ external_source: "fitosanitario" }, async (requestId) => {
     const inicio = Date.now();
     try {
-      const avisos = await listarAvisosFitosanitariosOficiales({
-        cropId,
-        province,
-      });
+      const [avisos, metadatos] = await Promise.all([
+        listarAvisosFitosanitariosOficiales({ cropId, province, municipality, region, pest, from, to, limit }),
+        metadatosFitosanitarios(),
+      ]);
       log.info("fitosanitario.listar.ok", {
         status: 200,
         duracion_ms: Date.now() - inicio,
@@ -27,7 +34,11 @@ export async function GET(req: Request) {
       });
       return conCabeceraRequestId(
         NextResponse.json({
-          disponible: proveedorRaif.configurado(),
+          disponible: proveedorRaif.configurado() && Boolean(metadatos.ultimaIngesta),
+          estadoDisponibilidad: proveedorRaif.configurado() && metadatos.ultimaIngesta ? "disponible" : "sin_ingesta",
+          ultimaIngesta: metadatos.ultimaIngesta,
+          boletinMasReciente: metadatos.boletinMasReciente,
+          fuente: "RAIF / Junta de Andalucía",
           avisos,
         }),
         requestId,

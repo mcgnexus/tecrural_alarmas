@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // El OCR y el parser PDF se cargan solo en cron/server; no deben entrar en
+  // bundles de cliente ni ser transformados por Turbopack.
+  serverExternalPackages: ["pdf-parse", "tesseract.js"],
   // CSP y cabeceras de defensa globales. Next 16 migra `middleware` a proxy;
   // declararlas aquí garantiza su presencia en páginas, estáticos y API sin
   // interferir con el routing.

@@ -105,6 +105,16 @@ export interface AvisoFitosanitarioOficial {
   resumen: string;
   enlace: string | null;
   severidad: string | null;
+  cobertura: string | null;
+  region: string | null;
+  plagaEnfermedad: string | null;
+  recomendacion: string | null;
+  fechaBoletin: string | null;
+  urlArticulo: string | null;
+  urlPdf: string | null;
+  paginaFuente: number | null;
+  estadoExtraccion: string | null;
+  confianzaExtraccion: number | null;
 }
 
 function zonaDe(municipio: string | null, provincia: string | null): string | null {
@@ -115,15 +125,15 @@ function zonaDe(municipio: string | null, provincia: string | null): string | nu
 }
 
 export async function listarAvisosFitosanitariosOficiales(
-  filtros: { cropId?: string; province?: string } = {},
+  filtros: { cropId?: string; province?: string; municipality?: string; region?: string; pest?: string; from?: string; to?: string; limit?: number } = {},
 ): Promise<AvisoFitosanitarioOficial[]> {
   const [alertas, oficiales, cultivos] = await Promise.all([
-    listarAlertasFitosanitarias(filtros),
+    listarAlertasFitosanitarias({ ...filtros, limite: filtros.limit }),
     listarAvisosOficiales(),
     listarCultivosPlataforma(),
   ]);
 
-  const nombreCultivo = new Map(cultivos.map((c) => [c.id, c.nameEs]));
+  const slugCultivo = new Map(cultivos.map((c) => [c.id, c.slug]));
   const vistos = new Set<string>();
   const salida: AvisoFitosanitarioOficial[] = [];
 
@@ -138,18 +148,29 @@ export async function listarAvisosFitosanitariosOficiales(
       provider: alerta.provider,
       externalId: alerta.externalId ?? null,
       fecha: alerta.publishedAt,
-      cultivo: alerta.cropId ? (nombreCultivo.get(alerta.cropId) ?? null) : null,
+      cultivo: alerta.cropId ? (slugCultivo.get(alerta.cropId) ?? alerta.cropId) : null,
       zona: zonaDe(alerta.municipality ?? null, alerta.province ?? null),
       titulo: alerta.title,
       resumen: alerta.summary,
       enlace: alerta.sourceUrl ?? null,
       severidad: alerta.severity ?? null,
+      cobertura: alerta.coverage ?? null,
+      region: alerta.region ?? null,
+      plagaEnfermedad: alerta.pestOrDisease ?? null,
+      recomendacion: alerta.recommendation ?? null,
+      fechaBoletin: alerta.sourcePublishedAt ?? alerta.publishedAt,
+      urlArticulo: alerta.sourceArticleUrl ?? alerta.sourceUrl ?? null,
+      urlPdf: alerta.sourcePdfUrl ?? null,
+      paginaFuente: alerta.sourcePage ?? null,
+      estadoExtraccion: alerta.extractionStatus ?? null,
+      confianzaExtraccion: alerta.extractionConfidence ?? null,
     });
   }
 
   // Avisos oficiales de RAIF persistidos en `official_alerts`.
   for (const aviso of oficiales) {
     if (aviso.provider !== "raif") continue;
+    if (filtros.cropId) continue;
     const clave = `${aviso.provider}:${aviso.id}`;
     if (vistos.has(clave)) continue;
     vistos.add(clave);
@@ -165,8 +186,23 @@ export async function listarAvisosFitosanitariosOficiales(
       resumen: aviso.description ?? aviso.headline,
       enlace: aviso.sourceUrl ?? null,
       severidad: aviso.severity,
+      cobertura: null,
+      region: null,
+      plagaEnfermedad: aviso.phenomenon || null,
+      recomendacion: null,
+      fechaBoletin: aviso.startsAt,
+      urlArticulo: aviso.sourceUrl ?? null,
+      urlPdf: null,
+      paginaFuente: null,
+      estadoExtraccion: null,
+      confianzaExtraccion: null,
     });
   }
 
-  return salida.sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const filtrada = salida.filter((aviso) => {
+    const texto = `${aviso.titulo} ${aviso.resumen} ${aviso.plagaEnfermedad ?? ""}`.toLowerCase();
+    const fecha = aviso.fechaBoletin ?? aviso.fecha;
+    return (!filtros.province || (aviso.zona ?? "").toLowerCase().includes(filtros.province.toLowerCase())) && (!filtros.pest || texto.includes(filtros.pest.toLowerCase())) && (!filtros.from || fecha >= filtros.from) && (!filtros.to || fecha <= filtros.to) && (!filtros.municipality || (aviso.zona ?? "").toLowerCase().includes(filtros.municipality.toLowerCase())) && (!filtros.region || (aviso.region ?? "").toLowerCase().includes(filtros.region.toLowerCase()));
+  }).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  return filtros.limit ? filtrada.slice(0, filtros.limit) : filtrada;
 }

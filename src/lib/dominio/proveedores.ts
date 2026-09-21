@@ -45,6 +45,7 @@ export interface OfficialWarning {
   headline: string;
   description?: string;
   sourceUrl?: string;
+  rawPayload?: Record<string, unknown>;
 }
 
 export type NormalizedForecast = WeatherHourly[];

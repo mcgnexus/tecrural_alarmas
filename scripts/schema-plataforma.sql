@@ -199,6 +199,63 @@ CREATE INDEX IF NOT EXISTS phyto_crop_idx
 CREATE INDEX IF NOT EXISTS phyto_pub_idx
   ON plataforma.phytosanitary_alerts (published_at DESC);
 
+-- Trazabilidad del artículo RAIF y de los PDF enlazados. Todas las columnas
+-- son opcionales para conservar avisos importados con el modelo anterior.
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS source_article_url text;
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS source_pdf_url text;
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS source_document_id text;
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS source_hash text;
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS source_page integer;
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS source_published_at timestamptz;
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS coverage text;
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS region text;
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS pest_or_disease text;
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS recommendation text;
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS valid_from timestamptz;
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS valid_to timestamptz;
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS extraction_version text;
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS extraction_status text NOT NULL DEFAULT 'article';
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS extraction_confidence double precision;
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS evidence_text text;
+ALTER TABLE plataforma.phytosanitary_alerts ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+CREATE INDEX IF NOT EXISTS phyto_source_hash_idx ON plataforma.phytosanitary_alerts (source_hash);
+
+-- Historial de versiones de documentos RAIF. La clave incluye el hash para
+-- conservar un PDF nuevo sin duplicar el mismo documento en cada cron.
+CREATE TABLE IF NOT EXISTS plataforma.raif_documents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider text NOT NULL,
+  rss_guid text NOT NULL,
+  document_key text NOT NULL UNIQUE,
+  article_url text NOT NULL,
+  pdf_url text,
+  pdf_hash text,
+  version integer NOT NULL DEFAULT 1,
+  previous_document_id uuid,
+  published_at timestamptz,
+  first_seen_at timestamptz NOT NULL DEFAULT now(),
+  last_seen_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS raif_documents_guid_idx
+  ON plataforma.raif_documents (provider, rss_guid, version DESC);
+CREATE INDEX IF NOT EXISTS raif_documents_hash_idx
+  ON plataforma.raif_documents (provider, pdf_hash);
+
+CREATE TABLE IF NOT EXISTS plataforma.raif_ingestions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  started_at timestamptz NOT NULL DEFAULT now(),
+  completed_at timestamptz,
+  status text NOT NULL,
+  fetched integer NOT NULL DEFAULT 0,
+  processed integer NOT NULL DEFAULT 0,
+  saved integer NOT NULL DEFAULT 0,
+  skipped integer NOT NULL DEFAULT 0,
+  failed integer NOT NULL DEFAULT 0,
+  error_summary text
+);
+CREATE INDEX IF NOT EXISTS raif_ingestions_completed_idx
+  ON plataforma.raif_ingestions (completed_at DESC);
+
 -- Reglas de riesgo configurables (no codificadas por completo en TypeScript).
 CREATE TABLE IF NOT EXISTS plataforma.risk_rules (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
