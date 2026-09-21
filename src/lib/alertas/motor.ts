@@ -1,5 +1,6 @@
 import { catalogoCultivos, faseActiva } from "@/lib/cultivos/catalogo";
 import type { CulturaId } from "@/lib/cultivos/catalogo";
+import { zonaCultivoPorCoordenadas } from "@/lib/cultivos/zona";
 import { obtenerClimaPunto } from "@/lib/clima/motor";
 import { reglas as reglasPorDefecto } from "@/lib/agronomia/reglas";
 import type { Regla } from "@/lib/agronomia/reglas";
@@ -30,10 +31,11 @@ export async function evaluarRiesgo(
   const clima = await obtenerClimaPunto(solicitud.latitud, solicitud.longitud, solicitud.aemetMunicipio);
   const momento = new Date();
 
+  const zona = zonaCultivoPorCoordenadas(solicitud.latitud, solicitud.longitud);
   const fenofase =
     (solicitud.fenofaseId
       ? cultivo.fenologia.find((fase) => fase.id === solicitud.fenofaseId)
-      : undefined) ?? faseActiva(cultivo, momento);
+      : undefined) ?? faseActiva(cultivo, momento, zona);
 
   const alertas = reglasActivas
     .flatMap((regla) => regla.evaluar({ clima, cultivo, fenofase, momento }))

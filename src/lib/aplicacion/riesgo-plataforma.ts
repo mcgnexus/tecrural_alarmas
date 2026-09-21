@@ -1,5 +1,6 @@
 import { evaluarRiesgos } from "@/lib/alertas/evaluadores";
 import { catalogoCultivos, faseActiva } from "@/lib/cultivos/catalogo";
+import { zonaCultivoPorCoordenadas } from "@/lib/cultivos/zona";
 import { obtenerClimaHorario, obtenerClimaPunto } from "@/lib/clima/motor";
 import { obtenerPronostico } from "@/lib/proveedores/registro";
 import {
@@ -66,7 +67,8 @@ export async function evaluarPlotPlataforma(
   const momento = new Date();
   const clima = await obtenerClimaPunto(plot.latitud, plot.longitud);
   const cultivo = catalogoCultivos[cultura];
-  const fenofase = faseActiva(cultivo, momento);
+  const zona = zonaCultivoPorCoordenadas(plot.latitud, plot.longitud);
+  const fenofase = faseActiva(cultivo, momento, zona);
 
   const reglas = await listarReglasRiesgo({ enabled: true });
   const parametrosPorRiesgo = resolverParametrosPorRiesgo(

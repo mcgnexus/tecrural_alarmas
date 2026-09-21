@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { catalogoCultivos } from "@/lib/cultivos/catalogo";
+import { catalogoCultivos, faseActiva } from "@/lib/cultivos/catalogo";
 import type { CulturaId } from "@/lib/cultivos/catalogo";
+import { etiquetaZona, zonaCultivoPorCoordenadas } from "@/lib/cultivos/zona";
 import type { ResultadoEvaluacion } from "@/lib/alertas/motor";
 import { AlertaCard } from "./alerta-card";
 import { CtaContextual } from "@/components/servicios/cta-contextual";
@@ -24,6 +25,8 @@ export function RiesgoActual() {
   const [resultado, setResultado] = useState<ResultadoEvaluacion | null>(null);
 
   const cultura = catalogoCultivos[cultivo];
+  const zona = posicion ? zonaCultivoPorCoordenadas(posicion.lat, posicion.lon) : null;
+  const faseAutomatica = faseActiva(cultura, new Date(), zona);
 
   function detectarUbicacion() {
     setEstadoGeo("buscando");
@@ -145,7 +148,7 @@ export function RiesgoActual() {
               onChange={(e) => setFenofaseId(e.target.value)}
               className={claseSelect}
             >
-              <option value="">Fase actual (automática)</option>
+              <option value="">Fase actual (automática{faseAutomatica ? `: ${faseAutomatica.etiqueta}` : ""}){zona ? ` · ${etiquetaZona(zona)}` : ""}</option>
               {cultura.fenologia.map((fase) => (
                 <option key={fase.id} value={fase.id}>
                   {fase.etiqueta}

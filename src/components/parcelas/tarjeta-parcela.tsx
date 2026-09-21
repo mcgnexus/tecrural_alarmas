@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { catalogoCultivos } from "@/lib/cultivos/catalogo";
+import { zonaCultivoPorCoordenadas } from "@/lib/cultivos/zona";
 import { asegurarSesionDispositivo, obtenerDispositivoId } from "@/lib/datos/dispositivo";
 import type { ParcelaDto } from "@/lib/datos/tipos";
 import { DashboardParcela } from "./dashboard-parcela";
@@ -18,6 +19,7 @@ export function TarjetaParcela({ parcela, onCambio }: Props) {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cultivo = catalogoCultivos[parcela.cultivo];
+  const zona = zonaCultivoPorCoordenadas(parcela.latitud, parcela.longitud);
 
   async function evaluar() {
     await asegurarSesionDispositivo();
@@ -92,7 +94,7 @@ export function TarjetaParcela({ parcela, onCambio }: Props) {
         <div className="mt-4 flex flex-col gap-3">
           <DashboardParcela alertas={ultimo.alertas} evaluadoEl={ultimo.evaluadoEl} />
           <CtaContextual alertas={ultimo.alertas} />
-          <MejorarPrecision parcelaId={parcela.id} cultivo={parcela.cultivo} fenofaseActual={ultimo.fenofase} onActualizado={onCambio} />
+          <MejorarPrecision parcelaId={parcela.id} cultivo={parcela.cultivo} fenofaseActual={ultimo.fenofase} zona={zona} onActualizado={onCambio} />
           <p className="text-sm font-medium text-stone-600">
             {criticos > 0
               ? `⚠ ${criticos} riesgo${criticos > 1 ? "s" : ""} activo${criticos > 1 ? "s" : ""} hoy`
@@ -102,7 +104,7 @@ export function TarjetaParcela({ parcela, onCambio }: Props) {
       ) : (
         <div className="mt-3 flex flex-col gap-2">
           <p className="text-base font-medium text-stone-600">Todavía sin evaluar.</p>
-          <MejorarPrecision parcelaId={parcela.id} cultivo={parcela.cultivo} fenofaseActual={null} onActualizado={onCambio} />
+          <MejorarPrecision parcelaId={parcela.id} cultivo={parcela.cultivo} fenofaseActual={null} zona={zona} onActualizado={onCambio} />
         </div>
       )}
 

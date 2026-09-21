@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { catalogoCultivos } from "@/lib/cultivos/catalogo";
+import { catalogoCultivos, faseActiva } from "@/lib/cultivos/catalogo";
 import type { CulturaId } from "@/lib/cultivos/catalogo";
+import { etiquetaZona, type ZonaCultivo } from "@/lib/cultivos/zona";
 import { asegurarSesionDispositivo, obtenerDispositivoId } from "@/lib/datos/dispositivo";
 
-export function MejorarPrecision({ parcelaId, cultivo, fenofaseActual, onActualizado }: { parcelaId: string; cultivo: CulturaId; fenofaseActual: string | null; onActualizado: () => void }) {
+export function MejorarPrecision({ parcelaId, cultivo, fenofaseActual, zona, onActualizado }: { parcelaId: string; cultivo: CulturaId; fenofaseActual: string | null; zona?: ZonaCultivo | null; onActualizado: () => void }) {
   const [abierto, setAbierto] = useState(false);
   const [fenofase, setFenofase] = useState<string>(fenofaseActual ?? "");
   const [guardando, setGuardando] = useState(false);
 
   const cultura = catalogoCultivos[cultivo];
+  const faseAutomatica = faseActiva(cultura, new Date(), zona);
 
   async function guardar() {
     await asegurarSesionDispositivo();
@@ -49,14 +51,14 @@ export function MejorarPrecision({ parcelaId, cultivo, fenofaseActual, onActuali
   return (
     <div className="rounded-2xl border-2 border-brand-800 bg-white p-4 shadow-sm">
       <h4 className="text-base font-bold text-stone-900">Indicar estado del cultivo</h4>
-      <p className="mt-1 text-sm text-stone-600">Opcional — puedes omitirlo y usaremos la fase estimada por fecha.</p>
+      <p className="mt-1 text-sm text-stone-600">Opcional — puedes omitirlo y usaremos la fase estimada por fecha y zona ({etiquetaZona(zona)}).</p>
       <label className="mt-3 block text-sm font-bold text-stone-900">Fase fenológica</label>
       <select
         value={fenofase}
         onChange={(e) => setFenofase(e.target.value)}
         className="mt-1 min-h-[48px] w-full rounded-xl border-2 border-stone-300 bg-white px-4 py-3 text-base font-medium"
       >
-        <option value="">Automática ({cultura.fenologia.find((f) => f.mesDesde <= new Date().getMonth() + 1 && f.mesHasta >= new Date().getMonth() + 1)?.etiqueta ?? "estimada"})</option>
+        <option value="">Automática ({faseAutomatica?.etiqueta ?? "estimada"})</option>
         {cultura.fenologia.map((f) => (
           <option key={f.id} value={f.id}>{f.etiqueta}</option>
         ))}
