@@ -31,7 +31,7 @@ export const notificadorPush: Notificador = {
 
     try {
       webpush.setVapidDetails(
-        process.env.VAPID_SUBJECT ?? "mailto:soporte@tecrural.local",
+        process.env.VAPID_SUBJECT ?? "mailto:mcgtecrural@gmail.com",
         publica,
         privada,
       );

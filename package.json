@@ -11,6 +11,7 @@
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "test:e2e": "vitest run --project e2e",
+    "test:telegram": "node scripts/test-telegram.mjs",
     "migrar:campo": "node scripts/migrar-campo.mjs",
     "migrar:plataforma": "node scripts/migrar-plataforma.mjs"
   },

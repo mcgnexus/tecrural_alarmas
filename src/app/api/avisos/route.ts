@@ -3,6 +3,8 @@ import {
   crearSuscripcion,
   listarSuscripciones,
 } from "@/lib/datos/avisos-repo";
+import { obtenerParcela } from "@/lib/datos/parcelas-repo";
+import { notificarNuevoSuscriptor } from "@/lib/notificaciones/aviso-negocio";
 import { suscripcionValida } from "@/lib/datos/validacion";
 import { exigirDispositivo } from "@/lib/datos/sesion-dispositivo";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
@@ -75,6 +77,17 @@ export async function POST(req: Request) {
           status: 201,
           duracion_ms: Date.now() - inicio,
           external_source: aviso.canal,
+        });
+        // Aviso al equipo por Telegram (nunca rompe el alta si falla).
+        const parcela = aviso.parcelaId
+          ? await obtenerParcela(aviso.parcelaId).catch(() => null)
+          : null;
+        await notificarNuevoSuscriptor({
+          canal: aviso.canal,
+          destino: aviso.destino,
+          severidadMinima: aviso.severidadMinima,
+          parcelaNombre: parcela?.nombre ?? null,
+          origen: "api/avisos",
         });
         await registrarSenalSegura({
           dispositivoId: idDispositivo,

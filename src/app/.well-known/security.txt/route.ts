@@ -1,8 +1,10 @@
+import { EMAIL_CONTACTO } from "@/lib/config/contacto";
+
 export const dynamic = "force-static";
 export const revalidate = false;
 
 export async function GET() {
-  const contacto = "hola@tecrural.es";
+  const contacto = EMAIL_CONTACTO;
   const dominio =
     process.env.NEXT_PUBLIC_SITE_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://tecrural.es");

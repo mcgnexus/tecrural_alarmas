@@ -9,8 +9,8 @@ import type { Severidad } from "@/lib/alertas/tipos";
 
 const CANALES: { id: Canal; etiqueta: string; ayuda: string }[] = [
   { id: "telegram", etiqueta: "Telegram", ayuda: "Chat ID que te da el bot" },
-  { id: "email", etiqueta: "Correo", ayuda: "tu@correo.com" },
-  { id: "whatsapp", etiqueta: "WhatsApp", ayuda: "+34600000000" },
+  { id: "email", etiqueta: "Correo", ayuda: "mcgtecrural@gmail.com" },
+  { id: "whatsapp", etiqueta: "WhatsApp", ayuda: "Tu número con prefijo internacional" },
   { id: "push", etiqueta: "Push del móvil", ayuda: "Actívalo en este dispositivo" },
   { id: "log", etiqueta: "Registro (pruebas)", ayuda: "Solo para desarrollo" },
 ];

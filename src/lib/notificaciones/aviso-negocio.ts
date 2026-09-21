@@ -43,6 +43,19 @@ async function enviarTelegram(chatId: string, token: string, texto: string): Pro
   }
 }
 
+/** Credenciales del chat de negocio, o null si falta alguna. */
+function credencialesNegocio(): { token: string; chatId: string } | null {
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  const chatId = process.env.TELEGRAM_CHAT_ID_NEGOCIO?.trim();
+  if (!token || !chatId) {
+    log.warn("negocio.telegram.no_configurado", {
+      data: { telegram: Boolean(token), chat: Boolean(chatId) },
+    });
+    return null;
+  }
+  return { token, chatId };
+}
+
 /**
  * Notifica al equipo (chat de Telegram del negocio) una solicitud de contacto
  * entrante. Con `origen: "asistente"` usa el resumen tipo lead del chat.
@@ -52,14 +65,9 @@ async function enviarTelegram(chatId: string, token: string, texto: string): Pro
 export async function notificarSolicitudContacto(
   solicitud: SolicitudContacto,
 ): Promise<boolean> {
-  const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
-  const chatId = process.env.TELEGRAM_CHAT_ID_NEGOCIO?.trim();
-  if (!token || !chatId) {
-    log.warn("negocio.telegram.no_configurado", {
-      data: { telegram: Boolean(token), chat: Boolean(chatId) },
-    });
-    return false;
-  }
+  const credenciales = credencialesNegocio();
+  if (!credenciales) return false;
+  const { token, chatId } = credenciales;
 
   let lineas: string[];
   if (solicitud.origen === "asistente") {
@@ -90,6 +98,40 @@ export async function notificarSolicitudContacto(
     if (solicitud.servicioNombre) lineas.push(`🛠 ${solicitud.servicioNombre}`);
     if (solicitud.mensaje) lineas.push(`💬 ${solicitud.mensaje}`);
   }
+
+  return enviarTelegram(chatId, token, lineas.join("\n"));
+}
+
+export interface NuevoSuscriptor {
+  canal: string;
+  destino: string;
+  severidadMinima: string;
+  /** Nombre de la parcela, o null si el aviso aplica a todas. */
+  parcelaNombre?: string | null;
+  /** Origen de la suscripción para dar contexto al equipo. */
+  origen?: string;
+}
+
+/**
+ * Notifica al equipo (chat de Telegram del negocio) que alguien ha activado un
+ * nuevo aviso/suscripción. Degradación elegante: sin credenciales se registra y
+ * se ignora — nunca rompe el flujo de alta.
+ */
+export async function notificarNuevoSuscriptor(
+  suscriptor: NuevoSuscriptor,
+): Promise<boolean> {
+  const credenciales = credencialesNegocio();
+  if (!credenciales) return false;
+  const { token, chatId } = credenciales;
+
+  const lineas = [
+    "🔔 Nuevo suscriptor de avisos",
+    `📡 Canal: ${suscriptor.canal}`,
+    `🎯 Gravedad mínima: ${suscriptor.severidadMinima}`,
+    `📍 Parcela: ${suscriptor.parcelaNombre ?? "Todas las parcelas"}`,
+    `📮 Destino: ${suscriptor.destino}`,
+  ];
+  if (suscriptor.origen) lineas.push(`🏷 Origen: ${suscriptor.origen}`);
 
   return enviarTelegram(chatId, token, lineas.join("\n"));
 }
