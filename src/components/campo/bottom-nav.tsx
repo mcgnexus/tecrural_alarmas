@@ -72,8 +72,8 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky bottom-0 z-10 border-t-2 border-stone-900/10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/95">
-      <div className="mx-auto grid w-full max-w-5xl grid-cols-5 gap-1 px-2 pb-[env(safe-area-inset-bottom)] pt-1">
+    <nav className="sticky bottom-0 z-10 border-t-2 border-stone-900/10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/95 md:hidden">
+      <div className="mx-auto grid w-full max-w-5xl grid-cols-5 gap-0.5 px-2 pb-[env(safe-area-inset-bottom)] pt-1">
         {items.map((item) => {
           const activo =
             item.href === "/"
@@ -85,18 +85,46 @@ export function BottomNav() {
               href={item.href}
               aria-current={activo ? "page" : undefined}
               aria-label={item.etiqueta}
-              className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[15px] font-semibold leading-none ${
+              className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[13px] font-semibold leading-none sm:text-[15px] ${
                 activo
                   ? "bg-brand-800 text-white shadow-sm"
                   : "text-stone-700 hover:bg-stone-100 active:bg-stone-200"
               }`}
             >
               <Icono nombre={item.icono} />
-              <span className="text-center leading-none">{item.etiqueta}</span>
+              <span className="w-full truncate text-center leading-none">{item.etiqueta}</span>
             </Link>
           );
         })}
       </div>
+    </nav>
+  );
+}
+
+/** Navegación superior para escritorio; en móvil se usa `BottomNav`. */
+export function NavEscritorio() {
+  const pathname = usePathname();
+
+  return (
+    <nav className="hidden items-center gap-1 md:flex">
+      {items.map((item) => {
+        const activo =
+          item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-current={activo ? "page" : undefined}
+            className={`inline-flex min-h-[44px] items-center rounded-xl px-2 text-[14px] font-semibold lg:px-3 lg:text-[15px] ${
+              activo
+                ? "bg-brand-800 text-white"
+                : "text-stone-700 hover:bg-stone-100"
+            }`}
+          >
+            {item.etiqueta}
+          </Link>
+        );
+      })}
     </nav>
   );
 }

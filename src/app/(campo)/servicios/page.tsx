@@ -177,7 +177,7 @@ export default function ServiciosPage() {
         </Link>
       </section>
 
-      <section className="flex flex-col gap-4">
+      <section className="grid gap-4 lg:grid-cols-2">
         {servicios.map((servicio) => {
           const wa = enlaceWhatsapp(`Hola, quiero información sobre: ${servicio.titulo}`);
           return (

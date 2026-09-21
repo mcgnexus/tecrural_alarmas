@@ -231,7 +231,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
         <section className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm">
           <h2 className="text-xl font-extrabold text-stone-900">¿Qué cultivas?</h2>
           <p className="mt-1 text-base text-stone-700">Toca una tarjeta.</p>
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
             {CULTIVOS.map((id) => {
               const c = catalogoCultivos[id];
               const activo = cultivo === id;

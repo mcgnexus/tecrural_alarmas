@@ -128,14 +128,14 @@ export function AsistenteChat() {
         <button
           type="button"
           onClick={abrir}
-          className="inline-flex min-h-[52px] w-full items-center justify-center min-h-[52px] items-center gap-2 rounded-full border-2 border-brand-800 bg-brand-800 px-5 py-3 text-base font-bold text-white shadow-lg hover:bg-brand-900"
+          className="inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full border-2 border-brand-800 bg-brand-800 px-5 py-3 text-base font-bold text-white shadow-lg hover:bg-brand-900 md:w-auto"
         >
           ¿Te ayudo?
         </button>
       ) : null}
 
       {abierto ? (
-        <div className="fixed inset-x-4 bottom-24 z-30 mx-auto flex max-h-[70vh] w-[calc(100vw-2rem)] max-w-sm flex-col rounded-2xl border-2 border-stone-900 bg-white shadow-xl">
+        <div className="fixed inset-x-4 bottom-24 z-30 mx-auto flex max-h-[70vh] w-[calc(100vw-2rem)] max-w-sm flex-col rounded-2xl border-2 border-stone-900 bg-white shadow-xl md:bottom-6">
           <div className="flex items-center justify-between rounded-t-2xl border-b-2 border-stone-200 bg-brand-800 px-4 py-3 text-white">
             <p className="text-sm font-bold">Asistente TecRural</p>
             <div className="flex gap-2">

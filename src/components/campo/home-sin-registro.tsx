@@ -77,9 +77,10 @@ export function HomeSinRegistro() {
       {ubicacion ? <p role="status" className="mt-3 rounded-xl bg-brand-50 p-3 text-base font-bold text-brand-900">Ubicación elegida: {ubicacion.nombre}</p> : null}{error ? <p role="alert" className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 p-3 text-[15px] font-semibold text-red-800">{error}</p> : null}
     </section>
 
-    {ubicacion ? <MeteoZona key={`${ubicacion.lat}-${ubicacion.lon}`} ubicacion={ubicacion} /> : null}
-
-    {ubicacion ? <AvisosOficialesAemet key={`aemet-${ubicacion.lat}-${ubicacion.lon}`} ubicacion={ubicacion} /> : null}
+    {ubicacion ? <div className="grid gap-5 lg:grid-cols-2">
+      <MeteoZona key={`${ubicacion.lat}-${ubicacion.lon}`} ubicacion={ubicacion} />
+      <AvisosOficialesAemet key={`aemet-${ubicacion.lat}-${ubicacion.lon}`} ubicacion={ubicacion} />
+    </div> : null}
 
     {ubicacion?.province ? <section className="rounded-2xl border-2 border-earth-300 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-baseline justify-between gap-2"><h2 className="text-xl font-extrabold text-stone-950">Avisos fitosanitarios de {ubicacion.province}</h2><span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-700">Gratis, sin registro</span></div>

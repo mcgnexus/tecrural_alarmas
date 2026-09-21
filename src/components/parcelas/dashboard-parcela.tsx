@@ -132,7 +132,7 @@ export function DashboardParcela({ alertas, evaluadoEl }: { alertas: Alerta[]; e
       {caducado ? (
         <p role="alert" className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-center text-sm font-bold text-amber-800">⚠ Datos meteorológicos pendientes de actualización — no mostrar nivel como actual</p>
       ) : null}
-      <div className={`grid grid-cols-2 gap-2 ${caducado ? "opacity-60" : ""}`}>
+      <div className={`grid grid-cols-2 gap-2 md:grid-cols-3 ${caducado ? "opacity-60" : ""}`}>
         {bloques.map((b) => (
           <div
             key={b.key}
