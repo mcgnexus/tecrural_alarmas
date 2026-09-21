@@ -55,7 +55,7 @@ export function DashboardParcela({ alertas, evaluadoEl }: { alertas: Alerta[]; e
       icono: sev === "critica" ? "🔴" : sev === "alerta" ? "🟠" : sev === "aviso" ? "🟡" : "🟢",
       severidad: sev,
       linea1: a ? (temp ?? a.titulo) : "Sin riesgo",
-      linea2: a ? "04:00–07:00" : "",
+      linea2: "",
       orden: ORDEN[sev] ?? 0,
       claseLinea: a && tempNum !== null ? colorTemperatura(tempNum) : undefined,
       tituloLinea: a && tempNum !== null ? etiquetaTermica(tempNum) : undefined,
