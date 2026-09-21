@@ -15,6 +15,11 @@ type Hora = {
   windGustKmh: number | null;
 };
 
+type DiaMin = { clave: string; etiqueta: string; minima: number | null };
+
+const DIAS_PREVISION = 5;
+const HORAS_PREVISION = DIAS_PREVISION * 24;
+
 function numero(valor: number | null | undefined, unidad: string, decimales = 0): string {
   if (typeof valor !== "number" || !Number.isFinite(valor)) return "—";
   return `${valor.toFixed(decimales)}${unidad}`;
@@ -29,8 +34,26 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   );
 }
 
+/** Agrupa la serie horaria por día natural y devuelve la mínima de cada uno. */
+function minimasPorDia(horas: Hora[]): DiaMin[] {
+  const porDia = new Map<string, DiaMin>();
+  for (const hora of horas) {
+    const t = hora.temperatureC;
+    if (typeof t !== "number" || !Number.isFinite(t)) continue;
+    const fecha = new Date(hora.timestamp);
+    if (Number.isNaN(fecha.getTime())) continue;
+    const clave = `${fecha.getFullYear()}-${fecha.getMonth()}-${fecha.getDate()}`;
+    const etiqueta = fecha.toLocaleDateString("es-ES", { weekday: "short", day: "2-digit" });
+    const actual = porDia.get(clave);
+    if (!actual) porDia.set(clave, { clave, etiqueta, minima: t });
+    else if (actual.minima === null || t < actual.minima) actual.minima = t;
+  }
+  return Array.from(porDia.values()).slice(0, DIAS_PREVISION);
+}
+
 export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
   const [actual, setActual] = useState<Hora | null>(null);
+  const [dias, setDias] = useState<DiaMin[]>([]);
   const [minima, setMinima] = useState<number | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +68,7 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
     const pedirActual = fetch(`/api/v1/weather/current?${q}`, { cache: "no-store" })
       .then((r) => (r.ok ? (r.json() as Promise<Hora>) : null))
       .catch(() => null);
-    const pedirPrevision = fetch(`/api/v1/weather/forecast?${q}&hours=24`, { cache: "no-store" })
+    const pedirPrevision = fetch(`/api/v1/weather/forecast?${q}&hours=${HORAS_PREVISION}`, { cache: "no-store" })
       .then((r) => (r.ok ? (r.json() as Promise<Hora[]>) : null))
       .catch(() => null);
 
@@ -55,10 +78,12 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
         if (!hoy && !horas) { setError("No pudimos cargar el tiempo de tu zona. Inténtalo de nuevo."); return; }
         setActual(hoy);
         if (Array.isArray(horas) && horas.length) {
-          const temps = horas
-            .map((h) => h.temperatureC)
+          const porDia = minimasPorDia(horas);
+          setDias(porDia);
+          const minimas = porDia
+            .map((d) => d.minima)
             .filter((t): t is number => typeof t === "number" && Number.isFinite(t));
-          setMinima(temps.length ? Math.min(...temps) : null);
+          setMinima(minimas.length ? Math.min(...minimas) : null);
         }
       })
       .catch(() => { if (activo) setError("No pudimos cargar el tiempo de tu zona. Inténtalo de nuevo."); })
@@ -69,6 +94,7 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
 
   const hayHelada = minima !== null && minima <= 0;
   const riesgoHelada = minima !== null && minima <= 2;
+  const diasRiesgo = dias.filter((d) => d.minima !== null && d.minima <= 2);
 
   return (
     <section className="rounded-2xl border-2 border-sky-200 bg-white p-5 shadow-sm">
@@ -96,19 +122,44 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
             <Dato etiqueta="Rachas" valor={numero(actual.windGustKmh, " km/h")} />
             <Dato etiqueta="Lluvia 1 h" valor={numero(actual.precipitationMm, " mm", 1)} />
             <Dato etiqueta="Prob. lluvia" valor={numero(actual.precipitationProbabilityPct, " %")} />
-            <Dato etiqueta="Mín. 24 h" valor={numero(minima, " °C", 1)} />
+            <Dato etiqueta="Mín. 5 días" valor={numero(minima, " °C", 1)} />
             <Dato etiqueta="Actualizado" valor={actual.timestamp ? new Date(actual.timestamp).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : "—"} />
           </div>
+
+          {dias.length ? (
+            <div className="mt-4">
+              <h3 className="text-[15px] font-extrabold text-stone-900">Previsión de heladas · {DIAS_PREVISION} días</h3>
+              <ul className="mt-2 divide-y divide-stone-200 rounded-xl border-2 border-stone-200">
+                {dias.map((dia) => {
+                  const helada = dia.minima !== null && dia.minima <= 0;
+                  const riesgo = dia.minima !== null && dia.minima <= 2;
+                  return (
+                    <li key={dia.clave} className="flex items-center justify-between gap-3 px-3 py-2">
+                      <span className="text-[15px] font-bold capitalize text-stone-800">{dia.etiqueta}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="text-[15px] font-extrabold text-stone-950">{numero(dia.minima, " °C", 1)}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${helada ? "bg-blue-100 text-blue-800" : riesgo ? "bg-amber-100 text-amber-800" : "bg-emerald-50 text-emerald-700"}`}>
+                          {helada ? "Helada" : riesgo ? "Riesgo" : "Sin riesgo"}
+                        </span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
 
           {riesgoHelada ? (
             <div className={`mt-4 rounded-xl border-2 p-4 ${hayHelada ? "border-blue-300 bg-blue-50" : "border-amber-300 bg-amber-50"}`}>
               <p className={`text-[15px] font-extrabold ${hayHelada ? "text-blue-900" : "text-amber-900"}`}>
-                {hayHelada ? `Helada probable: mínima prevista ${numero(minima, " °C", 1)}` : `Vigila el frío: mínima prevista ${numero(minima, " °C", 1)}`}
+                {hayHelada ? `Helada probable: mínima de ${numero(minima, " °C", 1)} en los próximos ${DIAS_PREVISION} días` : `Vigila el frío: mínima de ${numero(minima, " °C", 1)} en los próximos ${DIAS_PREVISION} días`}
               </p>
-              <p className="mt-1 text-[13px] leading-relaxed text-stone-700">Protege los cultivos sensibles durante la madrugada. Es una estimación orientativa, no un aviso oficial.</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-stone-700">
+                Días con riesgo: {diasRiesgo.map((d) => d.etiqueta).join(", ")}. Protege los cultivos sensibles durante la madrugada. Es una estimación orientativa, no un aviso oficial.
+              </p>
             </div>
           ) : minima !== null ? (
-            <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-[14px] font-semibold text-emerald-900">Sin riesgo de helada en las próximas 24 h (mínima {numero(minima, " °C", 1)}).</p>
+            <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-[14px] font-semibold text-emerald-900">Sin riesgo de helada en los próximos {DIAS_PREVISION} días (mínima {numero(minima, " °C", 1)}).</p>
           ) : null}
         </>
       ) : null}

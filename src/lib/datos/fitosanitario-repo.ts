@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, sql } from "drizzle-orm";
 import { obtenerDb } from "./db";
 import { alertasFitosanitarias } from "./plataforma-schema";
 import type { PhytosanitaryAlert } from "@/lib/dominio/fitosanitario";
@@ -71,7 +71,7 @@ export async function listarAlertasFitosanitarias(
     condiciones.push(eq(alertasFitosanitarias.cropId, filtros.cropId));
   }
   if (filtros.province) {
-    condiciones.push(eq(alertasFitosanitarias.province, filtros.province));
+    condiciones.push(ilike(alertasFitosanitarias.province, filtros.province));
   }
   const filas = await db
     .select()

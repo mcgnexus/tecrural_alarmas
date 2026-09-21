@@ -12,6 +12,7 @@ export type EventoEmbudo =
   | "lead_submitted"
   | "municipality_selected"
   | "service_interest_selected"
+  | "crop_selected"
   | "ai_conversation_started";
 
 /** `telegram_notification_sent` se registra en servidor (log estructurado). */
@@ -27,6 +28,7 @@ const EVENTO_LEAD: Record<EventoEmbudo, LeadEventType | null> = {
   lead_submitted: null,
   municipality_selected: "LOCATION_SELECTED",
   service_interest_selected: null,
+  crop_selected: "CROP_SELECTED",
   ai_conversation_started: "APP_VISIT",
 };
 

@@ -5,9 +5,15 @@ import { useMemo, useState } from "react";
 import { enlaceWhatsapp } from "@/lib/config/contacto";
 import { registrarEventoEmbudo } from "@/lib/analitica";
 import { MeteoZona } from "@/components/campo/meteo-zona";
+import { AvisosOficialesAemet } from "@/components/campo/avisos-oficiales";
+import { ListaAvisosFitosanitarios } from "@/components/fitosanitario/lista-avisos";
+import { catalogoCultivos } from "@/lib/cultivos/catalogo";
+import type { CulturaId } from "@/lib/cultivos/catalogo";
 
 type Municipio = { name: string; province: string; region: string; latitude: number; longitude: number; aemetMunicipio?: string };
-type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
+type Ubicacion = { lat: number; lon: number; nombre: string; province?: string; aemetMunicipio?: string };
+
+const idsCultivos = Object.keys(catalogoCultivos) as CulturaId[];
 
 const servicios = [
   { titulo: "Alertas de campo", texto: "Heladas, calor, lluvia y viento explicados con claridad.", href: "/alertas" },
@@ -20,9 +26,17 @@ export function HomeSinRegistro() {
   const [query, setQuery] = useState("");
   const [municipios, setMunicipios] = useState<Municipio[]>([]);
   const [ubicacion, setUbicacion] = useState<Ubicacion | null>(null);
+  const [cultivo, setCultivo] = useState<CulturaId | "">("");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const wa = useMemo(() => enlaceWhatsapp(ubicacion ? `Hola, soy de ${ubicacion.nombre} y quiero orientación para mi explotación.` : "Hola, quiero orientación para mi explotación."), [ubicacion]);
+  const wa = useMemo(() => {
+    const municipio = ubicacion ? ubicacion.nombre.split(",")[0]?.trim() : "";
+    const nombreCultivo = cultivo ? catalogoCultivos[cultivo].nombre : "";
+    const mensaje = nombreCultivo
+      ? `Hola, soy${municipio ? ` de ${municipio}` : ""} y quiero recibir avisos de mi cultivo de ${nombreCultivo} por WhatsApp.`
+      : `Hola, quiero recibir avisos de mi cultivo por WhatsApp${municipio ? ` (${municipio})` : ""}.`;
+    return enlaceWhatsapp(mensaje);
+  }, [ubicacion, cultivo]);
 
   async function cargarMunicipios(z?: "altiplano" | "costa") {
     const zonaElegida = z ?? zona;
@@ -43,7 +57,7 @@ export function HomeSinRegistro() {
   }
 
   function elegir(m: Municipio) {
-    const u = { lat: Number(m.latitude), lon: Number(m.longitude), nombre: `${m.name}, ${m.province}`, aemetMunicipio: m.aemetMunicipio };
+    const u = { lat: Number(m.latitude), lon: Number(m.longitude), nombre: `${m.name}, ${m.province}`, province: m.province, aemetMunicipio: m.aemetMunicipio };
     setUbicacion(u); setMunicipios([]); setQuery("");
     try { localStorage.setItem("tecrural:ubicacion", JSON.stringify(u)); localStorage.setItem("tecrural:zona", zona ?? m.region); } catch {}
     registrarEventoEmbudo("municipality_selected", { municipio: m.name, zona: zona ?? m.region });
@@ -65,7 +79,25 @@ export function HomeSinRegistro() {
 
     {ubicacion ? <MeteoZona key={`${ubicacion.lat}-${ubicacion.lon}`} ubicacion={ubicacion} /> : null}
 
-    <section className="rounded-2xl bg-olive-900 p-5 text-white"><h2 className="text-xl font-extrabold">Cuéntanos qué necesitas</h2><p className="mt-1 text-base text-wheat-100">Te responde una persona, sin menús ni complicaciones.</p>{wa ? <a href={wa} target="_blank" rel="noopener noreferrer" onClick={() => registrarEventoEmbudo("click_whatsapp", { origen: "home", municipio: ubicacion?.nombre ?? null })} className="mt-4 inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-lg font-black text-white hover:bg-emerald-700">Hablar por WhatsApp</a> : <a href="#contacto" className="mt-4 inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-wheat-100 px-5 py-3 text-lg font-black text-olive-950">Pedir una llamada</a>}</section>
+    {ubicacion ? <AvisosOficialesAemet key={`aemet-${ubicacion.lat}-${ubicacion.lon}`} ubicacion={ubicacion} /> : null}
+
+    {ubicacion?.province ? <section className="rounded-2xl border-2 border-earth-300 bg-white p-5 shadow-sm">
+      <div className="flex flex-wrap items-baseline justify-between gap-2"><h2 className="text-xl font-extrabold text-stone-950">Avisos fitosanitarios de {ubicacion.province}</h2><span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-700">Gratis, sin registro</span></div>
+      <div className="mt-3"><ListaAvisosFitosanitarios key={ubicacion.province} province={ubicacion.province} limite={3} /></div>
+      <Link href="/fitosanitario" className="mt-3 inline-flex min-h-[44px] items-center font-bold text-olive-800 underline">Ver todos los avisos fitosanitarios</Link>
+    </section> : null}
+
+    <section className="rounded-2xl bg-olive-900 p-5 text-white">
+      <h2 className="text-xl font-extrabold">Avisos de tu cultivo por WhatsApp</h2>
+      <p className="mt-1 text-base text-wheat-100">Dinos qué cultivas y te avisamos gratis cuando haya riesgo de helada, calor o plagas.</p>
+      <label htmlFor="cultivo-home" className="mt-4 block text-base font-bold text-wheat-100">Tu cultivo</label>
+      <select id="cultivo-home" value={cultivo} onChange={(e) => { const v = e.target.value as CulturaId | ""; setCultivo(v); if (v) registrarEventoEmbudo("crop_selected", { cultivo: v, municipio: ubicacion?.nombre ?? null }); }} className="mt-1 min-h-[52px] w-full rounded-xl border-2 border-wheat-100 bg-white px-4 text-base font-semibold text-stone-900">
+        <option value="">Elige tu cultivo</option>
+        {idsCultivos.map((id) => <option key={id} value={id}>{catalogoCultivos[id].nombre}</option>)}
+      </select>
+      {wa ? <a href={wa} target="_blank" rel="noopener noreferrer" onClick={() => registrarEventoEmbudo("click_whatsapp", { origen: "home", municipio: ubicacion?.nombre ?? null, cultivo: cultivo || null })} className="mt-4 inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-lg font-black text-white hover:bg-emerald-700">Quiero avisos de mi cultivo por WhatsApp</a> : <a href="#contacto" className="mt-4 inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-wheat-100 px-5 py-3 text-lg font-black text-olive-950">Pedir una llamada</a>}
+      <p className="mt-2 text-[12px] leading-relaxed text-wheat-100">Sin compromiso. Solo te avisamos de lo importante para tu cultivo.</p>
+    </section>
 
     <section><h2 className="text-xl font-extrabold text-stone-950">Ayuda práctica para tu explotación</h2><div className="mt-3 grid gap-3 md:grid-cols-3">{servicios.map((s) => <article key={s.titulo} className="rounded-2xl border-2 border-earth-200 bg-white p-4"><h3 className="text-lg font-extrabold text-stone-950">{s.titulo}</h3><p className="mt-1 text-[15px] leading-relaxed text-stone-700">{s.texto}</p><Link href={s.href} className="mt-3 inline-flex min-h-[44px] items-center font-bold text-olive-800 underline">Ver cómo ayuda</Link></article>)}</div></section>
   </div>;

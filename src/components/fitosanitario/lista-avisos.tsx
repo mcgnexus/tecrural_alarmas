@@ -38,7 +38,13 @@ function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   );
 }
 
-export function ListaAvisosFitosanitarios() {
+export function ListaAvisosFitosanitarios({
+  province,
+  limite,
+}: {
+  province?: string;
+  limite?: number;
+} = {}) {
   const [avisos, setAvisos] = useState<AvisoOficial[]>([]);
   const [disponible, setDisponible] = useState<boolean | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -46,7 +52,10 @@ export function ListaAvisosFitosanitarios() {
 
   useEffect(() => {
     let activo = true;
-    fetch("/api/fitosanitario", { cache: "no-store" })
+    const qs = new URLSearchParams();
+    if (province) qs.set("province", province);
+    const url = `/api/fitosanitario${qs.size ? `?${qs.toString()}` : ""}`;
+    fetch(url, { cache: "no-store" })
       .then((resp) => (resp.ok ? (resp.json() as Promise<{ disponible?: boolean; avisos?: AvisoOficial[] }>) : null))
       .then((datos) => {
         if (!activo) return;
@@ -66,7 +75,7 @@ export function ListaAvisosFitosanitarios() {
     return () => {
       activo = false;
     };
-  }, []);
+  }, [province]);
 
   if (disponible === false) {
     return (
@@ -89,9 +98,10 @@ export function ListaAvisosFitosanitarios() {
     );
   }
 
+  const visibles = limite ? avisos.slice(0, limite) : avisos;
   return (
     <div className="flex flex-col gap-3">
-      {avisos.map((aviso) => (
+      {visibles.map((aviso) => (
         <article
           key={aviso.id}
           className="rounded-xl border border-stone-200 bg-white p-4"
