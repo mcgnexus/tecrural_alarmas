@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { colorTemperatura, etiquetaTermica } from "@/lib/ui/temperatura";
+import { colorHumedad, etiquetaHumedad } from "@/lib/ui/humedad";
 
 type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
 
@@ -122,7 +123,12 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
             <p title={etiquetaTermica(actual.temperatureC)} className={`text-[42px] font-black leading-none ${colorTemperatura(actual.temperatureC)}`}>{numero(actual.temperatureC, " °C", 0)}</p>
             <div className="pb-1">
               <p className={`text-[15px] font-bold ${colorTemperatura(actual.apparentTemperatureC)}`}>Sensación {numero(actual.apparentTemperatureC, " °C", 0)}</p>
-              <p className="text-[13px] text-stone-500">Humedad {numero(actual.relativeHumidityPct, " %", 0)}</p>
+              <p className="text-[13px] text-stone-500">
+                Humedad{" "}
+                <span title={etiquetaHumedad(actual.relativeHumidityPct)} className={`font-bold ${colorHumedad(actual.relativeHumidityPct)}`}>
+                  {numero(actual.relativeHumidityPct, " %", 0)}
+                </span>
+              </p>
             </div>
           </div>
 
@@ -131,6 +137,7 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
             <Dato etiqueta="Rachas" valor={numero(actual.windGustKmh, " km/h")} />
             <Dato etiqueta="Lluvia 1 h" valor={numero(actual.precipitationMm, " mm", 1)} />
             <Dato etiqueta="Prob. lluvia" valor={numero(actual.precipitationProbabilityPct, " %")} />
+            <Dato etiqueta="Humedad ambiente" valor={numero(actual.relativeHumidityPct, " %", 0)} claseValor={colorHumedad(actual.relativeHumidityPct)} titulo={etiquetaHumedad(actual.relativeHumidityPct)} />
             <Dato etiqueta="Máx. 5 días" valor={numero(maxima, " °C", 1)} claseValor={colorTemperatura(maxima)} titulo={etiquetaTermica(maxima)} />
             <Dato etiqueta="Mín. 5 días" valor={numero(minima, " °C", 1)} claseValor={colorTemperatura(minima)} titulo={etiquetaTermica(minima)} />
             <Dato etiqueta="Actualizado" valor={actual.timestamp ? new Date(actual.timestamp).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : "—"} />

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParcelas } from "@/hooks/use-parcelas";
 import type { CulturaId } from "@/lib/cultivos/catalogo";
 import { colorTemperatura, etiquetaTermica } from "@/lib/ui/temperatura";
+import { colorHumedad, etiquetaHumedad } from "@/lib/ui/humedad";
 
 interface AvisoAgro {
   nivel: string;
@@ -114,7 +115,11 @@ export function RiesgoAgroclimatico() {
               <span title={etiquetaTermica(aviso.condiciones.temperaturaC)} className={`font-bold ${colorTemperatura(aviso.condiciones.temperaturaC)}`}>
                 {aviso.condiciones.temperaturaC} °C
               </span>{" "}
-              · HR {aviso.condiciones.humedadRelativaPct} % · precip. 1 h{" "}
+              · HR{" "}
+              <span title={etiquetaHumedad(aviso.condiciones.humedadRelativaPct)} className={`font-bold ${colorHumedad(aviso.condiciones.humedadRelativaPct)}`}>
+                {aviso.condiciones.humedadRelativaPct} %
+              </span>{" "}
+              · precip. 1 h{" "}
               {aviso.condiciones.precipitacionUltimaHoraMm} mm
             </p>
             <p className="mt-2 text-[11px] font-medium text-stone-500">
