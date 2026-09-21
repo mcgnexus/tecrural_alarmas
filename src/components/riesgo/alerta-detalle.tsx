@@ -3,10 +3,18 @@
 import { CtaContextual } from "@/components/servicios/cta-contextual";
 import { esDatosCaducados, haceMinutos } from "@/lib/dominio/frescura";
 import type { Alerta } from "@/lib/dominio/tipos";
+import { colorTemperatura, etiquetaTermica } from "@/lib/ui/temperatura";
 
 function extraer(mensaje: string, re: RegExp): string | null {
   const m = mensaje.match(re);
   return m ? m[1]! : null;
+}
+
+function temperaturaDe(texto: string): number | null {
+  const m = texto.match(/(-?\d+(?:[.,]\d+)?)\s*°C/);
+  if (!m) return null;
+  const n = Number(m[1]!.replace(",", "."));
+  return Number.isFinite(n) ? n : null;
 }
 
 export function AlertaDetalle({ alerta }: { alerta: Alerta }) {
@@ -15,6 +23,7 @@ export function AlertaDetalle({ alerta }: { alerta: Alerta }) {
   const icon = esCritica ? "🔴" : alerta.severidad === "alerta" ? "🟠" : alerta.severidad === "aviso" ? "🟡" : "🟢";
 
   const minima = extraer(alerta.mensaje, /(-?\d+[.,]\d+)\s*°C/) ?? "-1,7 °C";
+  const minimaNum = temperaturaDe(minima);
   // periodo: buscar 04:30–07:00 o similar, fallback
   const periodo = extraer(alerta.mensaje, /(\d{1,2}:\d{2}).*?(\d{1,2}:\d{2})/) ? (alerta.mensaje.match(/(\d{1,2}:\d{2}[–-]\d{1,2}:\d{2})/)?.[1] ?? "04:30–07:00") : "04:30–07:00";
   const viento = extraer(alerta.mensaje, /(\d+(?:[.,]\d+)?)\s*km\/h/) ?? "5";
@@ -37,7 +46,7 @@ export function AlertaDetalle({ alerta }: { alerta: Alerta }) {
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="rounded-xl bg-white p-4 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-wide text-stone-600">Mínima prevista</p>
-            <p className="mt-1 text-2xl font-extrabold text-stone-900">{minima}</p>
+            <p title={etiquetaTermica(minimaNum)} className={`mt-1 text-2xl font-extrabold ${colorTemperatura(minimaNum)}`}>{minima}</p>
           </div>
           <div className="rounded-xl bg-white p-4 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-wide text-stone-600">Periodo de mayor riesgo</p>

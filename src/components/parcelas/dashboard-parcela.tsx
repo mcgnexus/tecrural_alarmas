@@ -2,6 +2,7 @@
 
 import type { Alerta } from "@/lib/dominio/tipos";
 import { esDatosCaducados, haceMinutos } from "@/lib/dominio/frescura";
+import { colorTemperatura, etiquetaTermica } from "@/lib/ui/temperatura";
 
 type Bloque = {
   key: string;
@@ -11,6 +12,8 @@ type Bloque = {
   linea1: string;
   linea2: string;
   orden: number;
+  claseLinea?: string;
+  tituloLinea?: string;
 };
 
 const ORDEN: Record<string, number> = { critica: 3, alerta: 2, aviso: 1, info: 0, verde: 0 };
@@ -22,6 +25,12 @@ function severidadDe(alerta?: Alerta): string {
 function extraerTemperatura(mensaje: string): string | null {
   const m = mensaje.match(/(-?\d+[.,]\d+)\s*°C/);
   return m ? m[1]!.replace(".", ",") + " °C" : null;
+}
+function extraerTemperaturaNumero(mensaje: string): number | null {
+  const m = mensaje.match(/(-?\d+(?:[.,]\d+)?)\s*°C/);
+  if (!m) return null;
+  const n = Number(m[1]!.replace(",", "."));
+  return Number.isFinite(n) ? n : null;
 }
 function extraerRachas(mensaje: string): string | null {
   const m = mensaje.match(/(\d+(?:[.,]\d+)?)\s*km\/h/);
@@ -39,6 +48,7 @@ export function DashboardParcela({ alertas, evaluadoEl }: { alertas: Alerta[]; e
     const a = porTipo.get("helada");
     const sev = severidadDe(a);
     const temp = a ? extraerTemperatura(a.mensaje) ?? "-1,7 °C" : null;
+    const tempNum = a ? extraerTemperaturaNumero(a.mensaje) : null;
     bloques.push({
       key: "helada",
       etiqueta: "Helada",
@@ -47,6 +57,8 @@ export function DashboardParcela({ alertas, evaluadoEl }: { alertas: Alerta[]; e
       linea1: a ? (temp ?? a.titulo) : "Sin riesgo",
       linea2: a ? "04:00–07:00" : "",
       orden: ORDEN[sev] ?? 0,
+      claseLinea: a && tempNum !== null ? colorTemperatura(tempNum) : undefined,
+      tituloLinea: a && tempNum !== null ? etiquetaTermica(tempNum) : undefined,
     });
   }
   // Lluvia
@@ -82,6 +94,7 @@ export function DashboardParcela({ alertas, evaluadoEl }: { alertas: Alerta[]; e
   {
     const a = porTipo.get("golpe-de-calor");
     const sev = severidadDe(a);
+    const tempNum = a ? extraerTemperaturaNumero(a.mensaje) : null;
     bloques.push({
       key: "calor",
       etiqueta: "Calor",
@@ -90,6 +103,8 @@ export function DashboardParcela({ alertas, evaluadoEl }: { alertas: Alerta[]; e
       linea1: a ? (extraerTemperatura(a.mensaje) ?? a.titulo) : "Normal",
       linea2: "",
       orden: ORDEN[sev] ?? 0,
+      claseLinea: a && tempNum !== null ? colorTemperatura(tempNum) : undefined,
+      tituloLinea: a && tempNum !== null ? etiquetaTermica(tempNum) : undefined,
     });
   }
   // Agua
@@ -142,7 +157,7 @@ export function DashboardParcela({ alertas, evaluadoEl }: { alertas: Alerta[]; e
               <span aria-hidden="true" className="text-base leading-none">{caducado ? "⚪" : b.icono}</span>
               <span className="text-sm font-bold text-stone-900">{b.etiqueta}</span>
             </div>
-            <p className="mt-1 text-sm font-semibold leading-tight text-stone-900">{caducado ? "—" : b.linea1}</p>
+            <p title={caducado ? undefined : b.tituloLinea} className={`mt-1 text-sm font-semibold leading-tight ${caducado ? "text-stone-900" : b.claseLinea ?? "text-stone-900"}`}>{caducado ? "—" : b.linea1}</p>
             {b.linea2 && !caducado ? <p className="text-xs font-medium text-stone-600">{b.linea2}</p> : null}
           </div>
         ))}

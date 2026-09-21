@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { colorTemperatura, etiquetaTermica } from "@/lib/ui/temperatura";
 
 type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
 
@@ -15,7 +16,7 @@ type Hora = {
   windGustKmh: number | null;
 };
 
-type DiaMin = { clave: string; etiqueta: string; minima: number | null };
+type DiaExtremos = { clave: string; etiqueta: string; minima: number | null; maxima: number | null };
 
 const DIAS_PREVISION = 5;
 const HORAS_PREVISION = DIAS_PREVISION * 24;
@@ -25,18 +26,18 @@ function numero(valor: number | null | undefined, unidad: string, decimales = 0)
   return `${valor.toFixed(decimales)}${unidad}`;
 }
 
-function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
+function Dato({ etiqueta, valor, claseValor, titulo }: { etiqueta: string; valor: string; claseValor?: string; titulo?: string }) {
   return (
     <div className="rounded-xl border border-stone-200 bg-wheat-50 p-3">
       <p className="text-[11px] font-bold uppercase tracking-wide text-stone-500">{etiqueta}</p>
-      <p className="mt-0.5 text-lg font-extrabold text-stone-950">{valor}</p>
+      <p title={titulo} className={`mt-0.5 text-lg font-extrabold ${claseValor ?? "text-stone-950"}`}>{valor}</p>
     </div>
   );
 }
 
-/** Agrupa la serie horaria por día natural y devuelve la mínima de cada uno. */
-function minimasPorDia(horas: Hora[]): DiaMin[] {
-  const porDia = new Map<string, DiaMin>();
+/** Agrupa la serie horaria por día natural y devuelve la mínima y la máxima de cada uno. */
+function extremosPorDia(horas: Hora[]): DiaExtremos[] {
+  const porDia = new Map<string, DiaExtremos>();
   for (const hora of horas) {
     const t = hora.temperatureC;
     if (typeof t !== "number" || !Number.isFinite(t)) continue;
@@ -45,16 +46,20 @@ function minimasPorDia(horas: Hora[]): DiaMin[] {
     const clave = `${fecha.getFullYear()}-${fecha.getMonth()}-${fecha.getDate()}`;
     const etiqueta = fecha.toLocaleDateString("es-ES", { weekday: "short", day: "2-digit" });
     const actual = porDia.get(clave);
-    if (!actual) porDia.set(clave, { clave, etiqueta, minima: t });
-    else if (actual.minima === null || t < actual.minima) actual.minima = t;
+    if (!actual) porDia.set(clave, { clave, etiqueta, minima: t, maxima: t });
+    else {
+      if (actual.minima === null || t < actual.minima) actual.minima = t;
+      if (actual.maxima === null || t > actual.maxima) actual.maxima = t;
+    }
   }
   return Array.from(porDia.values()).slice(0, DIAS_PREVISION);
 }
 
 export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
   const [actual, setActual] = useState<Hora | null>(null);
-  const [dias, setDias] = useState<DiaMin[]>([]);
+  const [dias, setDias] = useState<DiaExtremos[]>([]);
   const [minima, setMinima] = useState<number | null>(null);
+  const [maxima, setMaxima] = useState<number | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,12 +83,16 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
         if (!hoy && !horas) { setError("No pudimos cargar el tiempo de tu zona. Inténtalo de nuevo."); return; }
         setActual(hoy);
         if (Array.isArray(horas) && horas.length) {
-          const porDia = minimasPorDia(horas);
+          const porDia = extremosPorDia(horas);
           setDias(porDia);
           const minimas = porDia
             .map((d) => d.minima)
             .filter((t): t is number => typeof t === "number" && Number.isFinite(t));
+          const maximas = porDia
+            .map((d) => d.maxima)
+            .filter((t): t is number => typeof t === "number" && Number.isFinite(t));
           setMinima(minimas.length ? Math.min(...minimas) : null);
+          setMaxima(maximas.length ? Math.max(...maximas) : null);
         }
       })
       .catch(() => { if (activo) setError("No pudimos cargar el tiempo de tu zona. Inténtalo de nuevo."); })
@@ -110,9 +119,9 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
       {!cargando && actual ? (
         <>
           <div className="mt-3 flex items-end gap-4">
-            <p className="text-[42px] font-black leading-none text-stone-950">{numero(actual.temperatureC, " °C", 0)}</p>
+            <p title={etiquetaTermica(actual.temperatureC)} className={`text-[42px] font-black leading-none ${colorTemperatura(actual.temperatureC)}`}>{numero(actual.temperatureC, " °C", 0)}</p>
             <div className="pb-1">
-              <p className="text-[15px] font-bold text-stone-700">Sensación {numero(actual.apparentTemperatureC, " °C", 0)}</p>
+              <p className={`text-[15px] font-bold ${colorTemperatura(actual.apparentTemperatureC)}`}>Sensación {numero(actual.apparentTemperatureC, " °C", 0)}</p>
               <p className="text-[13px] text-stone-500">Humedad {numero(actual.relativeHumidityPct, " %", 0)}</p>
             </div>
           </div>
@@ -122,13 +131,17 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
             <Dato etiqueta="Rachas" valor={numero(actual.windGustKmh, " km/h")} />
             <Dato etiqueta="Lluvia 1 h" valor={numero(actual.precipitationMm, " mm", 1)} />
             <Dato etiqueta="Prob. lluvia" valor={numero(actual.precipitationProbabilityPct, " %")} />
-            <Dato etiqueta="Mín. 5 días" valor={numero(minima, " °C", 1)} />
+            <Dato etiqueta="Máx. 5 días" valor={numero(maxima, " °C", 1)} claseValor={colorTemperatura(maxima)} titulo={etiquetaTermica(maxima)} />
+            <Dato etiqueta="Mín. 5 días" valor={numero(minima, " °C", 1)} claseValor={colorTemperatura(minima)} titulo={etiquetaTermica(minima)} />
             <Dato etiqueta="Actualizado" valor={actual.timestamp ? new Date(actual.timestamp).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : "—"} />
           </div>
 
           {dias.length ? (
             <div className="mt-4">
-              <h3 className="text-[15px] font-extrabold text-stone-900">Previsión de heladas · {DIAS_PREVISION} días</h3>
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 className="text-[15px] font-extrabold text-stone-900">Previsión de heladas · {DIAS_PREVISION} días</h3>
+                <span className="text-[11px] font-bold uppercase tracking-wide text-stone-500">Máx / Mín</span>
+              </div>
               <ul className="mt-2 divide-y divide-stone-200 rounded-xl border-2 border-stone-200">
                 {dias.map((dia) => {
                   const helada = dia.minima !== null && dia.minima <= 0;
@@ -137,7 +150,10 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
                     <li key={dia.clave} className="flex items-center justify-between gap-3 px-3 py-2">
                       <span className="text-[15px] font-bold capitalize text-stone-800">{dia.etiqueta}</span>
                       <span className="flex items-center gap-2">
-                        <span className="text-[15px] font-extrabold text-stone-950">{numero(dia.minima, " °C", 1)}</span>
+                        <span className="flex items-baseline gap-2 text-[15px] font-extrabold">
+                          <span title={`Máx. ${etiquetaTermica(dia.maxima)}`} className={colorTemperatura(dia.maxima)}>{numero(dia.maxima, " °C", 1)}</span>
+                          <span title={`Mín. ${etiquetaTermica(dia.minima)}`} className={colorTemperatura(dia.minima)}>{numero(dia.minima, " °C", 1)}</span>
+                        </span>
                         <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${helada ? "bg-blue-100 text-blue-800" : riesgo ? "bg-amber-100 text-amber-800" : "bg-emerald-50 text-emerald-700"}`}>
                           {helada ? "Helada" : riesgo ? "Riesgo" : "Sin riesgo"}
                         </span>
