@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { colorTemperatura, etiquetaTermica } from "@/lib/ui/temperatura";
 import { colorHumedad, etiquetaHumedad } from "@/lib/ui/humedad";
 import { registrarEventoEmbudo } from "@/lib/analitica";
+import { zonaCultivoPorCoordenadas } from "@/lib/cultivos/zona";
 
 type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
 
@@ -18,7 +19,7 @@ type Hora = {
   windGustKmh: number | null;
 };
 
-type DiaExtremos = { clave: string; etiqueta: string; minima: number | null; maxima: number | null };
+type DiaExtremos = { clave: string; etiqueta: string; minima: number | null; maxima: number | null; rachaMaxima: number | null };
 
 const DIAS_PREVISION = 5;
 const HORAS_PREVISION = DIAS_PREVISION * 24;
@@ -37,27 +38,38 @@ function Dato({ etiqueta, valor, claseValor, titulo }: { etiqueta: string; valor
   );
 }
 
-/** Agrupa la serie horaria por día natural y devuelve la mínima y la máxima de cada uno. */
+/** Agrupa la serie horaria por día natural y resume temperatura y racha máxima. */
 function extremosPorDia(horas: Hora[]): DiaExtremos[] {
   const porDia = new Map<string, DiaExtremos>();
   for (const hora of horas) {
     const t = hora.temperatureC;
-    if (typeof t !== "number" || !Number.isFinite(t)) continue;
+    const racha = hora.windGustKmh;
+    const temperaturaValida = typeof t === "number" && Number.isFinite(t);
+    const rachaValida = typeof racha === "number" && Number.isFinite(racha);
+    if (!temperaturaValida && !rachaValida) continue;
     const fecha = new Date(hora.timestamp);
     if (Number.isNaN(fecha.getTime())) continue;
     const clave = `${fecha.getFullYear()}-${fecha.getMonth()}-${fecha.getDate()}`;
     const etiqueta = fecha.toLocaleDateString("es-ES", { weekday: "short", day: "2-digit" });
     const actual = porDia.get(clave);
-    if (!actual) porDia.set(clave, { clave, etiqueta, minima: t, maxima: t });
+    if (!actual) porDia.set(clave, {
+      clave,
+      etiqueta,
+      minima: temperaturaValida ? t : null,
+      maxima: temperaturaValida ? t : null,
+      rachaMaxima: rachaValida ? racha : null,
+    });
     else {
-      if (actual.minima === null || t < actual.minima) actual.minima = t;
-      if (actual.maxima === null || t > actual.maxima) actual.maxima = t;
+      if (temperaturaValida && (actual.minima === null || t < actual.minima)) actual.minima = t;
+      if (temperaturaValida && (actual.maxima === null || t > actual.maxima)) actual.maxima = t;
+      if (rachaValida && (actual.rachaMaxima === null || racha > actual.rachaMaxima)) actual.rachaMaxima = racha;
     }
   }
   return Array.from(porDia.values()).slice(0, DIAS_PREVISION);
 }
 
 export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
+  const esCostaTropical = zonaCultivoPorCoordenadas(ubicacion.lat, ubicacion.lon) === "costa";
   const [actual, setActual] = useState<Hora | null>(null);
   const [dias, setDias] = useState<DiaExtremos[]>([]);
   const [minima, setMinima] = useState<number | null>(null);
@@ -154,24 +166,32 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
           {dias.length ? (
             <div className="mt-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 className="text-[15px] font-extrabold text-stone-900">Previsión de heladas · {DIAS_PREVISION} días</h3>
-                <span className="text-[11px] font-bold uppercase tracking-wide text-stone-500">Máx / Mín</span>
+                <h3 className="text-[15px] font-extrabold text-stone-900">{esCostaTropical ? `Previsión de vientos fuertes · ${DIAS_PREVISION} días` : `Previsión de heladas · ${DIAS_PREVISION} días`}</h3>
+                <span className="text-[11px] font-bold uppercase tracking-wide text-stone-500">{esCostaTropical ? "Racha máxima" : "Máx / Mín"}</span>
               </div>
               <ul className="mt-2 divide-y divide-stone-200 rounded-xl border-2 border-stone-200">
                 {dias.map((dia) => {
                   const helada = dia.minima !== null && dia.minima <= 0;
                   const riesgo = dia.minima !== null && dia.minima <= 2;
+                  const vientoFuerte = dia.rachaMaxima !== null && dia.rachaMaxima >= 50;
                   return (
                     <li key={dia.clave} className="flex items-center justify-between gap-3 px-3 py-2">
                       <span className="text-[15px] font-bold capitalize text-stone-800">{dia.etiqueta}</span>
                       <span className="flex items-center gap-2">
-                        <span className="flex items-baseline gap-2 text-[15px] font-extrabold">
-                          <span title={`Máx. ${etiquetaTermica(dia.maxima)}`} className={colorTemperatura(dia.maxima)}>{numero(dia.maxima, " °C", 1)}</span>
-                          <span title={`Mín. ${etiquetaTermica(dia.minima)}`} className={colorTemperatura(dia.minima)}>{numero(dia.minima, " °C", 1)}</span>
-                        </span>
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${helada ? "bg-blue-100 text-blue-800" : riesgo ? "bg-amber-100 text-amber-800" : "bg-emerald-50 text-emerald-700"}`}>
-                          {helada ? "Helada" : riesgo ? "Riesgo" : "Sin riesgo"}
-                        </span>
+                        {esCostaTropical ? <>
+                          <span className="text-[15px] font-extrabold text-stone-900">{numero(dia.rachaMaxima, " km/h")}</span>
+                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${dia.rachaMaxima === null ? "bg-stone-100 text-stone-700" : vientoFuerte ? "bg-amber-100 text-amber-900" : "bg-emerald-50 text-emerald-700"}`}>
+                            {dia.rachaMaxima === null ? "Sin datos" : vientoFuerte ? "Viento fuerte" : "Sin viento fuerte"}
+                          </span>
+                        </> : <>
+                          <span className="flex items-baseline gap-2 text-[15px] font-extrabold">
+                            <span title={`Máx. ${etiquetaTermica(dia.maxima)}`} className={colorTemperatura(dia.maxima)}>{numero(dia.maxima, " °C", 1)}</span>
+                            <span title={`Mín. ${etiquetaTermica(dia.minima)}`} className={colorTemperatura(dia.minima)}>{numero(dia.minima, " °C", 1)}</span>
+                          </span>
+                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${helada ? "bg-blue-100 text-blue-800" : riesgo ? "bg-amber-100 text-amber-800" : "bg-emerald-50 text-emerald-700"}`}>
+                            {helada ? "Helada" : riesgo ? "Riesgo" : "Sin riesgo"}
+                          </span>
+                        </>}
                       </span>
                     </li>
                   );
@@ -180,7 +200,9 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
             </div>
           ) : null}
 
-          {riesgoHelada ? (
+          {esCostaTropical ? (
+            <p className="mt-4 rounded-xl border-2 border-sky-200 bg-sky-50 p-3 text-[14px] font-semibold text-sky-950">Viento fuerte: se consideran relevantes las rachas previstas de 50 km/h o más. Consulta la previsión diaria superior para ver los días con mayor intensidad.</p>
+          ) : riesgoHelada ? (
             <div className={`mt-4 rounded-xl border-2 p-4 ${hayHelada ? "border-blue-300 bg-blue-50" : "border-amber-300 bg-amber-50"}`}>
               <p className={`text-[15px] font-extrabold ${hayHelada ? "text-blue-900" : "text-amber-900"}`}>
                 {hayHelada ? `Helada probable: mínima de ${numero(minima, " °C", 1)} en los próximos ${DIAS_PREVISION} días` : `Vigila el frío: mínima de ${numero(minima, " °C", 1)} en los próximos ${DIAS_PREVISION} días`}
