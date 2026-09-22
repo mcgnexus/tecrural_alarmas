@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { z } from "zod";
+import { esSolicitudDePrueba } from "@/lib/dominio/solicitud-contacto";
 
 const esquemaContacto = z.object({
   dispositivoId: z.string().trim().min(1).max(128),
@@ -9,6 +10,7 @@ const esquemaContacto = z.object({
   cultivo: z.string().trim().min(1).max(40),
   aceptaPrivacidad: z.literal(true),
   website: z.string().max(200).optional(),
+  esPrueba: z.boolean().optional(),
 });
 
 function baseLead(over: Record<string, unknown> = {}) {
@@ -46,6 +48,12 @@ describe("Fase10 Leads", () => {
   });
   it("lead correcto: pasa validación", () => {
     expect(esquemaContacto.safeParse(baseLead()).success).toBe(true);
+  });
+  it("modo prueba se reconoce y no debe incorporarse al proceso real", () => {
+    expect(esquemaContacto.safeParse(baseLead({ esPrueba: true })).success).toBe(true);
+    expect(esSolicitudDePrueba(true)).toBe(true);
+    expect(esSolicitudDePrueba(false)).toBe(false);
+    expect(esSolicitudDePrueba(undefined)).toBe(false);
   });
   it("lead duplicado: ventana 5min dedup", () => {
     // simula existeSolicitudReciente con memoria

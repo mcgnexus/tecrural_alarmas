@@ -115,13 +115,15 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
   return (
     <section className="rounded-2xl border-2 border-sky-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-xl font-extrabold text-stone-950">El tiempo en {ubicacion.nombre}</h2>
+        <h2 className="text-xl font-extrabold text-stone-950">Tiempo general de tu zona · {ubicacion.nombre}</h2>
         <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-700">Gratis, sin registro</span>
       </div>
 
       {error ? <p role="alert" className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 p-3 text-[15px] font-semibold text-red-800">{error}</p> : null}
 
       {cargando ? <p className="mt-3 text-[15px] text-stone-600">Cargando el tiempo de tu zona…</p> : null}
+
+      {!cargando && actual ? <p className="mt-2 text-xs leading-relaxed text-stone-600">Previsión meteorológica municipal · Fuentes: AEMET y Open-Meteo · Actualizado: {new Date(actual.timestamp).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" })}</p> : null}
 
       {!cargando && actual ? (
         <>
@@ -194,7 +196,7 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
       ) : null}
 
       {esStaleMeteo ? <div role="alert" className="mt-3 rounded-xl border-2 border-stone-300 bg-stone-100 p-3 text-center text-sm font-bold text-stone-700">Datos desactualizados — La última actualización fue hace {fechaDatos ? Math.max(1, Math.floor((Date.now()-new Date(fechaDatos).getTime())/3600000)) : 2} horas. No tomes decisiones con esta información.</div> : null}
-      <p className="mt-3 text-[12px] leading-relaxed text-stone-500">Datos de previsión horaria. TecRural no sustituye a AEMET, RAIF ni a un técnico agrícola.</p>
+      <p className="mt-3 text-[12px] leading-relaxed text-stone-500">Es una previsión general para el municipio, orientativa y no equivalente a una medición en tu parcela. No sustituye a AEMET, RAIF ni a un técnico agrícola.</p>
     </section>
   );
 }

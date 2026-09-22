@@ -1,16 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { registrarEventoEmbudo } from "@/lib/analitica";
 import { MeteoZona } from "@/components/campo/meteo-zona";
 import { BloqueValorAgricola } from "@/components/campo/bloque-valor-agricola";
 import { FormularioContacto } from "@/components/servicios/formulario-contacto";
 import { catalogoCultivos } from "@/lib/cultivos/catalogo";
 import type { CulturaId } from "@/lib/cultivos/catalogo";
+import { leerUbicacionGuardada, municipioDeUbicacion, type UbicacionGuardada } from "@/lib/datos/ubicacion";
 
 type Municipio = { name: string; province: string; region: string; latitude: number; longitude: number; aemetMunicipio?: string };
-type Ubicacion = { lat: number; lon: number; nombre: string; province?: string; aemetMunicipio?: string };
+type Ubicacion = UbicacionGuardada;
 
 const idsCultivos = Object.keys(catalogoCultivos) as CulturaId[];
 
@@ -26,14 +27,22 @@ export function HomeSinRegistro() {
   // CTA principal: ancla a captación
   const anclaCaptacion = useMemo(() => "#captacion", []);
 
-  async function cargarMunicipios(z?: "altiplano" | "costa") {
-    const zonaElegida = z ?? zona;
-    const textoBusqueda = z ? "" : query.trim();
-    if (z) {
+  useEffect(() => {
+    const restaurarUbicacion = () => setUbicacion(leerUbicacionGuardada());
+    restaurarUbicacion();
+    window.addEventListener("tecrural:datos-actualizados", restaurarUbicacion);
+    return () => window.removeEventListener("tecrural:datos-actualizados", restaurarUbicacion);
+  }, []);
+
+  async function cargarMunicipios(z?: "altiplano" | "costa" | "todas") {
+    const zonaElegida = z === "todas" ? null : z ?? zona;
+    const textoBusqueda = z && z !== "todas" ? "" : query.trim();
+    if (z === "todas") setZona(null);
+    if (z && z !== "todas") {
       setZona(z);
       setQuery("");
     }
-    if (!zonaElegida && textoBusqueda.length < 2) { setError("Elige una zona o escribe al menos dos letras."); return; }
+    if (!z && textoBusqueda.length < 2) { setError("Escribe al menos dos letras del municipio."); return; }
     setCargando(true); setError(null);
     try {
       const qs = new URLSearchParams();
@@ -66,10 +75,17 @@ export function HomeSinRegistro() {
         <p className="text-[15px] font-bold uppercase tracking-wide text-olive-700">Paso 1 — tu zona</p>
         <h2 className="mt-1 text-xl font-extrabold text-stone-950">¿En qué municipio está tu explotación?</h2>
         <p className="mt-1 text-base text-stone-700">Así podremos mostrarte el tiempo y los riesgos de tu zona.</p>
-        <div className="mt-4 grid grid-cols-2 gap-2"><button type="button" onClick={() => void cargarMunicipios("altiplano")} className={`min-h-[52px] rounded-xl border-2 px-3 text-[15px] font-bold ${zona === "altiplano" ? "border-olive-800 bg-olive-800 text-white" : "border-stone-300"}`}>Altiplano</button><button type="button" onClick={() => void cargarMunicipios("costa")} className={`min-h-[52px] rounded-xl border-2 px-3 text-[15px] font-bold ${zona === "costa" ? "border-olive-800 bg-olive-800 text-white" : "border-stone-300"}`}>Costa Tropical</button></div>
-        <label htmlFor="municipio-home" className="mt-4 block text-base font-bold text-stone-900">Buscar municipio</label><div className="mt-1 flex gap-2"><input id="municipio-home" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void cargarMunicipios(); }} autoComplete="address-level2" className="min-h-[52px] min-w-0 flex-1 rounded-xl border-2 border-stone-300 px-4 text-base" placeholder="Ej. Baza o Motril"/><button type="button" onClick={() => void cargarMunicipios()} disabled={cargando} className="min-h-[52px] rounded-xl bg-olive-800 px-4 text-base font-bold text-white">{cargando ? "…" : "Buscar"}</button></div>
+        <label htmlFor="municipio-home" className="mt-4 block text-base font-bold text-stone-900">Buscar municipio</label>
+        <p className="mt-1 text-sm text-stone-600">Escribe el nombre directamente; no necesitas conocer la zona.</p>
+        <div className="mt-1 flex gap-2"><input id="municipio-home" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void cargarMunicipios(); }} autoComplete="address-level2" className="min-h-[52px] min-w-0 flex-1 rounded-xl border-2 border-stone-300 px-4 text-base" placeholder="Ej. Huéscar, Baza o Motril"/><button type="button" onClick={() => void cargarMunicipios()} disabled={cargando} className="min-h-[52px] rounded-xl bg-olive-800 px-4 text-base font-bold text-white">{cargando ? "Buscando…" : "Buscar"}</button></div>
+        <details className="mt-3 rounded-xl border border-stone-200 p-3">
+          <summary className="cursor-pointer text-sm font-bold text-stone-700">Explorar por zona (opcional)</summary>
+          <p className="mt-2 text-sm text-stone-600">Altiplano: Huéscar, Baza, Puebla de Don Fadrique, Castril, Orce, Galera y Cúllar. Costa Tropical: Almuñécar, La Herradura, Salobreña y Motril.</p>
+          <div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={() => void cargarMunicipios("altiplano")} className={`min-h-[44px] rounded-xl border-2 px-3 text-sm font-bold ${zona === "altiplano" ? "border-olive-800 bg-olive-800 text-white" : "border-stone-300"}`}>Altiplano</button><button type="button" onClick={() => void cargarMunicipios("costa")} className={`min-h-[44px] rounded-xl border-2 px-3 text-sm font-bold ${zona === "costa" ? "border-olive-800 bg-olive-800 text-white" : "border-stone-300"}`}>Costa Tropical</button></div>
+        </details>
         {municipios.length ? <ul className="mt-3 divide-y divide-stone-200 rounded-xl border-2 border-stone-200">{municipios.slice(0,8).map((m) => <li key={`${m.name}-${m.latitude}`}><button type="button" onClick={() => elegir(m)} className="min-h-[52px] w-full px-4 text-left text-base font-semibold">{m.name} · <span className="text-stone-600">{m.province}</span></button></li>)}</ul> : null}
-        {ubicacion ? <p role="status" className="mt-3 rounded-xl bg-brand-50 p-3 text-base font-bold text-brand-900">Ubicación seleccionada: {ubicacion.nombre}</p> : null}{error ? <p role="alert" className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 p-3 text-[15px] font-semibold text-red-800">{error}</p> : null}
+        {error && !cargando && query.trim().length >= 2 && municipios.length === 0 ? <div className="mt-3"><p role="alert" className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-[15px] font-semibold text-amber-900">{error}</p>{zona ? <button type="button" onClick={() => void cargarMunicipios("todas")} className="mt-2 min-h-[44px] rounded-xl border-2 border-olive-800 px-4 text-sm font-bold text-olive-900">Buscar en todas las zonas</button> : <p className="mt-2 text-sm text-stone-600">Comprueba la escritura o prueba con otro nombre. También puedes elegir una zona en “Explorar por zona”.</p>}</div> : error ? <p role="alert" className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 p-3 text-[15px] font-semibold text-red-800">{error}</p> : null}
+        {ubicacion ? <p role="status" className="mt-3 rounded-xl bg-brand-50 p-3 text-base font-bold text-brand-900">Ubicación seleccionada: {ubicacion.nombre}</p> : null}
       </div>
 
       <div className="mt-6 rounded-2xl border-2 border-stone-200 bg-white p-5">
@@ -97,13 +113,13 @@ export function HomeSinRegistro() {
     </section> : null}
 
     {/* BLOQUE 3: explicación valor agrícola */}
-    {ubicacion ? <BloqueValorAgricola ubicacion={ubicacion} cultivo={cultivo || undefined} /> : null}
+    {ubicacion ? <BloqueValorAgricola key={`${ubicacion.lat}-${ubicacion.lon}-${cultivo}`} ubicacion={ubicacion} cultivo={cultivo || undefined} /> : null}
 
     {/* BLOQUE 4: captación */}
     <section id="captacion" className="scroll-mt-24">
       <h2 className="text-xl font-extrabold text-stone-950">Recibe avisos por WhatsApp</h2>
       <p className="mt-1 text-base text-stone-700">Avisos gratuitos y solo cuando haya algo relevante para tu municipio y cultivo.</p>
-      <div className="mt-3"><FormularioContacto /></div>
+      <div className="mt-3"><FormularioContacto key={ubicacion?.nombre ?? "sin-ubicacion"} municipioInicial={ubicacion ? municipioDeUbicacion(ubicacion.nombre) : ""} cultivoInicial={cultivo ? catalogoCultivos[cultivo].nombre : ""} onCultivoChange={(nombre) => setCultivo(idsCultivos.find((id) => catalogoCultivos[id].nombre === nombre) ?? "")} /></div>
     </section>
 
     {/* BLOQUE 5: confianza */}

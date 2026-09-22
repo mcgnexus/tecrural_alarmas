@@ -7,6 +7,7 @@ import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
 import { VERSION_CONSENTIMIENTO } from "@/lib/privacidad/consentimiento";
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { esSolicitudDePrueba } from "@/lib/dominio/solicitud-contacto";
 
 const log = crearLogger("api.contacto");
 export const dynamic = "force-dynamic";
@@ -36,6 +37,8 @@ const esquema = z.object({
   marketingConsent: z.boolean().optional(),
   // Honeypot: campo invisible que solo rellenan los bots.
   website: z.string().max(200).optional(),
+  /** Modo QA: confirma el flujo sin crear lead, evento CRM ni notificación. */
+  esPrueba: z.boolean().optional(),
 });
 
 /** Interés de plan probable según el problema declarado en el asistente. */
@@ -68,6 +71,13 @@ export async function POST(req: Request) {
   if (datos.website && datos.website.trim()) {
     log.warn("contacto.honeypot", { data: { origen: datos.origen ?? "formulario" } });
     return NextResponse.json({ ok: true }, { status: 201 });
+  }
+
+  // Dry run disponible para QA en cualquier entorno, incluida producción:
+  // nunca crea datos de CRM ni activa el seguimiento manual.
+  if (esSolicitudDePrueba(datos.esPrueba)) {
+    log.info("contacto.prueba_omitida", { data: { origen: datos.origen ?? "formulario" } });
+    return NextResponse.json({ ok: true, prueba: true }, { status: 201 });
   }
 
   // Límite por IP: frena el envío masivo y el spam al chat de Telegram.
