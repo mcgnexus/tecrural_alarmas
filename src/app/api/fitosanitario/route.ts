@@ -22,6 +22,9 @@ export async function GET(req: Request) {
   const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 50) || 50, 1), 100);
   const accesoAdmin = await verificarAccesoAdmin(req);
   const esAdmin = accesoAdmin.ok;
+  if (!esAdmin && !province && !municipality && !cropId && !region) {
+    return NextResponse.json({ disponible: false, avisos: [], total: 0 });
+  }
 
   return conRequestId({ external_source: "fitosanitario" }, async (requestId) => {
     const inicio = Date.now();
