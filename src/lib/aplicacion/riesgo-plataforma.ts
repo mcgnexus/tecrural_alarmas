@@ -1,7 +1,7 @@
 import { evaluarRiesgos } from "@/lib/alertas/evaluadores";
 import { catalogoCultivos, faseActiva } from "@/lib/cultivos/catalogo";
 import { zonaCultivoPorCoordenadas } from "@/lib/cultivos/zona";
-import { obtenerClimaHorario, obtenerClimaPunto } from "@/lib/clima/motor";
+import { obtenerClimaPunto } from "@/lib/clima/motor";
 import { obtenerPronostico } from "@/lib/proveedores/registro";
 import {
   leerHorarioReciente,

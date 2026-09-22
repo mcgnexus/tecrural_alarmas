@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import type { Alerta } from "@/lib/dominio/tipos";
 import { enlaceWhatsappPersonal } from "@/lib/config/contacto";
 import { registrarEventoEmbudo } from "@/lib/analitica";
@@ -57,11 +56,7 @@ function elegirCta(alertas: Alerta[]): Cta | null {
 
 export function CtaContextual({ alertas }: { alertas: Alerta[] }) {
   const cta = elegirCta(alertas);
-  const [wa, setWa] = useState<string | null>(null);
-
-  useEffect(() => {
-    setWa(enlaceWhatsappPersonal(cta?.etiqueta));
-  }, [cta]);
+  const wa = enlaceWhatsappPersonal(cta?.etiqueta);
 
   if (!cta) return null;
   return (

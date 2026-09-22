@@ -41,13 +41,17 @@ export function HomeSinRegistro() {
 
   async function cargarMunicipios(z?: "altiplano" | "costa") {
     const zonaElegida = z ?? zona;
-    if (z) setZona(z);
-    if (!zonaElegida && query.trim().length < 2) { setError("Elige una zona o escribe al menos dos letras."); return; }
+    const textoBusqueda = z ? "" : query.trim();
+    if (z) {
+      setZona(z);
+      setQuery("");
+    }
+    if (!zonaElegida && textoBusqueda.length < 2) { setError("Elige una zona o escribe al menos dos letras."); return; }
     setCargando(true); setError(null);
     try {
       const qs = new URLSearchParams();
       if (zonaElegida) qs.set("zona", zonaElegida);
-      if (query.trim()) qs.set("q", query.trim());
+       if (textoBusqueda) qs.set("q", textoBusqueda);
       const r = await fetch(`/api/v1/locations/search?${qs.toString()}`);
       if (!r.ok) throw new Error();
       const datos = await r.json() as Municipio[];

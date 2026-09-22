@@ -3,7 +3,6 @@ import type {
   RiskEvaluation,
   RiskEvaluator,
 } from "@/lib/dominio/evaluacion";
-import type { RiskLevel } from "@/lib/dominio/riesgo";
 import { nivelDesdeSeveridadTexto } from "./comun";
 
 const ORDEN: Record<string, number> = {

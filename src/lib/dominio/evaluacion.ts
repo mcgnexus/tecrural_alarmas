@@ -1,7 +1,6 @@
 import type { CulturaId } from "@/lib/cultivos/catalogo";
 import type { ClimaPunto } from "./tipos";
 import type { OfficialWarning, WeatherHourly } from "./proveedores";
-import type { RiskLevel } from "./riesgo";
 import type { PhytosanitaryAlert } from "./fitosanitario";
 import type { SensorData } from "./sensores";
 

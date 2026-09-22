@@ -18,15 +18,6 @@ export async function GET(req: Request) {
     try {
       const db = obtenerDb();
 
-      const q = async (texto: string, params: unknown[] = []) => {
-        try {
-          const r = await (db as unknown as { execute: (q: unknown) => Promise<{ rows: unknown[] }> }).execute(sql.raw(texto));
-          return r.rows;
-        } catch {
-          return [];
-        }
-      };
-
       // Usuarios
       const usuariosRows = await db.execute(sql`SELECT COUNT(*)::int as c FROM plataforma.users`);
       const usuarios = Number((usuariosRows.rows[0] as { c: number })?.c ?? 0);

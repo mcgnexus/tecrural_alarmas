@@ -4,7 +4,6 @@ import type { ContextoAgronomico } from "@/lib/agronomia/contexto";
 import type { RiskContext, RiskEvaluation } from "@/lib/dominio/evaluacion";
 import type { HallazgoAgronomico } from "@/lib/dominio/tipos";
 import { nivelDesdeSeveridad } from "@/lib/dominio/riesgo";
-import type { RiskLevel } from "@/lib/dominio/riesgo";
 
 export function contextoAgronomico(
   context: RiskContext,

@@ -4,6 +4,7 @@ import { metadatosFitosanitarios } from "@/lib/datos/fitosanitario-repo";
 import { proveedorRaif } from "@/lib/proveedores/raif";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
+import { verificarAccesoAdmin } from "@/lib/admin/auth";
 
 const log = crearLogger("api.fitosanitario");
 
@@ -19,6 +20,8 @@ export async function GET(req: Request) {
   const from = url.searchParams.get("from") ?? undefined;
   const to = url.searchParams.get("to") ?? undefined;
   const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 50) || 50, 1), 100);
+  const accesoAdmin = await verificarAccesoAdmin(req);
+  const esAdmin = accesoAdmin.ok;
 
   return conRequestId({ external_source: "fitosanitario" }, async (requestId) => {
     const inicio = Date.now();
@@ -39,7 +42,13 @@ export async function GET(req: Request) {
           ultimaIngesta: metadatos.ultimaIngesta,
           boletinMasReciente: metadatos.boletinMasReciente,
           fuente: "RAIF / Junta de Andalucía",
-          avisos,
+          avisos: esAdmin ? avisos : avisos.map((aviso) => {
+            const publico: Partial<typeof aviso> = { ...aviso };
+            delete publico.paginaFuente;
+            delete publico.estadoExtraccion;
+            delete publico.confianzaExtraccion;
+            return publico;
+          }),
         }),
         requestId,
       );

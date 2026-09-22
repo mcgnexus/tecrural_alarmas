@@ -9,7 +9,6 @@ import { crearLogger } from "@/lib/log/logger";
 import { proveedorRaif } from "@/lib/proveedores/raif";
 import { esDominioOficialRaif } from "@/lib/raif/config";
 import { descargarYExtraerPdfRaif, extraerRecomendacion } from "@/lib/raif/pdf-extractor";
-import { eq } from "drizzle-orm";
 
 const log = crearLogger("cron.phytosanitary-refresh");
 

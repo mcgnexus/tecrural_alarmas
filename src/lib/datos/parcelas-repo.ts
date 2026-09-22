@@ -65,16 +65,20 @@ function ordenarPorSeveridad(alertasLista: ResultadoEvaluacion["alertas"]) {
 }
 
 export async function listarParcelas(
-  dispositivoId: string,
+  dispositivoId: string | null,
   userId?: string | null,
 ): Promise<ParcelaDto[]> {
   const db = obtenerDb();
-  const filtro = userId
+  const filtro = userId && dispositivoId
     ? or(
         eq(parcelas.userId, userId),
         and(isNull(parcelas.userId), eq(parcelas.dispositivoId, dispositivoId)),
       )
-    : eq(parcelas.dispositivoId, dispositivoId);
+    : userId
+      ? eq(parcelas.userId, userId)
+      : dispositivoId
+        ? eq(parcelas.dispositivoId, dispositivoId)
+        : undefined;
   const filas = await db
     .select()
     .from(parcelas)

@@ -5,7 +5,6 @@ import { listarReglasRiesgo } from "@/lib/datos/reglas-repo";
 import { obtenerClimaPunto } from "@/lib/clima/motor";
 import { catalogoCultivos } from "@/lib/cultivos/catalogo";
 import type { CulturaId } from "@/lib/cultivos/catalogo";
-import type { RiskLevel } from "@/lib/dominio/riesgo";
 
 const MENSAJE_FUNGICO =
   "Las condiciones meteorológicas pueden favorecer determinadas enfermedades fúngicas.";

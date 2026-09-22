@@ -7,7 +7,6 @@ import type {
   OfficialWarning,
   WeatherHourly,
 } from "@/lib/dominio/proveedores";
-import type { RiskLevel } from "@/lib/dominio/riesgo";
 import { nivelDesdeSeveridadTexto, numeroParametro } from "./comun";
 
 const PALABRAS_LLUVIA = ["lluvia", "precipitac", "rain", "chubasc", "aguacero"];
@@ -148,7 +147,6 @@ export const evaluadorLluvia: RiskEvaluator = {
     const h3 = ventana(context.horario, context.momento, 3);
     const h6 = ventana(context.horario, context.momento, 6);
     const horizonte = ventana(context.horario, context.momento, 168);
-    const h24 = horizonte.slice(0, 24);
 
     const rain1h = sumaPrecipitacion(h1);
     const rain3h = sumaPrecipitacion(h3);

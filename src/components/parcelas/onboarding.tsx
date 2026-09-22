@@ -23,7 +23,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
   const [municipios, setMunicipios] = useState<Municipio[]>([]);
   const [buscando, setBuscando] = useState(false);
   const [localizando, setLocalizando] = useState(false);
-  const [cultivo, setCultivo] = useState<CulturaId | null>(null);
+  const [cultivos, setCultivos] = useState<CulturaId[]>([]);
   const [nombre, setNombre] = useState("");
   const [privacidad, setPrivacidad] = useState(false);
   const [marketing, setMarketing] = useState(false);
@@ -56,6 +56,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
 
   async function cargarZona(z: "altiplano" | "costa") {
     setZona(z);
+    setQuery("");
     setBuscando(true);
     setError(null);
     try {
@@ -101,7 +102,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
   }
 
   async function guardar() {
-    if (!ubicacionOk || !cultivo || !nombre.trim()) {
+    if (!ubicacionOk || cultivos.length === 0 || !nombre.trim()) {
       setError("Completa ubicación, cultivo y nombre.");
       return;
     }
@@ -113,7 +114,8 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
     setGuardando(true);
     setError(null);
     try {
-      const resp = await fetch("/api/parcelas", {
+      for (const cultivo of cultivos) {
+        const resp = await fetch("/api/parcelas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -123,8 +125,9 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
           latitud: Number(lat),
           longitud: Number(lon),
         }),
-      });
-      if (!resp.ok) throw new Error();
+        });
+        if (!resp.ok) throw new Error();
+      }
       onComplete();
       router.push("/alertas");
     } catch {
@@ -230,16 +233,16 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
       {paso === 2 ? (
         <section className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm">
           <h2 className="text-xl font-extrabold text-stone-900">¿Qué cultivas?</h2>
-          <p className="mt-1 text-base text-stone-700">Toca una tarjeta.</p>
+          <p className="mt-1 text-base text-stone-700">Selecciona uno o varios cultivos.</p>
           <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
             {CULTIVOS.map((id) => {
               const c = catalogoCultivos[id];
-              const activo = cultivo === id;
+              const activo = cultivos.includes(id);
               return (
                 <button
                   key={id}
                   type="button"
-                  onClick={() => setCultivo(id)}
+                  onClick={() => setCultivos((actuales) => actuales.includes(id) ? actuales.filter((actual) => actual !== id) : [...actuales, id])}
                   className={`flex min-h-[96px] flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center ${activo ? "border-brand-800 bg-brand-50" : "border-stone-200 bg-white hover:bg-stone-50"}`}
                 >
                   <span className="text-base font-bold text-stone-900">{c.nombre}</span>
@@ -250,7 +253,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
           {error ? <p role="alert" className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</p> : null}
           <div className="mt-4 flex gap-3">
             <button type="button" onClick={() => setPaso(1)} className="min-h-[48px] flex-1 rounded-xl border-2 border-stone-900 bg-white px-4 py-3 text-base font-bold">← Atrás</button>
-            <button type="button" onClick={() => { if (!cultivo) setError("Elige un cultivo."); else setPaso(3); }} className="min-h-[48px] flex-1 rounded-xl bg-brand-800 px-4 py-3 text-base font-bold text-white disabled:opacity-50">Siguiente →</button>
+            <button type="button" onClick={() => { if (cultivos.length === 0) setError("Elige al menos un cultivo."); else setPaso(3); }} className="min-h-[48px] flex-1 rounded-xl bg-brand-800 px-4 py-3 text-base font-bold text-white disabled:opacity-50">Siguiente →</button>
           </div>
         </section>
       ) : null}

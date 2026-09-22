@@ -8,6 +8,7 @@ import { crearLogger } from "@/lib/log/logger";
 import { registrarSenalSegura } from "@/lib/aplicacion/crm";
 import { evaluarYGuardarParcela } from "@/lib/aplicacion/evaluacion";
 import type { ParcelaDto } from "@/lib/datos/tipos";
+import { verificarAccesoAdmin } from "@/lib/admin/auth";
 
 const log = crearLogger("api.parcelas");
 
@@ -50,7 +51,8 @@ async function refrescarCaducadas(
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const dispositivo = url.searchParams.get("dispositivo");
-  const identidad = exigirDispositivo(req, dispositivo);
+  const admin = await verificarAccesoAdmin(req);
+  const identidad = admin.ok ? { ok: true as const, dispositivoId: "admin" } : exigirDispositivo(req, dispositivo);
   if (!identidad.ok) {
     return NextResponse.json({ error: identidad.error }, { status: identidad.status });
   }
@@ -60,7 +62,7 @@ export async function GET(req: Request) {
   return conRequestId({ user_id: userId ?? idDispositivo }, async (requestId) => {
     const inicio = Date.now();
     try {
-      const listadas = await listarParcelas(idDispositivo, userId);
+      const listadas = await listarParcelas(admin.ok ? null : idDispositivo, admin.ok ? null : userId);
       const { parcelas, refrescadas } = await refrescarCaducadas(listadas, idDispositivo);
       log.info("parcelas.listar.ok", {
         status: 200,
@@ -90,12 +92,13 @@ export async function POST(req: Request) {
   if (!cuerpoParcelaValido(cuerpo)) {
     return NextResponse.json({ error: "Solicitud no válida." }, { status: 400 });
   }
-  const identidad = exigirDispositivo(req, cuerpo.dispositivoId);
+  const admin = await verificarAccesoAdmin(req);
+  const identidad = admin.ok ? { ok: true as const, dispositivoId: "admin" } : exigirDispositivo(req, cuerpo.dispositivoId);
   if (!identidad.ok) {
     return NextResponse.json({ error: identidad.error }, { status: identidad.status });
   }
   const idDispositivo = identidad.dispositivoId;
-  const userId = usuarioAutenticado(req);
+  const userId = admin.ok ? null : usuarioAutenticado(req);
 
   return conRequestId({ user_id: userId ?? idDispositivo }, async (requestId) => {
     const inicio = Date.now();

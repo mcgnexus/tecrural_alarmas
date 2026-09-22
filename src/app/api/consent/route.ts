@@ -64,7 +64,7 @@ export async function GET(req: Request) {
       const db = obtenerDb();
       const [u] = await db.select({ privacyVersion: usuarios.privacyVersion, consentVersion: usuarios.consentVersion, consentTimestamp: usuarios.consentTimestamp, marketingConsent: usuarios.marketingConsent, marketingConsentAt: usuarios.marketingConsentAt }).from(usuarios).where(eq(usuarios.id, userId)).limit(1);
       return conCabeceraRequestId(NextResponse.json(u ?? null), requestId);
-    } catch (e) {
+    } catch {
       return conCabeceraRequestId(NextResponse.json({ error: "Error" }, { status: 503 }), requestId);
     }
   });

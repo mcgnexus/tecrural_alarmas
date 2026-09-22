@@ -4,7 +4,6 @@ import type {
   RiskEvaluator,
 } from "@/lib/dominio/evaluacion";
 import type { WeatherHourly } from "@/lib/dominio/proveedores";
-import type { RiskLevel } from "@/lib/dominio/riesgo";
 import { numeroParametro } from "./comun";
 
 interface ParamsCalor {

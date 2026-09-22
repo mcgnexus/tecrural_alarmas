@@ -1,5 +1,3 @@
-import type { RiskLevel } from "@/lib/dominio/riesgo";
-
 const ORDEN: Record<string, number> = { green: 0, yellow: 1, orange: 2, red: 3, GREEN: 0, YELLOW: 1, ORANGE: 2, RED: 3 };
 const NIVELES = ["green", "yellow", "orange", "red"] as const;
 

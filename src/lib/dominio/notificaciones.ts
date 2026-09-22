@@ -44,15 +44,6 @@ const CLAVE_CANAL: Record<
   whatsapp: "whatsappEnabled",
 };
 
-const CLAVE_NIVEL: Record<
-  NotificationLevel,
-  "yellowEnabled" | "orangeEnabled" | "redEnabled"
-> = {
-  yellow: "yellowEnabled",
-  orange: "orangeEnabled",
-  red: "redEnabled",
-};
-
 export function canalHabilitado(
   prefs: NotificationPreference,
   channel: NotificationChannel,

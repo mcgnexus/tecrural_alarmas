@@ -7,7 +7,6 @@ import type {
   OfficialWarning,
   WeatherHourly,
 } from "@/lib/dominio/proveedores";
-import type { RiskLevel } from "@/lib/dominio/riesgo";
 import { nivelDesdeSeveridadTexto, numeroParametro } from "./comun";
 
 const PALABRAS_TORMENTA = [

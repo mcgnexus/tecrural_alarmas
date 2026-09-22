@@ -13,7 +13,7 @@ export function RegistroParcela({
   onGuardada: () => void;
 }) {
   const [nombre, setNombre] = useState("");
-  const [cultivo, setCultivo] = useState<CulturaId>("almendro");
+  const [cultivos, setCultivos] = useState<CulturaId[]>(["almendro"]);
   const [lat, setLat] = useState("");
   const [lon, setLon] = useState("");
   const [localizando, setLocalizando] = useState(false);
@@ -49,6 +49,10 @@ export function RegistroParcela({
       setError("Pon un nombre a la parcela.");
       return;
     }
+    if (cultivos.length === 0) {
+      setError("Selecciona al menos un cultivo.");
+      return;
+    }
     if (!Number.isFinite(latNum) || latNum < -90 || latNum > 90) {
       setError("Latitud no válida.");
       return;
@@ -60,7 +64,8 @@ export function RegistroParcela({
     setCargando(true);
     setError(null);
     try {
-      const resp = await fetch("/api/parcelas", {
+      for (const cultivo of cultivos) {
+        const resp = await fetch("/api/parcelas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -70,8 +75,9 @@ export function RegistroParcela({
           latitud: latNum,
           longitud: lonNum,
         }),
-      });
-      if (!resp.ok) throw new Error();
+        });
+        if (!resp.ok) throw new Error();
+      }
       setNombre("");
       setLat("");
       setLon("");
@@ -106,19 +112,15 @@ export function RegistroParcela({
           />
         </div>
         <div>
-          <label className={claseLabel}>Cultivo</label>
-          <select
-            value={cultivo}
-            onChange={(e) => setCultivo(e.target.value as CulturaId)}
-            disabled={cargando}
-            className={claseCampo}
-          >
+          <label className={claseLabel}>Cultivos</label>
+          <div className="grid grid-cols-2 gap-2 rounded-xl border-2 border-stone-300 p-3">
             {ids.map((id) => (
-              <option key={id} value={id}>
+              <label key={id} className="flex items-center gap-2 text-sm font-medium text-stone-800">
+                <input type="checkbox" checked={cultivos.includes(id)} onChange={() => setCultivos((actuales) => actuales.includes(id) ? actuales.filter((actual) => actual !== id) : [...actuales, id])} disabled={cargando} className="h-5 w-5" />
                 {catalogoCultivos[id].nombre}
-              </option>
+              </label>
             ))}
-          </select>
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>

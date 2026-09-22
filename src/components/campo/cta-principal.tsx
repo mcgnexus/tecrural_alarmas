@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { enlaceTelefono, enlaceWhatsappPersonal, TELEFONO_VISIBLE } from "@/lib/config/contacto";
 import { registrarEventoEmbudo } from "@/lib/analitica";
 
@@ -10,13 +10,8 @@ import { registrarEventoEmbudo } from "@/lib/analitica";
  * (perfil + municipio). Secundaria: formulario de orientación.
  */
 export function CtaPrincipal() {
-  const [tel, setTel] = useState<string | null>(null);
-  const [wa, setWa] = useState<string | null>(null);
-
-  useEffect(() => {
-    setTel(enlaceTelefono());
-    setWa(enlaceWhatsappPersonal());
-  }, []);
+  const [tel] = useState<string | null>(enlaceTelefono);
+  const [wa] = useState<string | null>(enlaceWhatsappPersonal);
 
   return (
     <div className="rounded-2xl border-2 border-brand-800 bg-brand-800 p-5 text-white shadow-sm">
