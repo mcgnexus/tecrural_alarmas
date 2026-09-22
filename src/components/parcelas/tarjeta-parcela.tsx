@@ -22,10 +22,10 @@ export function TarjetaParcela({ parcela, onCambio }: Props) {
   const zona = zonaCultivoPorCoordenadas(parcela.latitud, parcela.longitud);
 
   async function evaluar() {
-    await asegurarSesionDispositivo();
     setCargando(true);
     setError(null);
     try {
+      await asegurarSesionDispositivo();
       const resp = await fetch(`/api/parcelas/${parcela.id}/evaluar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -123,7 +123,7 @@ export function TarjetaParcela({ parcela, onCambio }: Props) {
           disabled={cargando}
           className="inline-flex flex-1 min-h-[48px] items-center justify-center gap-2 rounded-xl bg-brand-800 px-4 py-3 text-base font-bold text-white shadow-sm hover:bg-brand-900 active:bg-brand-950 disabled:opacity-60"
         >
-          {cargando ? "⏳ Evaluando…" : "▶ Evaluar riesgo"}
+          {cargando ? "Evaluando riesgo…" : "▶ Evaluar riesgo"}
         </button>
         <Link
           href="/alertas"
@@ -132,6 +132,7 @@ export function TarjetaParcela({ parcela, onCambio }: Props) {
           Alertas
         </Link>
       </div>
+      {cargando ? <p role="status" className="mt-2 text-center text-sm font-semibold text-brand-800">Calculando el riesgo con los datos meteorológicos disponibles…</p> : null}
     </article>
   );
 }

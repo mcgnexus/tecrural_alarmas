@@ -1,6 +1,6 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { obtenerDb } from "./db";
-import { reglasRiesgo } from "./plataforma-schema";
+import { historialReglasRiesgo, reglasRiesgo } from "./plataforma-schema";
 import type { RiskRule } from "@/lib/dominio/reglas";
 
 type Fila = typeof reglasRiesgo.$inferSelect;
@@ -103,6 +103,13 @@ export async function actualizarReglaRiesgo(
   cambios: Partial<ReglaRiesgoInput>,
 ): Promise<RiskRule | null> {
   const db = obtenerDb();
+  const [anterior] = await db.select().from(reglasRiesgo).where(eq(reglasRiesgo.id, id)).limit(1);
+  if (!anterior) return null;
+  await db.insert(historialReglasRiesgo).values({
+    ruleId: anterior.id,
+    action: "update",
+    snapshot: anterior as unknown as Record<string, unknown>,
+  });
   const set: Record<string, unknown> = { updatedAt: new Date() };
   if (cambios.code !== undefined) set.code = cambios.code;
   if (cambios.riskType !== undefined) set.riskType = cambios.riskType;
@@ -126,9 +133,23 @@ export async function actualizarReglaRiesgo(
 
 export async function eliminarReglaRiesgo(id: string): Promise<boolean> {
   const db = obtenerDb();
+  const [anterior] = await db.select().from(reglasRiesgo).where(eq(reglasRiesgo.id, id)).limit(1);
+  if (!anterior) return false;
+  await db.insert(historialReglasRiesgo).values({
+    ruleId: anterior.id,
+    action: "delete",
+    snapshot: anterior as unknown as Record<string, unknown>,
+  });
   const borradas = await db
     .delete(reglasRiesgo)
     .where(eq(reglasRiesgo.id, id))
     .returning({ id: reglasRiesgo.id });
   return borradas.length > 0;
+}
+
+export async function listarHistorialRegla(id: string) {
+  const db = obtenerDb();
+  return db.select().from(historialReglasRiesgo)
+    .where(eq(historialReglasRiesgo.ruleId, id))
+    .orderBy(desc(historialReglasRiesgo.createdAt));
 }

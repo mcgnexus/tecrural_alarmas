@@ -58,6 +58,25 @@ body {
   outline-offset: 2px;
 }
 
+/* Mantener la interfaz usable para personas sensibles al movimiento. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+}
+
 /* Botones grandes: mínimo 44px táctil, 48px preferente para uso con guantes/una mano */
 button,
 a {

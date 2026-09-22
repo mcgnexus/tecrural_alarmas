@@ -46,3 +46,4 @@ next-env.d.ts
 # logs locales
 smoke-contact*.log
 contact.log
+.env*.local

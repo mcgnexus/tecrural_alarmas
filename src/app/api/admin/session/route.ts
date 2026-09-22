@@ -7,6 +7,7 @@ import {
   verificarSecretoAdmin,
 } from "@/lib/admin/auth";
 import { crearSesionAdmin, revocarSesionAdmin } from "@/lib/datos/admin-sesiones-repo";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const limite = rateLimit(`admin-login:${ip}`, 5, 10 * 60_000);
+  if (!limite.ok) return NextResponse.json({ error: "Demasiados intentos. Espera unos minutos." }, { status: 429, headers: rateLimitResponse(limite.remaining, limite.resetAt) });
   const cuerpo = (await req.json().catch(() => null)) as { secret?: unknown } | null;
   const secret = typeof cuerpo?.secret === "string" ? cuerpo.secret.trim() : "";
   if (!secret) {

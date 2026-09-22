@@ -3,6 +3,17 @@
 
 CREATE SCHEMA IF NOT EXISTS plataforma;
 
+CREATE TABLE IF NOT EXISTS plataforma.risk_rule_history (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  rule_id uuid NOT NULL,
+  action text NOT NULL CHECK (action IN ('update', 'delete')),
+  snapshot jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS risk_rule_history_rule_idx
+  ON plataforma.risk_rule_history (rule_id, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS plataforma.users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   email text,

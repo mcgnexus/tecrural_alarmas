@@ -14,8 +14,12 @@ export default function ConfiguracionPage() {
       <section>
         <h1 className="text-lg font-semibold text-stone-800">Ajustes</h1>
         <p className="mt-1 text-[13px] text-stone-500">
-          Elige cómo quieres recibir las alertas. Las parcelas se asocian de
-          forma anónima a este dispositivo.
+          Elige cómo quieres recibir las alertas: primero WhatsApp, después
+           correo electrónico y Telegram como canal secundario. Las parcelas se
+           guardan en la nube y se asocian de forma anónima a este dispositivo.
+           Para gestionar alertas tratamos los datos de tus parcelas; las
+           comunicaciones comerciales requieren un consentimiento separado y
+           opcional. Consulta la <Link href="/privacidad" className="font-semibold underline">política de privacidad</Link>.
         </p>
       </section>
 

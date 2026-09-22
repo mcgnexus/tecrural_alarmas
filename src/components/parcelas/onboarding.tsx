@@ -152,7 +152,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
       {paso === 1 ? (
         <section className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm">
           <h2 className="text-xl font-extrabold text-stone-900">¿Dónde está tu parcela?</h2>
-          <p className="mt-1 text-base text-stone-700">Elige cómo ubicarla. Sin teléfono.</p>
+           <p className="mt-1 text-base text-stone-700">Elige cómo ubicarla. Se guardará en la nube asociada a este dispositivo; no necesitas teléfono.</p>
 
           <div className="mt-4 grid gap-3">
             <button
@@ -274,7 +274,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
           <div className="mt-4 rounded-xl border-2 border-stone-900 bg-stone-50 p-4">
             <p className="text-sm font-bold text-stone-900">Privacidad — consentimiento explícito</p>
             <p className="mt-1 text-sm leading-snug text-stone-700">
-              Usamos tus datos solo para alertas. Ver <a href="/privacidad" target="_blank" className="font-semibold text-brand-800 underline">política de privacidad</a> (finalidad clara, minimización).
+               Usamos nombre, ubicación, cultivos y coordenadas para guardar la parcela y generar alertas. Ver <a href="/privacidad" target="_blank" className="font-semibold text-brand-800 underline">política de privacidad</a>. Las comunicaciones comerciales son opcionales y separadas.
             </p>
             <label className="mt-3 flex items-start gap-3 rounded-xl border-2 border-stone-300 bg-white p-3">
               <input type="checkbox" checked={privacidad} onChange={(e) => setPrivacidad(e.target.checked)} className="mt-1 h-5 w-5" />
@@ -288,7 +288,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
                 Acepto comunicaciones comerciales. <span className="text-stone-600">Opcional, separado</span> — activar alerta no equivale a publicidad.
               </span>
             </label>
-            <p className="mt-2 text-xs text-stone-500">Guardamos consent_version y consent_timestamp. RGPD/LOPDGDD pendiente de validación legal.</p>
+             <p className="mt-2 text-xs text-stone-500">Guardamos la versión de la política y la fecha del consentimiento.</p>
           </div>
 
           {error ? <p role="alert" className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</p> : null}

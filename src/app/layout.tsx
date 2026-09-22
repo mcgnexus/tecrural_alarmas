@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tecrural.es";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -14,12 +16,31 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: "TecRural Campo",
     template: "%s · TecRural Campo",
   },
   description:
     "Riesgos agroclimáticos para tu parcela y cultivo, explicados de forma sencilla.",
+  openGraph: {
+    type: "website",
+    locale: "es_ES",
+    siteName: "TecRural Campo",
+    title: "TecRural Campo | Alertas para tu cultivo",
+    description:
+      "Riesgos agroclimáticos para tu parcela y cultivo, explicados de forma sencilla.",
+  },
+  twitter: {
+    card: "summary",
+    title: "TecRural Campo | Alertas para tu cultivo",
+    description:
+      "Riesgos agroclimáticos para tu parcela y cultivo, explicados de forma sencilla.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   applicationName: "TecRural Campo",
   appleWebApp: {
     capable: true,

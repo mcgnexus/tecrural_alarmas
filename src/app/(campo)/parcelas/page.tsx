@@ -12,7 +12,7 @@ export default function ParcelasPage() {
       <section>
         <h1 className="text-lg font-semibold text-stone-800">Parcelas</h1>
         <p className="mt-1 text-[13px] text-stone-500">
-          Registra tus parcelas para evaluar el riesgo según el cultivo.
+          Tus parcelas se guardan en la nube asociadas de forma segura a este dispositivo. Al activar una cuenta podrás recuperarlas desde otros dispositivos. Puedes eliminar cada parcela cuando quieras.
         </p>
       </section>
 

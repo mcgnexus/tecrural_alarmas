@@ -28,6 +28,7 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
   const [municipio, setMunicipio] = useState(municipioGuardado);
   const [cultivo, setCultivo] = useState("");
   const [acepta, setAcepta] = useState(false);
+  const [marketing, setMarketing] = useState(false);
   const [website, setWebsite] = useState("");
   const [errores, setErrores] = useState<Errores>({});
   const [leadIniciado, setLeadIniciado] = useState(false);
@@ -63,7 +64,7 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
         body: JSON.stringify({
           dispositivoId: obtenerDispositivoId(), nombre: nombre.trim(), telefono: telefono.trim(), municipio: municipio.trim(), cultivo,
           tipoExplotacion: "agricultura", problema: "Avisos gratuitos por WhatsApp", servicioKey, servicioNombre, interes,
-          origen: "formulario", aceptaPrivacidad: true, consentVersion: VERSION_CONSENTIMIENTO, marketingConsent: false, website,
+           origen: "formulario", aceptaPrivacidad: true, consentVersion: VERSION_CONSENTIMIENTO, marketingConsent: marketing, website,
         }),
       });
       if (!resp.ok) throw new Error();
@@ -75,13 +76,14 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
     }
   }
 
-  if (estado === "enviado") return <div role="status" className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-5"><p className="text-xl font-extrabold text-emerald-900">Gracias. Revisaremos tus datos y te contactaremos por WhatsApp.</p></div>;
+  if (estado === "enviado") return <div role="status" className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-5"><p className="text-xl font-extrabold text-emerald-900">Solicitud recibida</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Revisaremos tus datos y te enviaremos un WhatsApp para confirmar la activación de los avisos.</p><ul className="mt-3 list-disc space-y-1 pl-5 text-sm font-medium text-emerald-900"><li>Recogimos nombre, teléfono, municipio y cultivo para adaptar los avisos.</li><li>El primer mensaje llegará normalmente en menos de 24 horas laborables.</li><li>Para cancelar los avisos, responde <strong>BAJA</strong> por WhatsApp o escríbenos a <a className="font-bold underline" href="mailto:mcgtecrural@gmail.com">mcgtecrural@gmail.com</a>.</li></ul></div>;
 
   const listaErrores = Object.values(errores).filter(Boolean);
   return (
     <form onSubmit={enviar} noValidate className="rounded-2xl border-2 border-brand-800 bg-white p-5 shadow-sm">
        <h3 className="text-xl font-extrabold text-stone-900">Recibe avisos por WhatsApp</h3>
        <p className="mt-1 text-base text-stone-700">Déjanos estos datos y te avisaremos gratis de lo importante para tu cultivo.</p>
+       <div className="mt-3 rounded-xl border border-brand-200 bg-brand-50 p-3 text-sm leading-relaxed text-brand-950"><p><strong>¿Qué recogemos?</strong> Nombre, teléfono o WhatsApp, municipio y cultivo.</p><p className="mt-1"><strong>¿Para qué?</strong> Para revisar tu solicitud y enviarte avisos relevantes para tu zona y cultivo.</p><p className="mt-1"><strong>¿Qué pasa después?</strong> Revisamos los datos y te escribimos por WhatsApp, normalmente en menos de 24 horas laborables, para confirmar la activación.</p><p className="mt-1"><strong>¿Cómo cancelas?</strong> Responde <strong>BAJA</strong> en WhatsApp o escribe a mcgtecrural@gmail.com.</p></div>
       <div className="sr-only" aria-hidden="true">
         <label htmlFor="contacto-website">No rellenar</label>
         <input id="contacto-website" name="website" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} />
@@ -104,10 +106,14 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
        </select>
        {errores.cultivo ? <p className="mt-1 text-sm font-semibold text-red-700">{errores.cultivo}</p> : null}
 
-      <label className="mt-4 flex min-h-[52px] cursor-pointer items-center gap-3 rounded-xl border-2 border-stone-300 p-3">
-        <input type="checkbox" required checked={acepta} onChange={(e) => setAcepta(e.target.checked)} className="h-6 w-6 shrink-0 accent-brand-800" />
-         <span className="text-[15px] font-medium text-stone-900">Acepto recibir avisos por WhatsApp y he leído la <Link href="/privacidad" className="font-bold text-brand-800 underline">política de privacidad</Link>.</span>
-      </label>
+       <label className="mt-4 flex min-h-[52px] cursor-pointer items-start gap-3 rounded-xl border-2 border-stone-300 p-3">
+         <input type="checkbox" required checked={acepta} onChange={(e) => setAcepta(e.target.checked)} className="h-6 w-6 shrink-0 accent-brand-800" />
+          <span className="text-[15px] font-medium text-stone-900"><strong>Necesario:</strong> acepto el tratamiento de mis datos para gestionar la solicitud y recibir avisos por WhatsApp. He leído la <Link href="/privacidad" className="font-bold text-brand-800 underline">política de privacidad</Link>.</span>
+       </label>
+       <label className="mt-2 flex min-h-[52px] cursor-pointer items-start gap-3 rounded-xl border-2 border-stone-200 bg-stone-50 p-3">
+         <input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} className="h-6 w-6 shrink-0 accent-brand-800" />
+         <span className="text-[15px] font-medium text-stone-900"><strong>Opcional:</strong> acepto recibir comunicaciones comerciales de TecRural. Puedo retirarlo cuando quiera.</span>
+       </label>
 
       {listaErrores.length ? <div role="alert" className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 p-3"><p className="font-bold text-red-900">Revisa estos datos:</p><ul className="mt-1 list-disc pl-5 text-[15px] font-semibold text-red-800">{listaErrores.map((e) => <li key={e}>{e}</li>)}</ul></div> : null}
        <button type="submit" disabled={estado === "enviando"} className="mt-4 min-h-[52px] w-full rounded-xl bg-brand-800 px-5 py-3 text-base font-extrabold text-white hover:bg-brand-900 disabled:opacity-60">{estado === "enviando" ? "Enviando…" : "Quiero recibir avisos"}</button>

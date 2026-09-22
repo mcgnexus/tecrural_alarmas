@@ -28,6 +28,7 @@ export function AsistenteChat() {
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [municipio, setMunicipio] = useState("");
+  const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false);
   const finRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -54,6 +55,10 @@ export function AsistenteChat() {
     setPaso("inicio");
     setPerfil(null);
     setProblema("");
+    setNombre("");
+    setTelefono("");
+    setMunicipio("");
+    setAceptaPrivacidad(false);
   }
 
   function elegirPerfil(valor: "agricultura" | "ganaderia") {
@@ -80,13 +85,18 @@ export function AsistenteChat() {
   function datosValidos(): boolean {
     return (
       nombre.trim().length >= 2 &&
-      /^[\d\s().+-]{9,20}$/.test(telefono.trim()) &&
-      municipio.trim().length >= 1
+       /^(?:\+34)?[6789]\d{8}$/.test(telefono.replace(/[\s().-]/g, "").replace(/^0034/, "+34")) &&
+       municipio.trim().length >= 2 &&
+       municipio.trim().length <= 80 &&
+       aceptaPrivacidad
     );
   }
 
   async function enviar() {
-    if (!datosValidos()) return;
+    if (!datosValidos()) {
+      setMensajes((m) => [...m, { de: "bot", texto: "Completa los tres datos y acepta la política de privacidad para enviar la solicitud." }]);
+      return;
+    }
     setPaso("enviando");
     try {
       await asegurarSesionDispositivo();
@@ -110,7 +120,7 @@ export function AsistenteChat() {
       registrarEventoEmbudo("lead_submitted", { origen: "asistente", tipoExplotacion: perfil ?? null, problema });
       setMensajes((m) => [
         ...m,
-        { de: "bot", texto: `¡Listo, ${nombre.trim().split(" ")[0]}! Un técnico te escribirá por WhatsApp al ${telefono.trim()} en menos de 24 h laborables.` },
+         { de: "bot", texto: "Solicitud recibida. Revisaremos tus datos y te enviaremos un WhatsApp para confirmar la activación de los avisos, normalmente en menos de 24 horas laborables. Puedes cancelar respondiendo BAJA." },
       ]);
       setPaso("enviado");
     } catch {
@@ -135,9 +145,9 @@ export function AsistenteChat() {
       ) : null}
 
       {abierto ? (
-        <div className="fixed inset-x-4 bottom-24 z-30 mx-auto flex max-h-[70vh] w-[calc(100vw-2rem)] max-w-sm flex-col rounded-2xl border-2 border-stone-900 bg-white shadow-xl md:bottom-6">
+        <div role="dialog" aria-modal="true" aria-labelledby="asistente-titulo" className="fixed inset-x-4 bottom-24 z-30 mx-auto flex max-h-[70vh] w-[calc(100vw-2rem)] max-w-sm flex-col rounded-2xl border-2 border-stone-900 bg-white shadow-xl md:bottom-6">
           <div className="flex items-center justify-between rounded-t-2xl border-b-2 border-stone-200 bg-brand-800 px-4 py-3 text-white">
-            <p className="text-sm font-bold">Asistente TecRural</p>
+            <p id="asistente-titulo" className="text-sm font-bold">Asistente TecRural</p>
             <div className="flex gap-2">
               <button type="button" onClick={reiniciar} aria-label="Reiniciar conversación" className="min-h-[32px] rounded-lg px-2 text-sm font-bold hover:bg-brand-900">↺</button>
               <button type="button" onClick={() => setAbierto(false)} aria-label="Cerrar asistente" className="min-h-[32px] rounded-lg px-2 text-sm font-bold hover:bg-brand-900">✕</button>
@@ -181,17 +191,16 @@ export function AsistenteChat() {
 
             {paso === "datos" || paso === "enviando" || paso === "error" ? (
               <div className="mt-3 flex flex-col gap-2">
-                <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre" autoComplete="name" className="min-h-[44px] w-full rounded-xl border-2 border-stone-300 px-3 py-2 text-sm font-medium" />
-                <input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Teléfono (WhatsApp)" inputMode="tel" autoComplete="tel" className="min-h-[44px] w-full rounded-xl border-2 border-stone-300 px-3 py-2 text-sm font-medium" />
-                <input value={municipio} onChange={(e) => setMunicipio(e.target.value)} placeholder="Municipio" autoComplete="address-level2" className="min-h-[44px] w-full rounded-xl border-2 border-stone-300 px-3 py-2 text-sm font-medium" />
+                <label htmlFor="asistente-nombre" className="text-xs font-bold text-stone-700">Nombre <span className="font-normal">(obligatorio)</span></label>
+                <input id="asistente-nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. María García" autoComplete="name" className="min-h-[44px] w-full rounded-xl border-2 border-stone-300 px-3 py-2 text-sm font-medium" />
+                <label htmlFor="asistente-telefono" className="text-xs font-bold text-stone-700">Teléfono o WhatsApp <span className="font-normal">(obligatorio)</span></label>
+                <input id="asistente-telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Ej. 600 123 456" inputMode="tel" autoComplete="tel" className="min-h-[44px] w-full rounded-xl border-2 border-stone-300 px-3 py-2 text-sm font-medium" />
+                <label htmlFor="asistente-municipio" className="text-xs font-bold text-stone-700">Municipio <span className="font-normal">(obligatorio)</span></label>
+                <input id="asistente-municipio" value={municipio} onChange={(e) => setMunicipio(e.target.value)} placeholder="Ej. Baza" autoComplete="address-level2" className="min-h-[44px] w-full rounded-xl border-2 border-stone-300 px-3 py-2 text-sm font-medium" />
                 {paso === "error" ? (
                   <p role="alert" className="text-xs font-semibold text-red-700">Revisa los datos (nombre, teléfono y municipio) e inténtalo de nuevo.</p>
                 ) : null}
-                <p className="text-[11px] leading-snug text-stone-500">
-                  Al enviar aceptas que te contactemos y la{" "}
-                  <Link href="/privacidad" className="font-bold text-brand-800 underline">política de privacidad</Link>{" "}
-                  ({VERSION_CONSENTIMIENTO}).
-                </p>
+                <label htmlFor="asistente-privacidad" className="flex items-start gap-2 text-[11px] leading-snug text-stone-600"><input id="asistente-privacidad" type="checkbox" checked={aceptaPrivacidad} onChange={(e) => setAceptaPrivacidad(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0" /><span><strong>Obligatorio:</strong> acepto el tratamiento de mis datos para gestionar esta solicitud y he leído la <Link href="/privacidad" className="font-bold text-brand-800 underline">política de privacidad</Link> ({VERSION_CONSENTIMIENTO}).</span></label>
                 <button
                   type="button"
                   onClick={enviar}

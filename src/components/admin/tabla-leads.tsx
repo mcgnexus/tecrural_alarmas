@@ -56,13 +56,13 @@ export function TablaLeads() {
       <p className="mt-1 text-sm text-stone-600">Filtros: municipio · cultivo · score · servicio · última actividad</p>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <input placeholder="Municipio" value={filtros.municipio} onChange={(e) => setFiltros({ ...filtros, municipio: e.target.value })} className="min-h-[44px] rounded-xl border-2 border-stone-300 px-3 py-2 text-sm" />
-        <input placeholder="Cultivo" value={filtros.cultivo} onChange={(e) => setFiltros({ ...filtros, cultivo: e.target.value })} className="min-h-[44px] rounded-xl border-2 border-stone-300 px-3 py-2 text-sm" />
-        <input placeholder="Score min" type="number" value={filtros.scoreMin} onChange={(e) => setFiltros({ ...filtros, scoreMin: e.target.value })} className="min-h-[44px] rounded-xl border-2 border-stone-300 px-3 py-2 text-sm" />
-        <input placeholder="Score max" type="number" value={filtros.scoreMax} onChange={(e) => setFiltros({ ...filtros, scoreMax: e.target.value })} className="min-h-[44px] rounded-xl border-2 border-stone-300 px-3 py-2 text-sm" />
-        <input placeholder="Servicio" value={filtros.servicio} onChange={(e) => setFiltros({ ...filtros, servicio: e.target.value })} className="min-h-[44px] rounded-xl border-2 border-stone-300 px-3 py-2 text-sm" />
-        <input placeholder="Desde (YYYY-MM-DD)" type="date" value={filtros.desde} onChange={(e) => setFiltros({ ...filtros, desde: e.target.value })} className="min-h-[44px] rounded-xl border-2 border-stone-300 px-3 py-2 text-sm" />
-        <input placeholder="Hasta" type="date" value={filtros.hasta} onChange={(e) => setFiltros({ ...filtros, hasta: e.target.value })} className="min-h-[44px] col-span-2 rounded-xl border-2 border-stone-300 px-3 py-2 text-sm" />
+        <input aria-label="Filtrar por municipio" placeholder="Municipio" value={filtros.municipio} onChange={(e) => setFiltros({ ...filtros, municipio: e.target.value })} className="min-h-[44px] rounded-xl border-2 border-stone-300 px-3 py-2 text-sm" />
+        <input aria-label="Filtrar por cultivo" placeholder="Cultivo" value={filtros.cultivo} onChange={(e) => setFiltros({ ...filtros, cultivo: e.target.value })} className="min-h-[44px] rounded-xl border-2 border-stone-300 px-3 py-2 text-sm" />
+        <input aria-label="Puntuación mínima" placeholder="Score min" type="number" value={filtros.scoreMin} onChange={(e) => setFiltros({ ...filtros, scoreMin: e.target.value })} className="min-h-[44px] rounded-xl border-2 border-stone-300 px-3 py-2 text-sm" />
+        <input aria-label="Puntuación máxima" placeholder="Score max" type="number" value={filtros.scoreMax} onChange={(e) => setFiltros({ ...filtros, scoreMax: e.target.value })} className="min-h-[44px] rounded-xl border-2 border-stone-300 px-3 py-2 text-sm" />
+        <input aria-label="Filtrar por servicio" placeholder="Servicio" value={filtros.servicio} onChange={(e) => setFiltros({ ...filtros, servicio: e.target.value })} className="min-h-[44px] rounded-xl border-2 border-stone-300 px-3 py-2 text-sm" />
+        <input aria-label="Filtrar desde fecha" placeholder="Desde (YYYY-MM-DD)" type="date" value={filtros.desde} onChange={(e) => setFiltros({ ...filtros, desde: e.target.value })} className="min-h-[44px] rounded-xl border-2 border-stone-300 px-3 py-2 text-sm" />
+        <input aria-label="Filtrar hasta fecha" placeholder="Hasta" type="date" value={filtros.hasta} onChange={(e) => setFiltros({ ...filtros, hasta: e.target.value })} className="min-h-[44px] col-span-2 rounded-xl border-2 border-stone-300 px-3 py-2 text-sm" />
       </div>
       <button onClick={buscar} disabled={cargando} className="mt-3 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-stone-900 px-5 py-2 text-sm font-bold text-white hover:bg-black disabled:opacity-60">
         {cargando ? "Buscando…" : "Filtrar (score DESC)"}

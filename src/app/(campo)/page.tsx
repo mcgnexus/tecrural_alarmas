@@ -5,9 +5,34 @@ import { AsistenteChat } from "@/components/campo/asistente-chat";
 import { FormularioContacto } from "@/components/servicios/formulario-contacto";
 import { SeccionConfianza } from "@/components/campo/seccion-confianza";
 import { CtaWhatsapp } from "@/components/campo/cta-whatsapp";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  openGraph: { url: "/" },
+};
+
+const datosEstructurados = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      name: "TecRural Campo",
+      url: "https://tecrural.es",
+      logo: "https://tecrural.es/logo-tecrural.svg",
+    },
+    {
+      "@type": "WebSite",
+      name: "TecRural Campo",
+      url: "https://tecrural.es",
+      inLanguage: "es-ES",
+    },
+  ],
+};
 
 export default function InicioPage() {
   return <>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(datosEstructurados) }} />
     <HomeSinRegistro />
     <section className="scroll-mt-24"><FormularioContacto /></section>
     <section className="rounded-2xl border-2 border-earth-300 bg-wheat-50 p-5 shadow-sm md:flex md:items-center md:justify-between md:gap-8"><div><h2 className="text-xl font-extrabold text-stone-950">Avisos fitosanitarios de tu zona</h2><p className="mt-1 text-base text-stone-700">Consulta avisos oficiales y una estimación agroclimática explicada con claridad.</p></div><Link href="/fitosanitario" className="mt-4 inline-flex min-h-[52px] items-center justify-center rounded-xl bg-olive-800 px-5 py-3 text-base font-bold text-white md:mt-0 md:shrink-0">Ver avisos fitosanitarios</Link></section>

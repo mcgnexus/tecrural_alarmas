@@ -244,6 +244,15 @@ export const reglasRiesgo = plataforma.table("risk_rules", {
     .defaultNow(),
 });
 
+/** Copia inmutable de una regla antes de cualquier actualización o borrado. */
+export const historialReglasRiesgo = plataforma.table("risk_rule_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ruleId: uuid("rule_id").notNull(),
+  action: text("action").notNull(),
+  snapshot: jsonb("snapshot").$type<Record<string, unknown>>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const eventosRiesgo = plataforma.table("risk_events", {
   id: uuid("id").primaryKey().defaultRandom(),
   plotId: uuid("plot_id").notNull(),
@@ -432,6 +441,7 @@ export const esquemaPlataforma = {
   raifDocuments,
   raifIngestions,
   reglasRiesgo,
+  historialReglasRiesgo,
   eventosRiesgo,
   eventosLead,
   configPuntosLead,

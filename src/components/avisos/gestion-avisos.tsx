@@ -8,9 +8,9 @@ import type { Canal } from "@/lib/notificaciones/tipos";
 import type { Severidad } from "@/lib/alertas/tipos";
 
 const CANALES: { id: Canal; etiqueta: string; ayuda: string }[] = [
-  { id: "telegram", etiqueta: "Telegram", ayuda: "Chat ID que te da el bot" },
-  { id: "email", etiqueta: "Correo", ayuda: "mcgtecrural@gmail.com" },
   { id: "whatsapp", etiqueta: "WhatsApp", ayuda: "Tu número con prefijo internacional" },
+  { id: "email", etiqueta: "Correo electrónico", ayuda: "Tu dirección de correo" },
+  { id: "telegram", etiqueta: "Telegram (secundario)", ayuda: "Chat ID que te da el bot" },
   { id: "push", etiqueta: "Push del móvil", ayuda: "Actívalo en este dispositivo" },
   { id: "log", etiqueta: "Registro (pruebas)", ayuda: "Solo para desarrollo" },
 ];
@@ -47,10 +47,12 @@ async function cargarAvisosRemotos(): Promise<SuscripcionDto[]> {
 export function GestionAvisos() {
   const { parcelas } = useParcelas();
   const [avisos, setAvisos] = useState<SuscripcionDto[]>([]);
-  const [canal, setCanal] = useState<Canal>("telegram");
+  const [canal, setCanal] = useState<Canal>("whatsapp");
   const [destino, setDestino] = useState("");
   const [parcelaId, setParcelaId] = useState("");
   const [severidad, setSeveridad] = useState<Severidad>("aviso");
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [confirmacion, setConfirmacion] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,7 +110,12 @@ export function GestionAvisos() {
     await asegurarSesionDispositivo();
     setGuardando(true);
     setError(null);
+    setConfirmacion(null);
     try {
+      if (editandoId) {
+        const eliminarResp = await fetch(`/api/avisos/${editandoId}?dispositivo=${encodeURIComponent(obtenerDispositivoId())}`, { method: "DELETE" });
+        if (!eliminarResp.ok) throw new Error();
+      }
       const resp = await fetch("/api/avisos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -122,6 +129,8 @@ export function GestionAvisos() {
       });
       if (!resp.ok) throw new Error();
       setDestino("");
+      setEditandoId(null);
+      setConfirmacion(editandoId ? "Aviso actualizado correctamente." : "Aviso creado correctamente.");
       await cargar();
     } catch {
       setError("No se pudo guardar el aviso. Revisa los datos.");
@@ -141,6 +150,14 @@ export function GestionAvisos() {
     }
     if (!destino.trim()) {
       setError("Indica el destino del aviso.");
+      return;
+    }
+    if (canal === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(destino.trim())) {
+      setError("Escribe un correo electrónico válido.");
+      return;
+    }
+    if (canal === "whatsapp" && !/^(?:\+34|0034)?[6789]\d{8}$/.test(destino.replace(/[\s().-]/g, ""))) {
+      setError("Escribe un número de WhatsApp válido (9 cifras, opcionalmente con +34).");
       return;
     }
     await crear({ canal, destino: destino.trim() });
@@ -196,6 +213,7 @@ export function GestionAvisos() {
       );
       if (!resp.ok) throw new Error();
       await cargar();
+      setConfirmacion("Aviso eliminado correctamente.");
     } catch {
       setError("No se pudo eliminar el aviso.");
     }
@@ -210,8 +228,8 @@ export function GestionAvisos() {
       <section className="rounded-xl border border-stone-200 bg-white p-4">
         <h2 className="text-sm font-semibold text-stone-800">Nuevo aviso</h2>
         <p className="mt-1 text-[13px] text-stone-500">
-          Recibe un mensaje cuando se active una alerta. Elige canal y gravedad
-          mínima.
+           Recibe primero los avisos por WhatsApp. También puedes usar correo y,
+           como alternativa secundaria, Telegram.
         </p>
 
         <div className="mt-3 grid gap-3">
@@ -240,9 +258,9 @@ export function GestionAvisos() {
             </p>
           ) : null}
 
-          {canal !== "push" ? (
-            <div>
-              <label className={claseLabel}>Destino</label>
+           {canal !== "push" ? (
+             <div>
+              <label className={claseLabel}>{canal === "whatsapp" ? "Número de WhatsApp" : canal === "email" ? "Correo electrónico" : "Usuario o chat de Telegram"}</label>
               <input
                 value={destino}
                 onChange={(e) => setDestino(e.target.value)}
@@ -292,17 +310,18 @@ export function GestionAvisos() {
             disabled={guardando}
             className="rounded-xl bg-brand-800 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-70"
           >
-            {guardando
+              {guardando
               ? "Guardando…"
               : canal === "push"
                 ? "Activar en este dispositivo"
-                : "Añadir aviso"}
+                : editandoId ? "Guardar cambios" : "Añadir aviso"}
           </button>
         </div>
 
         {error ? (
           <p className="mt-3 text-[13px] font-medium text-red-600">{error}</p>
         ) : null}
+        {confirmacion ? <p role="status" className="mt-3 rounded-lg bg-emerald-50 p-3 text-[13px] font-semibold text-emerald-800">{confirmacion}</p> : null}
       </section>
 
       <section className="rounded-xl border border-stone-200 bg-white p-4">
@@ -326,19 +345,17 @@ export function GestionAvisos() {
                       aviso.canal}
                     {aviso.parcelaId ? "" : " · todas las parcelas"}
                   </p>
-                  <p className="text-xs text-stone-400">
+                   <p className="text-xs text-stone-400">
                     Gravedad mínima:{" "}
                     {SEVERIDADES.find((s) => s.id === aviso.severidadMinima)
                       ?.etiqueta ?? aviso.severidadMinima}
-                  </p>
+                   </p>
+                  <p className="text-xs text-stone-500">Destino: {aviso.destino}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => eliminar(aviso.id)}
-                  className="text-[13px] font-medium text-red-600"
-                >
-                  Quitar
-                </button>
+                <div className="flex shrink-0 gap-2">
+                  <button type="button" onClick={() => { setCanal(aviso.canal); setDestino(aviso.destino); setParcelaId(aviso.parcelaId ?? ""); setSeveridad(aviso.severidadMinima); setEditandoId(aviso.id); setConfirmacion(null); }} className="text-[13px] font-medium text-brand-800">Editar</button>
+                  <button type="button" onClick={() => eliminar(aviso.id)} className="text-[13px] font-medium text-red-600">Eliminar</button>
+                </div>
               </li>
             ))}
           </ul>

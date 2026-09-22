@@ -20,7 +20,8 @@ function secreto(): string {
     "";
   if (valor) return valor;
   if (process.env.NODE_ENV === "production") {
-    log.warn("sesion-usuario.secreto.ausente", {}, new Error("DEVICE_SESSION_SECRET no configurado"));
+    log.error("sesion-usuario.secreto.ausente", {}, new Error("DEVICE_SESSION_SECRET no configurado"));
+    throw new Error("Sesiones no disponibles: falta DEVICE_SESSION_SECRET.");
   }
   return "tecrural-dev-insecure-secret";
 }

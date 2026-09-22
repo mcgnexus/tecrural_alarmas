@@ -6,6 +6,18 @@ const idsCultivos = Object.keys(catalogoCultivos) as [CulturaId, ...CulturaId[]]
 
 export const esquemaDispositivoId = z.string().trim().min(1).max(128);
 
+/** Formatos normalizados usados por los canales de contacto. */
+export const esquemaTelefono = z.string().trim().regex(/^\+?[1-9]\d{7,14}$/);
+export const esquemaEmail = z.string().trim().email().max(254);
+
+export function telefonoValido(valor: unknown): valor is string {
+  return esquemaTelefono.safeParse(valor).success;
+}
+
+export function emailValido(valor: unknown): valor is string {
+  return esquemaEmail.safeParse(valor).success;
+}
+
 export function dispositivoValido(valor: unknown): valor is string {
   return esquemaDispositivoId.safeParse(valor).success;
 }

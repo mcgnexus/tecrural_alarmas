@@ -78,6 +78,7 @@ export function GestionReglas() {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [historial, setHistorial] = useState<Record<string, unknown>[]>([]);
 
   const aplicarDatos = useCallback((datos: DatosGestion) => {
     setCultivos(datos.cultivos);
@@ -132,6 +133,10 @@ export function GestionReglas() {
       enabled: regla.enabled,
       version: regla.version,
     });
+    void fetch(`/api/reglas/${regla.id}/historial`, { credentials: "same-origin" })
+      .then((resp) => resp.ok ? resp.json() as Promise<Record<string, unknown>[]> : [])
+      .then(setHistorial)
+      .catch(() => setHistorial([]));
     if (regla.cropId) void cambiarCultivo(regla.cropId);
   }
 
@@ -139,6 +144,7 @@ export function GestionReglas() {
     setEditandoId(null);
     setForm({ ...FORM_VACIO });
     setEstados([]);
+    setHistorial([]);
   }
 
   async function guardar() {
@@ -147,8 +153,10 @@ export function GestionReglas() {
     let parameters: Record<string, unknown>;
     try {
       parameters = JSON.parse(form.parameters || "{}") as Record<string, unknown>;
+      if (!parameters || Array.isArray(parameters) || typeof parameters !== "object") throw new Error();
+      if (form.parameters.length > 10000) throw new Error();
     } catch {
-      setError("Los parámetros no son JSON válido.");
+      setError("Los parámetros deben ser un objeto JSON válido de menos de 10.000 caracteres.");
       return;
     }
     const cuerpo = {
@@ -186,6 +194,7 @@ export function GestionReglas() {
   }
 
   async function eliminar(id: string) {
+    if (!window.confirm("¿Seguro que quieres eliminar esta regla? Esta acción no se puede deshacer.")) return;
     setError(null);
     try {
       const resp = await fetch(`/api/reglas/${id}`, { method: "DELETE", credentials: "same-origin" });
@@ -208,6 +217,7 @@ export function GestionReglas() {
         Cada tipo de riesgo usa la regla más específica (estado fenológico &gt;
         cultivo &gt; global).
       </p>
+      {editandoId && historial.length > 0 ? <details className="mt-3 rounded-lg border border-stone-200 bg-stone-50 p-3"><summary className="cursor-pointer text-[13px] font-semibold text-stone-700">Versiones anteriores ({historial.length})</summary><ul className="mt-2 space-y-2 text-[12px] text-stone-600">{historial.map((version) => <li key={String(version.id)} className="rounded border border-stone-200 bg-white p-2">{String(version.action)} · {new Date(String(version.createdAt)).toLocaleString("es-ES")} · versión {String((version.snapshot as { version?: unknown }).version ?? "—")}</li>)}</ul></details> : null}
 
       {mensaje ? (
         <p className="mt-3 text-[13px] font-medium text-emerald-700">{mensaje}</p>
@@ -221,6 +231,7 @@ export function GestionReglas() {
           <label className="text-[11px] text-stone-500">Código</label>
           <input
             className={claseInput}
+            maxLength={80}
             value={form.code}
             onChange={(e) => setForm({ ...form, code: e.target.value })}
             placeholder="helada__almendro"
@@ -244,6 +255,7 @@ export function GestionReglas() {
           <label className="text-[11px] text-stone-500">Nombre</label>
           <input
             className={claseInput}
+            maxLength={120}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
           />
@@ -298,6 +310,7 @@ export function GestionReglas() {
           <label className="text-[11px] text-stone-500">Descripción</label>
           <input
             className={claseInput}
+            maxLength={500}
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
           />
@@ -308,7 +321,8 @@ export function GestionReglas() {
           </label>
           <textarea
             className={`${claseInput} h-28 font-mono`}
-            value={form.parameters}
+             maxLength={10000}
+             value={form.parameters}
             onChange={(e) => setForm({ ...form, parameters: e.target.value })}
           />
         </div>
@@ -327,7 +341,7 @@ export function GestionReglas() {
             onClick={guardar}
             className="rounded-xl bg-brand-800 px-4 py-2 text-[13px] font-semibold text-white"
           >
-            {editandoId ? "Actualizar regla" : "Crear regla"}
+             {editandoId ? "Actualizar regla" : "Crear regla"}
           </button>
           {editandoId ? (
             <button
