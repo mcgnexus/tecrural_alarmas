@@ -43,10 +43,10 @@ export function zonaCultivoPorCoordenadas(
     }
   }
   if (distancia <= TOLERANCIA_GRADOS ** 2) return mejor;
-  // Fallback por latitud: Costa Tropical es subtropical (< ~37.0), Altiplano es norte (> ~37.3)
-  if (latitud < 37.0) return "costa";
-  if (latitud > 37.3) return "altiplano";
-  return mejor;
+  // Fallback por latitud solo cerca de Granada (38.5 > lat > 36.5), fuera devuelve null para no confundir Madrid (40.4)
+  if (latitud < 37.0 && latitud > 36.0) return "costa";
+  if (latitud > 37.3 && latitud < 38.5) return "altiplano";
+  return null;
 }
 
 export function etiquetaZona(zona: ZonaCultivo | null | undefined): string {
