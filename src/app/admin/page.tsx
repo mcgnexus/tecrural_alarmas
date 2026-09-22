@@ -148,6 +148,9 @@ export default function AdminPage() {
           <Lista titulo="Municipios" items={stats.municipios.map((m) => ({ nombre: m.nombre, total: m.total }))} />
           <Lista titulo="CTAs más pulsados" items={stats.ctas.map((c) => ({ nombre: c.tipo, total: c.total }))} />
           <TablaLeads />
+          <a href="/admin/suscritos" className="rounded-2xl border-2 border-emerald-700 bg-emerald-50 px-5 py-4 text-center text-base font-bold text-emerald-900 hover:bg-emerald-100">
+            Ver control de suscritos — datos, consentimiento, parcelas e interacción
+          </a>
           <a
             href="/gestion"
             className="rounded-2xl border-2 border-brand-800 bg-brand-50 px-5 py-4 text-center text-base font-bold text-brand-900 hover:bg-brand-100"
