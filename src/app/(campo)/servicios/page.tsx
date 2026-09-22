@@ -4,6 +4,7 @@ import { FormularioContacto } from "@/components/servicios/formulario-contacto";
 import { EnlaceWhatsapp } from "@/components/analitica/enlace-whatsapp";
 import { enlaceWhatsapp } from "@/lib/config/contacto";
 import type { InteresLead } from "@/lib/dominio/leads";
+import { DiagnosticoFoto } from "@/components/servicios/diagnostico-foto";
 
 interface Servicio {
   titulo: string;
@@ -176,6 +177,8 @@ export default function ServiciosPage() {
           Elegir plan — te ayudamos →
         </Link>
       </section>
+
+      <DiagnosticoFoto />
 
       <section className="grid gap-4 lg:grid-cols-2">
         {servicios.map((servicio) => {

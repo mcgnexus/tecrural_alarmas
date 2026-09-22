@@ -33,7 +33,8 @@ export function valorCookieSesion(id: string): string {
 }
 
 export function cookieSesion(id: string): string {
-  return `${COOKIE_SESION}=${valorCookieSesion(id)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 365}`;
+  const seguro = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  return `${COOKIE_SESION}=${valorCookieSesion(id)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 365}${seguro}`;
 }
 
 function firmaValida(id: string, firma: string): boolean {
