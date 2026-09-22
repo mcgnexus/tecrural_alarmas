@@ -50,3 +50,8 @@ export function etiquetaZona(zona: ZonaCultivo | null | undefined): string {
   if (zona === "costa") return "Costa Tropical";
   return "Sin zona";
 }
+
+/** La Costa Tropical prioriza viento; no genera una tarjeta/alerta de helada. */
+export function riesgoRelevanteEnZona(tipo: string, zona: ZonaCultivo | null): boolean {
+  return !(zona === "costa" && tipo === "helada");
+}

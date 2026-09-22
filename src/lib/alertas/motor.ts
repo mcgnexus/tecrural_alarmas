@@ -1,6 +1,6 @@
 import { catalogoCultivos, faseActiva } from "@/lib/cultivos/catalogo";
 import type { CulturaId } from "@/lib/cultivos/catalogo";
-import { zonaCultivoPorCoordenadas } from "@/lib/cultivos/zona";
+import { riesgoRelevanteEnZona, zonaCultivoPorCoordenadas } from "@/lib/cultivos/zona";
 import { obtenerClimaPunto } from "@/lib/clima/motor";
 import { reglas as reglasPorDefecto } from "@/lib/agronomia/reglas";
 import type { Regla } from "@/lib/agronomia/reglas";
@@ -39,6 +39,7 @@ export async function evaluarRiesgo(
 
   const alertas = reglasActivas
     .flatMap((regla) => regla.evaluar({ clima, cultivo, fenofase, momento }))
+    .filter((hallazgo) => riesgoRelevanteEnZona(hallazgo.tipo, zona))
     .map((hallazgo) => crearAlerta({ ...hallazgo, fuente: clima.fuente }))
     .sort(
       (a, b) => ordenSeveridad[b.severidad] - ordenSeveridad[a.severidad],

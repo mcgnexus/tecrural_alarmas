@@ -3,6 +3,7 @@
 import type { Alerta } from "@/lib/dominio/tipos";
 import { esDatosCaducados, haceMinutos } from "@/lib/dominio/frescura";
 import { colorTemperatura, etiquetaTermica } from "@/lib/ui/temperatura";
+import type { ZonaCultivo } from "@/lib/cultivos/zona";
 
 type Bloque = {
   key: string;
@@ -37,14 +38,15 @@ function extraerRachas(mensaje: string): string | null {
   return m ? `Rachas ${m[1]} km/h` : null;
 }
 
-export function DashboardParcela({ alertas, evaluadoEl }: { alertas: Alerta[]; evaluadoEl?: string }) {
+export function DashboardParcela({ alertas, evaluadoEl, zona }: { alertas: Alerta[]; evaluadoEl?: string; zona?: ZonaCultivo | null }) {
   const porTipo = new Map<string, Alerta>();
   for (const a of alertas) porTipo.set(a.tipo, a);
 
   const bloques: Bloque[] = [];
 
-  // Helada
-  {
+  // En la Costa Tropical se muestra viento como riesgo principal; la helada
+  // sigue evaluándose en backend, pero no ocupa una tarjeta de esa zona.
+  if (zona !== "costa") {
     const a = porTipo.get("helada");
     const sev = severidadDe(a);
     const temp = a ? extraerTemperatura(a.mensaje) ?? a.titulo : null;

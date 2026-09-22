@@ -92,7 +92,7 @@ export function TarjetaParcela({ parcela, onCambio }: Props) {
 
       {ultimo ? (
         <div className="mt-4 flex flex-col gap-3">
-          <DashboardParcela alertas={ultimo.alertas} evaluadoEl={ultimo.evaluadoEl} />
+          <DashboardParcela alertas={ultimo.alertas} evaluadoEl={ultimo.evaluadoEl} zona={zona} />
           <CtaContextual alertas={ultimo.alertas} />
           <MejorarPrecision parcelaId={parcela.id} cultivo={parcela.cultivo} fenofaseActual={ultimo.fenofase} zona={zona} onActualizado={onCambio} />
           <p className="text-sm font-medium text-stone-600">
