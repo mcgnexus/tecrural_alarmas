@@ -7,8 +7,19 @@ import type { InteresLead } from "@/lib/dominio/leads";
 import { registrarEventoEmbudo } from "@/lib/analitica";
 import { VERSION_CONSENTIMIENTO } from "@/lib/privacidad/consentimiento";
 
-type Estado = "inicial" | "enviando" | "enviado" | "error";
+type Estado = "inicial" | "validando" | "enviando" | "enviado" | "error";
 type Errores = Partial<Record<"nombre" | "telefono" | "municipio" | "cultivo" | "privacidad", string>>;
+/**
+ * Cultivos incluidos en MVP:
+ * - Almendro
+ * - Olivar
+ * - Pistacho
+ * - Aguacate
+ * - Mango
+ * - Chirimoyo
+ * - Cereal
+ * + "Otro" para no excluir usuarios
+ */
 const cultivos = ["Almendro", "Olivar", "Pistacho", "Cereal", "Aguacate", "Mango", "Chirimoyo", "Otro"] as const;
 
 function municipioGuardado(): string {
@@ -36,7 +47,7 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
   function iniciarLead() {
     if (leadIniciado) return;
     setLeadIniciado(true);
-    registrarEventoEmbudo("lead_started", { origen: "formulario", servicioKey: servicioKey ?? null });
+    registrarEventoEmbudo("lead_form_started", { origen: "formulario", servicioKey: servicioKey ?? null });
   }
 
   function validar(): Errores {
@@ -52,9 +63,10 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
 
   async function enviar(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault();
+    setEstado("validando");
     const siguientes = validar();
     setErrores(siguientes);
-    if (Object.keys(siguientes).length) return;
+    if (Object.keys(siguientes).length) { registrarEventoEmbudo("lead_form_error", { origen: "formulario", campos: Object.keys(siguientes).join(",") }); setEstado("inicial"); return; }
     setEstado("enviando");
     try {
       await asegurarSesionDispositivo();
@@ -69,14 +81,15 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
       });
       if (!resp.ok) throw new Error();
       setEstado("enviado");
-      registrarEventoEmbudo("lead_submitted", { origen: "formulario", servicioKey: servicioKey ?? null });
+      registrarEventoEmbudo("lead_form_submitted", { origen: "formulario", servicioKey: servicioKey ?? null });
     } catch {
       setEstado("error");
+      registrarEventoEmbudo("lead_form_error", { origen: "formulario" });
       setErrores({ privacidad: "No se pudo enviar. Revisa la conexión e inténtalo de nuevo." });
     }
   }
 
-  if (estado === "enviado") return <div role="status" className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-5"><p className="text-xl font-extrabold text-emerald-900">Solicitud recibida</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Revisaremos tus datos y te enviaremos un WhatsApp para confirmar la activación de los avisos.</p><ul className="mt-3 list-disc space-y-1 pl-5 text-sm font-medium text-emerald-900"><li>Recogimos nombre, teléfono, municipio y cultivo para adaptar los avisos.</li><li>El primer mensaje llegará normalmente en menos de 24 horas laborables.</li><li>Para cancelar los avisos, responde <strong>BAJA</strong> por WhatsApp o escríbenos a <a className="font-bold underline" href="mailto:mcgtecrural@gmail.com">mcgtecrural@gmail.com</a>.</li></ul></div>;
+  if (estado === "enviado") return <div role="status" className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-5"><p className="text-xl font-extrabold text-emerald-900">Solicitud recibida</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Revisaremos tus datos y te escribiremos por WhatsApp para confirmar la activación.</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Normalmente responderemos en menos de 24 horas laborables.</p><p className="mt-3 text-sm font-medium text-emerald-800">Para cancelar, responde BAJA por WhatsApp o escribe a <a className="font-bold underline" href="mailto:mcgtecrural@gmail.com">mcgtecrural@gmail.com</a>.</p></div>;
 
   const listaErrores = Object.values(errores).filter(Boolean);
   return (
@@ -115,8 +128,10 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes }: { s
          <span className="text-[15px] font-medium text-stone-900"><strong>Opcional:</strong> acepto recibir comunicaciones comerciales de TecRural. Puedo retirarlo cuando quiera.</span>
        </label>
 
-      {listaErrores.length ? <div role="alert" className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 p-3"><p className="font-bold text-red-900">Revisa estos datos:</p><ul className="mt-1 list-disc pl-5 text-[15px] font-semibold text-red-800">{listaErrores.map((e) => <li key={e}>{e}</li>)}</ul></div> : null}
-       <button type="submit" disabled={estado === "enviando"} className="mt-4 min-h-[52px] w-full rounded-xl bg-brand-800 px-5 py-3 text-base font-extrabold text-white hover:bg-brand-900 disabled:opacity-60">{estado === "enviando" ? "Enviando…" : "Quiero recibir avisos"}</button>
+       {estado === "validando" ? <p role="status" className="mt-3 text-sm font-semibold text-stone-600">Validando…</p> : null}
+       {listaErrores.length ? <div role="alert" className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 p-3"><p className="font-bold text-red-900">Datos incompletos</p><ul className="mt-1 list-disc pl-5 text-[15px] font-semibold text-red-800">{listaErrores.map((e) => <li key={e}>{e}</li>)}</ul></div> : null}
+       {estado === "error" ? <div role="alert" className="mt-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-3"><p className="font-bold text-amber-900">Error temporal</p><p className="mt-1 text-sm text-amber-800">No se pudo enviar. Inténtalo de nuevo en unos minutos.</p></div> : null}
+        <button type="submit" disabled={estado === "enviando" || estado === "validando"} className="mt-4 min-h-[52px] w-full rounded-xl bg-brand-800 px-5 py-3 text-base font-extrabold text-white hover:bg-brand-900 disabled:opacity-60">{estado === "enviando" ? "Enviando…" : estado === "validando" ? "Validando…" : "Quiero recibir avisos"}</button>
     </form>
   );
 }

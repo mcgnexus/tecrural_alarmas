@@ -9,29 +9,19 @@ export const metadata: Metadata = {
 };
 
 export default function ConfiguracionPage() {
+  // Fase 3: ajustes públicos simplificados — canales premium ocultos, gestión fenológica reservada a /gestion (no vinculada)
   return (
     <>
       <section>
         <h1 className="text-lg font-semibold text-stone-800">Ajustes</h1>
         <p className="mt-1 text-[13px] text-stone-500">
-          Elige cómo quieres recibir las alertas: primero WhatsApp, después
-           correo electrónico y Telegram como canal secundario. Las parcelas se
-           guardan en la nube y se asocian de forma anónima a este dispositivo.
-           Para gestionar alertas tratamos los datos de tus parcelas; las
-           comunicaciones comerciales requieren un consentimiento separado y
-           opcional. Consulta la <Link href="/privacidad" className="font-semibold underline">política de privacidad</Link>.
+          Recibe avisos por WhatsApp. Las parcelas se guardan asociadas a este dispositivo. Consulta la <Link href="/privacidad" className="font-semibold underline">política de privacidad</Link>.
         </p>
       </section>
 
       <GestionAvisos />
-      <ResumenInteres />
-
-      <Link
-        href="/gestion"
-        className="block rounded-xl border border-stone-200 bg-white p-4 text-[13px] font-medium text-brand-800"
-      >
-        Gestión avanzada: catálogo fenológico, Kc y reglas por cultivo
-      </Link>
+      {/* ResumenInteres y gestión fenológica ocultos temporalmente — conservados para premium */}
+      <p className="text-xs text-stone-400">¿Necesitas sensores, diagnóstico o informes? <Link href="/#captacion" className="font-bold text-brand-800 underline">Recibir avisos de mi zona</Link> y te orientamos.</p>
     </>
   );
 }

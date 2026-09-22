@@ -33,11 +33,16 @@ export async function POST(req: Request) {
         { status: 503, duracion_ms: Date.now() - inicio },
         error,
       );
+      // Fase 5: no mostrar "sin riesgo" en fallo — devolver failed con error trazable
       return conCabeceraRequestId(
         NextResponse.json(
-          esNoData
-            ? { error: "Datos temporalmente no disponibles", code: "NO_DATA" }
-            : { error: "No se pudieron obtener los datos meteorológicos ahora." },
+          {
+            error: "No disponible",
+            code: esNoData ? "NO_DATA" : "EVAL_FAILED",
+            estadoEvaluacion: "failed",
+            errorTecnico: error instanceof Error ? error.message : String(error),
+            evaluadoEl: new Date().toISOString(),
+          },
           { status: 503 },
         ),
         requestId,

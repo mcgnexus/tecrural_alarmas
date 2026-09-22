@@ -141,112 +141,19 @@ export const metadata: Metadata = {
 };
 
 export default function ServiciosPage() {
+  // Fase 3: contenido premium oculto temporalmente — componentes conservados (planes, sensores, diagnóstico, informes) para fase premium
   return (
     <>
       <section>
-        <h1 className="text-lg font-semibold text-stone-800">
-          Servicios TecRural
-        </h1>
-        <p className="mt-1 text-[13px] text-stone-500">
-          Cuando detectemos un problema, te sugeriremos cuál de estos servicios
-          puede ayudarte.
-        </p>
+        <h1 className="text-lg font-semibold text-stone-800">Servicios TecRural</h1>
+        <p className="mt-1 text-[13px] text-stone-500">Servicios avanzados (sensores, diagnóstico, informes, seguimiento) disponibles próximamente. Por ahora, recibe avisos gratuitos de helada y viento.</p>
       </section>
-
-      {/* Planes: suscripciones mensuales. El hardware se añade como complemento. */}
-      <section id="planes" className="scroll-mt-20 rounded-2xl border-2 border-brand-800 bg-brand-50 p-5">
-        <h2 className="text-lg font-bold text-stone-900">Planes TecRural</h2>
-        <p className="mt-1 text-sm leading-snug text-stone-700">
-          Suscripción mensual según lo que necesites. Los sensores y estaciones se añaden después como complemento del plan.
-        </p>
-        <ul className="mt-3 flex flex-col gap-2">
-          {planes.map((plan) => (
-            <li key={plan.nombre} className="flex items-center justify-between rounded-xl border-2 border-stone-200 bg-white px-4 py-3">
-              <span className="text-base font-bold text-stone-900">{plan.nombre}</span>
-              <span className="text-right">
-                <span className="block text-base font-extrabold text-brand-800">{plan.precio}</span>
-                <span className="block text-xs font-medium text-stone-600">{plan.detalle}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-        <Link
-          href="#contacto-servicios"
-          className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-base font-bold text-white hover:bg-brand-900"
-        >
-          Elegir plan — te ayudamos →
-        </Link>
+      <section className="rounded-2xl border-2 border-brand-800 bg-brand-50 p-5">
+        <h2 className="text-lg font-bold text-stone-900">¿Necesitas algo más?</h2>
+        <p className="mt-1 text-sm text-stone-700">Cuéntanos tu cultivo y zona y te orientamos. Sin compromiso.</p>
+        <Link href="/#captacion" className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-brand-800 px-5 py-3 text-base font-bold text-white">Recibir avisos de mi zona</Link>
       </section>
-
-      <DiagnosticoFoto />
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        {servicios.map((servicio) => {
-          const wa = enlaceWhatsapp(`Hola, quiero información sobre: ${servicio.titulo}`);
-          return (
-          <article
-            key={servicio.servicioKey}
-            id={servicio.anchor}
-            className="scroll-mt-20 rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm"
-          >
-            <h2 className="text-lg font-bold text-stone-900">{servicio.titulo}</h2>
-            <p className="mt-1 text-base leading-snug text-stone-700">{servicio.descripcion}</p>
-
-            <dl className="mt-4 flex flex-col gap-3">
-              <div>
-                <dt className="text-sm font-bold text-stone-900">Qué problema resuelve</dt>
-                <dd className="mt-1 text-sm leading-snug text-stone-700">{servicio.problema}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-bold text-stone-900">Qué mide</dt>
-                <dd className="mt-1 text-sm leading-snug text-stone-700">{servicio.mide}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-bold text-stone-900">Qué incluye</dt>
-                <dd className="mt-1 text-sm leading-snug text-stone-700">{servicio.incluye.join(" · ")}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-bold text-stone-900">Qué no incluye</dt>
-                <dd className="mt-1 text-sm leading-snug text-stone-600">{servicio.noIncluye.join(" · ")}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-bold text-stone-900">Precio orientativo</dt>
-                <dd className="mt-1 text-sm font-semibold text-brand-800">{servicio.precio}</dd>
-                {servicio.notaPlanes ? (
-                  <dd className="mt-1 rounded-lg border-2 border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-snug text-amber-800">
-                    {servicio.notaPlanes}
-                  </dd>
-                ) : null}
-              </div>
-              <div>
-                <dt className="text-sm font-bold text-stone-900">Cómo funciona</dt>
-                <dd className="mt-1 text-sm leading-snug text-stone-700">{servicio.comoFunciona}</dd>
-              </div>
-            </dl>
-
-            <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-brand-700">{servicio.cuando}</p>
-            <p className="mt-2 rounded-lg border-2 border-stone-200 bg-stone-50 px-3 py-2 text-xs font-semibold leading-snug text-stone-700">
-              Qué compras: {servicio.tipoCompra}
-            </p>
-
-            {wa ? (
-              <EnlaceWhatsapp
-                href={wa}
-                ubicacion={servicio.servicioKey}
-                className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-600 bg-white px-4 py-3 text-base font-bold text-emerald-700 hover:bg-emerald-50"
-              >
-                Preguntar por WhatsApp
-              </EnlaceWhatsapp>
-            ) : null}
-          </article>
-          );
-        })}
-      </section>
-
-      <section id="contacto-servicios" className="scroll-mt-24">
-        <h2 className="mb-3 text-xl font-extrabold text-stone-950">Te ayudamos a elegir</h2>
-        <FormularioContacto />
-      </section>
+      {/* Premium conservado sin renderizar — ver SERVICIOS_PREMIUM_OCULTOS arriba y DiagnosticoFoto/servicios array */}
     </>
   );
 }

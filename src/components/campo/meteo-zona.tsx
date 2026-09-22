@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { colorTemperatura, etiquetaTermica } from "@/lib/ui/temperatura";
 import { colorHumedad, etiquetaHumedad } from "@/lib/ui/humedad";
+import { registrarEventoEmbudo } from "@/lib/analitica";
 
 type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
 
@@ -82,6 +83,8 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
       .then(([hoy, horas]) => {
         if (!activo) return;
         if (!hoy && !horas) { setError("No pudimos cargar el tiempo de tu zona. Inténtalo de nuevo."); return; }
+        if (hoy) registrarEventoEmbudo("weather_viewed", { municipio: ubicacion.nombre });
+        if (horas && horas.length) registrarEventoEmbudo("forecast_viewed", { municipio: ubicacion.nombre });
         setActual(hoy);
         if (Array.isArray(horas) && horas.length) {
           const porDia = extremosPorDia(horas);
@@ -105,6 +108,9 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
   const hayHelada = minima !== null && minima <= 0;
   const riesgoHelada = minima !== null && minima <= 2;
   const diasRiesgo = dias.filter((d) => d.minima !== null && d.minima <= 2);
+  // Fase 5: caducidad 90m — no mostrar como actual si stale
+  const fechaDatos = actual?.timestamp ? new Date(actual.timestamp).toISOString() : null;
+  const esStaleMeteo = actual?.timestamp ? (Date.now() - new Date(actual.timestamp).getTime())/60000 > 90 : false;
 
   return (
     <section className="rounded-2xl border-2 border-sky-200 bg-white p-5 shadow-sm">
@@ -187,6 +193,7 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
         </>
       ) : null}
 
+      {esStaleMeteo ? <div role="alert" className="mt-3 rounded-xl border-2 border-stone-300 bg-stone-100 p-3 text-center text-sm font-bold text-stone-700">Datos desactualizados — La última actualización fue hace {fechaDatos ? Math.max(1, Math.floor((Date.now()-new Date(fechaDatos).getTime())/3600000)) : 2} horas. No tomes decisiones con esta información.</div> : null}
       <p className="mt-3 text-[12px] leading-relaxed text-stone-500">Datos de previsión horaria. TecRural no sustituye a AEMET, RAIF ni a un técnico agrícola.</p>
     </section>
   );

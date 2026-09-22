@@ -11,10 +11,9 @@ interface ItemNav {
 
 const items: ItemNav[] = [
   { href: "/", etiqueta: "Inicio", icono: "home" },
-  { href: "/parcelas", etiqueta: "Parcelas", icono: "pin" },
-  { href: "/alertas", etiqueta: "Alertas", icono: "campana" },
-  { href: "/servicios", etiqueta: "Servicios", icono: "maletin" },
-  { href: "/configuracion", etiqueta: "Ajustes", icono: "ajustes" },
+  { href: "/#prevision", etiqueta: "Tiempo", icono: "tiempo" },
+  { href: "/#avisos", etiqueta: "Avisos", icono: "campana" },
+  { href: "/#como-funciona", etiqueta: "¿Cómo funciona?", icono: "ayuda" },
 ];
 
 function Icono({ nombre }: { nombre: string }) {
@@ -56,11 +55,19 @@ function Icono({ nombre }: { nombre: string }) {
           <path d="M2 13h20" />
         </svg>
       );
-    case "ajustes":
+    case "tiempo":
       return (
         <svg viewBox="0 0 24 24" className="h-7 w-7" aria-hidden="true" {...common}>
-          <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3" />
-          <path d="M2 14h4M10 8h4M18 16h4" />
+          <circle cx="12" cy="12" r="5" />
+          <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.66 17.66l1.42 1.42M4.93 19.07l1.42-1.42M17.66 6.34l1.42-1.42" />
+        </svg>
+      );
+    case "ayuda":
+      return (
+        <svg viewBox="0 0 24 24" className="h-7 w-7" aria-hidden="true" {...common}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-1.5 2-1.5 3" />
+          <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none" />
         </svg>
       );
     default:
@@ -73,12 +80,13 @@ export function BottomNav() {
 
   return (
     <nav className="sticky bottom-0 z-10 border-t-2 border-stone-900/10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/95 md:hidden">
-      <div className="mx-auto grid w-full max-w-5xl grid-cols-5 gap-0.5 px-2 pb-[env(safe-area-inset-bottom)] pt-1">
+      <div className="mx-auto grid w-full max-w-5xl grid-cols-4 gap-0.5 px-2 pb-[env(safe-area-inset-bottom)] pt-1">
         {items.map((item) => {
+          const base = item.href.split("#")[0] || "/";
           const activo =
-            item.href === "/"
+            base === "/"
               ? pathname === "/"
-              : pathname.startsWith(item.href);
+              : pathname.startsWith(base);
           return (
             <Link
               key={item.href}

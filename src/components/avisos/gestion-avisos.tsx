@@ -9,10 +9,7 @@ import type { Severidad } from "@/lib/alertas/tipos";
 
 const CANALES: { id: Canal; etiqueta: string; ayuda: string }[] = [
   { id: "whatsapp", etiqueta: "WhatsApp", ayuda: "Tu número con prefijo internacional" },
-  { id: "email", etiqueta: "Correo electrónico", ayuda: "Tu dirección de correo" },
-  { id: "telegram", etiqueta: "Telegram (secundario)", ayuda: "Chat ID que te da el bot" },
-  { id: "push", etiqueta: "Push del móvil", ayuda: "Actívalo en este dispositivo" },
-  { id: "log", etiqueta: "Registro (pruebas)", ayuda: "Solo para desarrollo" },
+  // Otros canales ocultos temporalmente en menú público (Fase 3) — conservados internamente: email, telegram, push, log
 ];
 
 const SEVERIDADES: { id: Severidad; etiqueta: string }[] = [

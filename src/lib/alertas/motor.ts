@@ -8,6 +8,7 @@ import { calcularDemandaHidrica } from "@/lib/agronomia/demanda-hidrica";
 import { crearAlerta } from "./factory";
 import { ordenSeveridad } from "./tipos";
 import type { ResultadoEvaluacion } from "@/lib/dominio/tipos";
+import { canUseFeature, planForUser } from "@/lib/planes/permisos";
 
 export type { ResultadoEvaluacion };
 
@@ -37,8 +38,16 @@ export async function evaluarRiesgo(
       ? cultivo.fenologia.find((fase) => fase.id === solicitud.fenofaseId)
       : undefined) ?? faseActiva(cultivo, momento, zona);
 
+  // Fase 5: gratuitas solo helada+viento (centralizado, no hardcode disperso)
+  const plan = planForUser();
+  const tiposPermitidos = new Set<string>();
+  if (canUseFeature(plan, "frost_alert")) tiposPermitidos.add("helada");
+  if (canUseFeature(plan, "wind_alert")) tiposPermitidos.add("viento");
+  // premium oculto pero conservado: otros tipos solo si plan lo permite (canUseFeature)
+
   const alertas = reglasActivas
     .flatMap((regla) => regla.evaluar({ clima, cultivo, fenofase, momento }))
+    .filter((hallazgo) => tiposPermitidos.has(hallazgo.tipo))
     .filter((hallazgo) => riesgoRelevanteEnZona(hallazgo.tipo, zona))
     .map((hallazgo) => crearAlerta({ ...hallazgo, fuente: clima.fuente }))
     .sort(
@@ -51,6 +60,7 @@ export async function evaluarRiesgo(
     momento,
   });
 
+  const caducidad = new Date(momento.getTime() + 90 * 60_000).toISOString();
   return {
     latitud: solicitud.latitud,
     longitud: solicitud.longitud,
@@ -60,5 +70,8 @@ export async function evaluarRiesgo(
     alertas,
     demandaHidrica,
     fuente: clima.fuente,
+    fechaDatos: clima.fuente.consultadaEn,
+    fechaCaducidad: caducidad,
+    estadoEvaluacion: alertas.length ? "active" : "no-risk",
   };
 }

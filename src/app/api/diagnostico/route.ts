@@ -13,6 +13,14 @@ export async function POST(req: Request) {
   if (!parsed.success || parsed.data.imageData.length > 8_000_000) {
     return NextResponse.json({ error: "Imagen o datos no válidos. Usa JPG, PNG o WebP de tamaño reducido." }, { status: 400 });
   }
+  // Fase 8: gate premium — aunque UI oculta, servidor autoriza plan+flag
+  const { canAccessServer, planForUser } = await import("@/lib/planes/permisos");
+  const { isFlagEnabled } = await import("@/config/feature-flags");
+  const puedeDiagnostico = canAccessServer(planForUser(), "image_diagnosis") && isFlagEnabled("image_diagnosis");
+  if (!puedeDiagnostico) {
+    const esAdminDiag = (await verificarAccesoAdmin(req)).ok;
+    if (!esAdminDiag) return NextResponse.json({ error: "Funcionalidad premium no habilitada. Solicita acceso.", code: "PREMIUM_REQUIRED" }, { status: 403 });
+  }
   const esAdmin = (await verificarAccesoAdmin(req)).ok;
   const identidad = esAdmin ? { ok: true as const, dispositivoId: "admin" } : exigirDispositivo(req, null);
   if (!identidad.ok) return NextResponse.json({ error: identidad.error }, { status: identidad.status });

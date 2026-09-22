@@ -99,6 +99,11 @@ export interface ResultadoEvaluacion {
   alertas: Alerta[];
   demandaHidrica: DemandaHidrica | null;
   fuente: FuenteDatos;
+  // Fase 5 — metadatos de evaluación para caducidad y trazabilidad
+  estadoEvaluacion?: import("@/lib/alertas/estado").AlertStatus;
+  fechaDatos?: string;
+  fechaCaducidad?: string;
+  errorTecnico?: string;
 }
 
 // --- Notificaciones ---

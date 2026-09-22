@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { ServiceWorkerRegistrator } from "@/components/pwa/service-worker-registrator";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tecrural.es";
@@ -71,6 +72,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
         {children}
+        <ServiceWorkerRegistrator />
         <Analytics />
       </body>
     </html>
