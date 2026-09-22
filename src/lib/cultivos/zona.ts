@@ -42,7 +42,11 @@ export function zonaCultivoPorCoordenadas(
       mejor = referencia.zona;
     }
   }
-  return distancia <= TOLERANCIA_GRADOS ** 2 ? mejor : null;
+  if (distancia <= TOLERANCIA_GRADOS ** 2) return mejor;
+  // Fallback por latitud: Costa Tropical es subtropical (< ~37.0), Altiplano es norte (> ~37.3)
+  if (latitud < 37.0) return "costa";
+  if (latitud > 37.3) return "altiplano";
+  return mejor;
 }
 
 export function etiquetaZona(zona: ZonaCultivo | null | undefined): string {

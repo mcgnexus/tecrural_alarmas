@@ -1,6 +1,6 @@
 import { evaluarRiesgos } from "@/lib/alertas/evaluadores";
 import { catalogoCultivos, faseActiva } from "@/lib/cultivos/catalogo";
-import { zonaCultivoPorCoordenadas } from "@/lib/cultivos/zona";
+import { riesgoRelevanteEnZona, zonaCultivoPorCoordenadas } from "@/lib/cultivos/zona";
 import { obtenerClimaPunto } from "@/lib/clima/motor";
 import { obtenerPronostico } from "@/lib/proveedores/registro";
 import {
@@ -120,7 +120,7 @@ export async function evaluarPlotPlataforma(
     // Sensores opcionales en MVP
   }
 
-  const evaluaciones = await evaluarRiesgos({
+  const evaluacionesRaw = await evaluarRiesgos({
     // Spec 43 canonical
     plot: { id: plotId, latitude: plot.latitud, longitude: plot.longitud, farmId: plot.farmId, name: plot.nombre },
     crop: { id: plot.cropId, slug: plot.cropSlug, nameEs: plot.cropNombre },
@@ -149,6 +149,7 @@ export async function evaluarPlotPlataforma(
     avisosOficiales,
     cropIdPlataforma: plot.cropId,
   } as unknown as Parameters<typeof evaluarRiesgos>[0]);
+  const evaluaciones = evaluacionesRaw.filter((e) => riesgoRelevanteEnZona((e.riskType ?? (e as unknown as { type: string }).type) as string, zona));
 
   const eventos: NuevoRiskEvent[] = evaluaciones.map((evaluacion) => ({
     plotId,

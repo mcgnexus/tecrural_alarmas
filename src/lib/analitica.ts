@@ -41,10 +41,15 @@ async function registrarLeadServidor(
   if (!type) return;
   try {
     await asegurarSesionDispositivo();
+    const anonymousId = typeof window !== "undefined" ? window.localStorage.getItem("tecrural.dispositivo") : null;
+    const userId = typeof window !== "undefined" ? window.localStorage.getItem("tecrural.usuario") : null;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (anonymousId) headers["x-anonymous-id"] = anonymousId;
+    if (userId) headers["x-user-id"] = userId;
     await fetch("/api/v1/events", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type, metadata: datos ?? undefined }),
+      headers,
+      body: JSON.stringify({ type, metadata: datos ?? undefined, anonymousId: anonymousId ?? undefined, userId: userId ?? undefined }),
     });
   } catch {
     // El funnel nunca rompe la UI.
