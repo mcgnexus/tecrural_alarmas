@@ -120,7 +120,7 @@ export function AsistenteChat() {
       registrarEventoEmbudo("lead_submitted", { origen: "asistente", tipoExplotacion: perfil ?? null, problema });
       setMensajes((m) => [
         ...m,
-          { de: "bot", texto: "Solicitud recibida. El agente IA de TecRural revisará tus datos y te enviará un WhatsApp para confirmar la activación de los avisos en menos de 24 horas laborables. Puedes cancelar respondiendo BAJA." },
+          { de: "bot", texto: "Solicitud recibida. Una persona del equipo de TecRural revisará tus datos y te contactará por WhatsApp en menos de 24 horas laborables para resolver dudas sobre el servicio. Esta solicitud de contacto no activa avisos automáticamente. Para retirar la solicitud, escribe a mcgtecrural@gmail.com." },
       ]);
       setPaso("enviado");
     } catch {

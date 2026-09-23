@@ -69,6 +69,40 @@ export async function crearSuscripcion(input: {
   return aSuscripcionDto(fila);
 }
 
+/** Crea o reactiva una única suscripción WhatsApp gratuita para esta parcela y dispositivo. */
+export async function activarSuscripcionWhatsapp(input: {
+  dispositivoId: string;
+  parcelaId: string;
+  destino: string;
+}): Promise<SuscripcionDto> {
+  const db = obtenerDb();
+  const [existente] = await db
+    .select()
+    .from(suscripcionesAviso)
+    .where(and(
+      eq(suscripcionesAviso.dispositivoId, input.dispositivoId),
+      eq(suscripcionesAviso.parcelaId, input.parcelaId),
+      eq(suscripcionesAviso.canal, "whatsapp"),
+    ))
+    .limit(1);
+  if (existente) {
+    if (existente.activa && existente.destino === input.destino) return aSuscripcionDto(existente);
+    const [reactivada] = await db.update(suscripcionesAviso)
+      .set({ activa: true, destino: input.destino, severidadMinima: "aviso" })
+      .where(eq(suscripcionesAviso.id, existente.id))
+      .returning();
+    if (reactivada) return aSuscripcionDto(reactivada);
+    throw new Error("No se pudo reactivar la suscripción.");
+  }
+  return crearSuscripcion({
+    dispositivoId: input.dispositivoId,
+    parcelaId: input.parcelaId,
+    canal: "whatsapp",
+    destino: input.destino,
+    severidadMinima: "aviso",
+  });
+}
+
 export async function eliminarSuscripcion(
   id: string,
   dispositivoId: string,

@@ -63,7 +63,7 @@ export function Consentimiento({ userId, onAceptado }: { userId: string; onAcept
       <button onClick={guardar} disabled={guardando} className="mt-4 inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-stone-900 px-5 py-3 text-base font-bold text-white hover:bg-black disabled:opacity-60">
         {guardando ? "Guardando…" : "Guardar preferencias"}
       </button>
-      <p className="mt-2 text-xs text-stone-500">Guardamos consent_version y consent_timestamp. Revisión RGPD/LOPDGDD pendiente.</p>
+      <p className="mt-2 text-xs text-stone-500">Guardamos la versión de la política aceptada y la fecha del consentimiento. Las comunicaciones comerciales se guardan por separado y son opcionales.</p>
     </div>
   );
 }

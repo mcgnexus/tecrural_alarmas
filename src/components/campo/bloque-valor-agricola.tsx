@@ -2,10 +2,19 @@
 
 import { useEffect, useState } from "react";
 import type { CulturaId } from "@/lib/cultivos/catalogo";
+import { catalogoCultivos } from "@/lib/cultivos/catalogo";
 import { canUseFeature, planForUser } from "@/lib/planes/permisos";
 import { registrarEventoEmbudo } from "@/lib/analitica";
 
 type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
+
+function fechaLocal(valor: string): string {
+  return new Intl.DateTimeFormat("es-ES", {
+    timeZone: "Europe/Madrid",
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(valor));
+}
 
 type Hora = {
   timestamp: string;
@@ -25,6 +34,7 @@ export function BloqueValorAgricola({ ubicacion, cultivo }: { ubicacion: Ubicaci
   const [failed, setFailed] = useState(false);
   const [stale, setStale] = useState(false);
   const [evaluadoEl, setEvaluadoEl] = useState<string | null>(null);
+  const [fenofase, setFenofase] = useState<string | null>(null);
   const [intento, setIntento] = useState(0);
 
   useEffect(() => {
@@ -42,7 +52,7 @@ export function BloqueValorAgricola({ ubicacion, cultivo }: { ubicacion: Ubicaci
       cache: "no-store",
       signal: AbortSignal.timeout(20000),
     }).then(async r => {
-      if (r.ok) return await r.json() as { alertas: Array<{ tipo:string; severidad:string; mensaje:string }>, estadoEvaluacion?:string, fechaCaducidad?:string, evaluadoEl?:string, fechaDatos?:string };
+      if (r.ok) return await r.json() as { alertas: Array<{ tipo:string; severidad:string; mensaje:string }>, fenofase?:string | null, estadoEvaluacion?:string, fechaCaducidad?:string, evaluadoEl?:string, fechaDatos?:string };
       // Fase 5: failed — no mostrar verde ni "sin riesgo"
       const j = await r.json().catch(()=>null) as { code?:string, estadoEvaluacion?:string, errorTecnico?:string } | null;
       if (j?.estadoEvaluacion === "failed") throw new Error(j.code || "EVAL_FAILED");
@@ -65,9 +75,13 @@ export function BloqueValorAgricola({ ubicacion, cultivo }: { ubicacion: Ubicaci
       if (riesgo) {
         const evaluado = riesgo.evaluadoEl ?? new Date().toISOString();
         setEvaluadoEl(evaluado);
+        setFenofase(riesgo.fenofase ?? null);
         const caducidad = (riesgo as unknown as { fechaCaducidad?:string }).fechaCaducidad;
         if (caducidad && Date.now() > new Date(caducidad).getTime()) setStale(true);
-      } else setEvaluadoEl(new Date().toISOString());
+      } else {
+        setEvaluadoEl(new Date().toISOString());
+        setFenofase(null);
+      }
       // Helada y viento desde riesgo si existe
       if (riesgo && Array.isArray(riesgo.alertas)) {
         const helada = riesgo.alertas.find(a=> a.tipo==="helada" && a.severidad!=="info");
@@ -95,7 +109,7 @@ export function BloqueValorAgricola({ ubicacion, cultivo }: { ubicacion: Ubicaci
       }
     }).catch(()=> { if(activo) setFailed(true); }).finally(()=> { if(activo) setCargando(false); });
     return ()=>{ activo=false; };
-  }, [ubicacion.lat, ubicacion.lon, ubicacion.aemetMunicipio, cultivo, intento]);
+  }, [ubicacion.lat, ubicacion.lon, ubicacion.aemetMunicipio, ubicacion.nombre, cultivo, intento]);
 
   if (!puedeHelada && !puedeViento) return null;
   if (cargando) return <section aria-live="polite" className="rounded-2xl border-2 border-earth-200 bg-wheat-50 p-5"><h2 className="text-lg font-extrabold text-stone-950">Calculando riesgos para tu cultivo…</h2><p className="mt-1 text-[15px] text-stone-600">Interpretando riesgos. Puede tardar unos segundos; si no se completa, podrás reintentar.</p></section>;
@@ -111,27 +125,38 @@ export function BloqueValorAgricola({ ubicacion, cultivo }: { ubicacion: Ubicaci
     return (
       <section className="rounded-2xl border-2 border-stone-300 bg-stone-100 p-5">
         <h2 className="text-lg font-extrabold text-stone-800">Datos desactualizados</h2>
-        <p className="mt-1 text-[15px] text-stone-700">Última evaluación: {evaluadoEl ? new Date(evaluadoEl).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" }) : "hora desconocida"}. No tomes decisiones con esta información.</p>
+        <p className="mt-1 text-[15px] text-stone-700">Última evaluación de riesgos: {evaluadoEl ? `${fechaLocal(evaluadoEl)} (hora peninsular)` : "hora desconocida"}. No tomes decisiones con esta información.</p>
         <p className="mt-2 text-xs text-stone-500">Mostrando último dato válido marcado como antiguo.</p>
       </section>
     );
   }
 
+  const nombreCultivo = cultivo ? catalogoCultivos[cultivo].nombre : null;
+  const hayRiesgoHelada = Boolean(heladaTexto && !heladaTexto.startsWith("Helada: sin riesgo") && !heladaTexto.includes("sin datos"));
+  const hayRiesgoViento = Boolean(vientoTexto && !vientoTexto.startsWith("Viento: sin rachas") && !vientoTexto.startsWith("Viento: sin riesgo") && !vientoTexto.includes("sin datos"));
+
   return (
     <section className="rounded-2xl border-2 border-earth-200 bg-wheat-50 p-5 shadow-sm">
       <h2 className="text-lg font-extrabold text-stone-950">Riesgos para tu cultivo</h2>
-      <p className="mt-1 text-xs leading-relaxed text-stone-600"><strong>Estado: Actualizado</strong> · Evaluación agrícola de helada y viento basada en previsiones de AEMET/Open-Meteo{evaluadoEl ? ` · Última actualización: ${new Date(evaluadoEl).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" })}` : ""}</p>
+      <p className="mt-1 text-xs leading-relaxed text-stone-600"><strong>Estado: Actualizado</strong> · Última evaluación de riesgos: {evaluadoEl ? `${fechaLocal(evaluadoEl)} (hora peninsular)` : "hora desconocida"} · Evaluación basada en previsiones de AEMET/Open-Meteo.</p>
+      <p className="mt-2 rounded-xl border border-stone-200 bg-white p-3 text-sm leading-relaxed text-stone-700">
+        {nombreCultivo
+          ? <>Cultivo seleccionado: <strong>{nombreCultivo}</strong>{fenofase ? <> · Fase estimada: <strong>{fenofase}</strong></> : null}. Estos datos intervienen en los umbrales que se comparan con la previsión; la fase se estima por calendario y zona, no se confirma en campo.</>
+          : "Sin cultivo seleccionado, la señal se basa en la previsión general y no aplica umbrales específicos de cultivo."}
+      </p>
       <div className="mt-3 grid gap-3">
         {puedeHelada ? <article className="rounded-xl bg-white p-4 border border-stone-200">
           <h3 className="font-bold text-stone-900">Helada</h3>
           <p className="mt-1 text-[15px] leading-relaxed text-stone-700">{heladaTexto}</p>
+          {hayRiesgoHelada ? <p className="mt-2 rounded-lg bg-blue-50 p-3 text-sm leading-relaxed text-blue-950"><strong>Qué hacer:</strong> comprueba la previsión y las condiciones de tu parcela, especialmente en zonas bajas. Si tienes medidas de protección frente al frío, revisa su disponibilidad y sigue las indicaciones técnicas adecuadas para tu cultivo. El aviso se fundamenta en la mínima prevista y el umbral indicado arriba.</p> : null}
         </article> : null}
         {puedeViento ? <article className="rounded-xl bg-white p-4 border border-stone-200">
           <h3 className="font-bold text-stone-900">Viento</h3>
           <p className="mt-1 text-[15px] leading-relaxed text-stone-700">{vientoTexto}</p>
+          {hayRiesgoViento ? <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm leading-relaxed text-amber-950"><strong>Qué hacer:</strong> revisa tutores, cubiertas y elementos sueltos, y evita trabajos expuestos durante las rachas. El aviso compara la racha máxima prevista con el umbral del cultivo indicado arriba.</p> : null}
         </article> : null}
       </div>
-      <p className="mt-3 text-xs text-stone-500">Explicación orientativa basada en la previsión de 5 días. No sustituye criterio técnico.</p>
+      <p className="mt-3 text-xs text-stone-500">Si no aparece riesgo, significa que la previsión no supera los umbrales aplicados en esta evaluación; no garantiza que no haya daños locales. Estimación orientativa de 5 días, no sustituye la observación de la parcela ni el criterio de un técnico.</p>
     </section>
   );
 }

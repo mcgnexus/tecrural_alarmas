@@ -160,6 +160,29 @@ export async function crearParcela(input: {
   return aParcelaDto(fila);
 }
 
+/** Reutiliza la parcela gratuita creada para el mismo dispositivo, cultivo y coordenadas. */
+export async function obtenerOCrearParcela(input: {
+  dispositivoId: string;
+  nombre: string;
+  cultivo: CulturaId;
+  latitud: number;
+  longitud: number;
+}): Promise<ParcelaDto> {
+  const db = obtenerDb();
+  const [existente] = await db
+    .select()
+    .from(parcelas)
+    .where(and(
+      eq(parcelas.dispositivoId, input.dispositivoId),
+      eq(parcelas.nombre, input.nombre),
+      eq(parcelas.cultivoSlug, input.cultivo),
+      eq(parcelas.latitud, input.latitud),
+      eq(parcelas.longitud, input.longitud),
+    ))
+    .limit(1);
+  return existente ? aParcelaDto(existente) : crearParcela(input);
+}
+
 export async function eliminarParcela(
   id: string,
   dispositivoId: string,

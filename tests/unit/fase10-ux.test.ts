@@ -43,7 +43,7 @@ describe("Fase10 UX", () => {
   });
   it("estados de carga visibles", () => {
     const meteo = read("src/components/campo/meteo-zona.tsx");
-    expect(meteo).toContain("Cargando el tiempo");
+    expect(meteo).toContain("Consultando el tiempo y la previsión");
     const bloque = read("src/components/campo/bloque-valor-agricola.tsx");
     expect(bloque).toContain("Interpretando riesgos");
     const form = read("src/components/servicios/formulario-contacto.tsx");
