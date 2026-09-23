@@ -61,6 +61,52 @@ const PARCHES_NIVEL: Record<Nivel, string> = {
   critica: "border-red-300 bg-red-50 text-red-900",
 };
 
+function IconoNivel({ nivel }: { nivel: Nivel }) {
+  const common = { fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" } as const;
+  switch (nivel) {
+    case "info":
+      return (
+        <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" aria-hidden="true" {...common}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M8.5 12.5l2.5 2.5 5-6" />
+        </svg>
+      );
+    case "aviso":
+      return (
+        <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" aria-hidden="true" {...common}>
+          <path d="M12 3L21.5 19.5H2.5L12 3z" />
+          <path d="M12 9v5" />
+          <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "alerta":
+      return (
+        <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" aria-hidden="true" {...common}>
+          <path d="M12 2l8 8-8 8-8-8 8-8z" />
+          <path d="M12 9v5" />
+          <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "critica":
+      return (
+        <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" aria-hidden="true" {...common}>
+          <path d="M7 2h10l5 5v10l-5 5H7l-5-5V7l5-5z" />
+          <path d="M12 8v6" />
+          <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none" />
+        </svg>
+      );
+  }
+}
+
+function IconoCalendario() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3 9h18M8 3v4M16 3v4" />
+    </svg>
+  );
+}
+
 function fechaLocal(valor: string): string {
   return new Intl.DateTimeFormat("es-ES", {
     timeZone: "Europe/Madrid",
@@ -256,7 +302,8 @@ export function BloqueValorAgricola({ ubicacion, cultivo }: { ubicacion: Ubicaci
     <section className="rounded-2xl border-2 border-stone-300 bg-stone-100 p-5">
       <h2 className="text-lg font-extrabold text-stone-800">Datos desactualizados</h2>
       <p className="mt-1 text-[15px] text-stone-700">Última evaluación de riesgos: {evaluadoEl ? `${fechaLocal(evaluadoEl)} (hora peninsular)` : "hora desconocida"}. No tomes decisiones con esta información.</p>
-      <p className="mt-2 text-xs text-stone-500">Mostrando último dato válido marcado como antiguo.</p>
+      <p className="mt-2 text-xs text-stone-500">Mostrando último dato válido conservado — hora: {evaluadoEl ? fechaLocal(evaluadoEl) : "—"} — no es información actual.</p>
+      <button type="button" onClick={() => { setFailed(false); setStale(false); setCargando(true); setIntento((n) => n + 1); }} className="mt-3 inline-flex min-h-[44px] items-center rounded-xl bg-stone-800 px-4 text-sm font-bold text-white">Reintentar evaluación</button>
     </section>
   );
 
@@ -285,23 +332,40 @@ export function BloqueValorAgricola({ ubicacion, cultivo }: { ubicacion: Ubicaci
 
   return (
     <section className="rounded-2xl border-2 border-earth-200 bg-wheat-50 p-5 shadow-sm">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-extrabold text-stone-950">Resumen agrícola</h2>
-        <span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${PARCHES_NIVEL[nivel]}`}>{ETIQUETA_NIVEL[nivel]}</span>
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${PARCHES_NIVEL[nivel]}`}>
+          <IconoNivel nivel={nivel} />
+          {ETIQUETA_NIVEL[nivel]}
+        </span>
       </div>
       <p className="mt-1 text-xs leading-relaxed text-stone-600">
         {nombreCultivo ? `Cultivo: ${nombreCultivo}${fenofase ? ` · ${fenofase}` : ""}` : "Sin cultivo: umbrales genéricos"} · Evaluado {evaluadoEl ? fechaLocal(evaluadoEl) : "ahora"} (hora peninsular)
       </p>
 
-      <dl className="mt-3 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-stone-200 bg-white p-4">
+      <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className={`rounded-xl border-2 bg-white p-4 ${nivel === "info" ? "border-emerald-200" : nivel === "aviso" ? "border-amber-200" : nivel === "alerta" ? "border-orange-300" : "border-red-300"}`}>
           <dt className="text-[11px] font-bold uppercase tracking-wide text-stone-500">Nivel</dt>
-          <dd className={`mt-1 text-xl font-extrabold ${COLOR_NIVEL[nivel]}`}>{ETIQUETA_NIVEL[nivel]}</dd>
+          <dd className={`mt-1 inline-flex items-center gap-2 text-2xl font-black ${COLOR_NIVEL[nivel]}`}>
+            <IconoNivel nivel={nivel} />
+            {ETIQUETA_NIVEL[nivel]}
+          </dd>
         </div>
-        <div className="rounded-xl border border-stone-200 bg-white p-4">
-          <dt className="text-[11px] font-bold uppercase tracking-wide text-stone-500">Día de mayor riesgo</dt>
-          <dd className="mt-1 text-xl font-extrabold text-stone-950">{hayRiesgo && peorDia ? peorDia.etiqueta : "Ninguno"}</dd>
-          {hayRiesgo && detallePeor ? <p className="mt-0.5 text-xs text-stone-500">{detallePeor}</p> : null}
+        <div className="rounded-xl border-2 border-stone-200 bg-white p-4">
+          <dt className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-stone-500">
+            <IconoCalendario />
+            Día de mayor riesgo
+          </dt>
+          <dd className="mt-1 flex items-baseline gap-2 text-2xl font-black text-stone-950">
+            <span>{hayRiesgo && peorDia ? peorDia.etiqueta : "Ninguno"}</span>
+            {hayRiesgo && peorDia ? (
+              <span className={`inline-flex items-center gap-1 text-xs font-bold ${COLOR_NIVEL[peorDia.nivel]}`}>
+                <IconoNivel nivel={peorDia.nivel} />
+                {ETIQUETA_NIVEL[peorDia.nivel]}
+              </span>
+            ) : null}
+          </dd>
+          {hayRiesgo && detallePeor ? <p className="mt-1 text-xs font-medium text-stone-600">{detallePeor}</p> : null}
         </div>
       </dl>
 

@@ -15,6 +15,30 @@ type Ubicacion = UbicacionGuardada;
 
 const idsCultivos = Object.keys(catalogoCultivos) as CulturaId[];
 
+const MUNICIPIOS_CERCANOS: Municipio[] = [
+  { name: "Huéscar", province: "Granada", region: "Altiplano de Granada", latitude: 37.8106, longitude: -2.5412, aemetMunicipio: "18098" },
+  { name: "Baza", province: "Granada", region: "Altiplano de Granada", latitude: 37.4897, longitude: -2.7735, aemetMunicipio: "18023" },
+  { name: "Puebla de Don Fadrique", province: "Granada", region: "Altiplano de Granada", latitude: 37.9587, longitude: -2.4354, aemetMunicipio: "18164" },
+  { name: "Castril", province: "Granada", region: "Altiplano de Granada", latitude: 37.7969, longitude: -2.9415, aemetMunicipio: "18046" },
+  { name: "Orce", province: "Granada", region: "Altiplano de Granada", latitude: 37.6425, longitude: -2.4788, aemetMunicipio: "18145" },
+  { name: "Galera", province: "Granada", region: "Altiplano de Granada", latitude: 37.6833, longitude: -2.55, aemetMunicipio: "18077" },
+  { name: "Cúllar", province: "Granada", region: "Altiplano de Granada", latitude: 37.5833, longitude: -2.4744, aemetMunicipio: "18057" },
+  { name: "Almuñécar", province: "Granada", region: "Costa Tropical", latitude: 36.7352, longitude: -3.6916, aemetMunicipio: "18017" },
+  { name: "La Herradura", province: "Granada", region: "Costa Tropical", latitude: 36.6206, longitude: -3.7348, aemetMunicipio: "18017" },
+  { name: "Salobreña", province: "Granada", region: "Costa Tropical", latitude: 36.7447, longitude: -3.5849, aemetMunicipio: "18173" },
+  { name: "Motril", province: "Granada", region: "Costa Tropical", latitude: 36.7448, longitude: -3.3426, aemetMunicipio: "18140" },
+];
+
+function municipioMasCercano(lat: number, lon: number): Municipio {
+  let mejor = MUNICIPIOS_CERCANOS[0];
+  let dMin = Infinity;
+  for (const m of MUNICIPIOS_CERCANOS) {
+    const d = (lat - m.latitude) ** 2 + (lon - m.longitude) ** 2;
+    if (d < dMin) { dMin = d; mejor = m; }
+  }
+  return mejor;
+}
+
 export function HomeSinRegistro() {
   const [zona, setZona] = useState<"altiplano" | "costa" | null>(null);
   const [query, setQuery] = useState("");
@@ -23,6 +47,7 @@ export function HomeSinRegistro() {
   const [cultivo, setCultivo] = useState<CulturaId | "">("");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [geolocalizando, setGeolocalizando] = useState(false);
 
   useEffect(() => {
     const restaurarUbicacion = () => setUbicacion(leerUbicacionGuardada());
@@ -61,6 +86,40 @@ export function HomeSinRegistro() {
     registrarEventoEmbudo("municipality_selected", { municipio: m.name, zona: zona ?? m.region });
   }
 
+  function usarMiUbicacion() {
+    if (!("geolocation" in navigator)) {
+      setError("Tu navegador no permite compartir ubicación. Usa la búsqueda por nombre.");
+      return;
+    }
+    setGeolocalizando(true);
+    setError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude, accuracy } = pos.coords;
+        const cercano = municipioMasCercano(latitude, longitude);
+        elegir(cercano);
+        setGeolocalizando(false);
+        if (accuracy != null && accuracy > 5000) {
+          setError("Ubicación poco precisa (varios km). Hemos seleccionado el municipio más cercano; corrígelo arriba si no es el tuyo. Recuerda: la previsión es municipal, no una medición de tu parcela.");
+        } else {
+          setError(null);
+        }
+        registrarEventoEmbudo("geolocation_used", { municipio: cercano.name, accuracy: accuracy ?? null });
+      },
+      (err) => {
+        setGeolocalizando(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setError("No has concedido permiso de ubicación. Puedes seguir buscando el municipio por nombre.");
+        } else if (err.code === err.TIMEOUT) {
+          setError("No pudimos obtener tu ubicación a tiempo. Inténtalo de nuevo o busca por nombre.");
+        } else {
+          setError("No pudimos obtener tu ubicación. Usa la búsqueda manual por nombre.");
+        }
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+    );
+  }
+
   return <div className="flex flex-col gap-5">
     {/* BLOQUE 1: propuesta principal */}
     <section className="rounded-3xl border-2 border-earth-700 bg-wheat-50 p-6 shadow-sm">
@@ -74,7 +133,12 @@ export function HomeSinRegistro() {
         <p className="mt-1 text-base text-stone-700">Así podremos mostrarte el tiempo y los riesgos de tu zona.</p>
         <label htmlFor="municipio-home" className="mt-4 block text-base font-bold text-stone-900">Buscar municipio</label>
         <p className="mt-1 text-sm text-stone-600">Escribe el nombre directamente; no necesitas conocer la zona.</p>
-        <div className="mt-1 flex gap-2"><input id="municipio-home" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void cargarMunicipios(); }} autoComplete="address-level2" className="min-h-[52px] min-w-0 flex-1 rounded-xl border-2 border-stone-300 px-4 text-base" placeholder="Ej. Huéscar, Baza o Motril"/><button type="button" onClick={() => void cargarMunicipios()} disabled={cargando} className="min-h-[52px] rounded-xl bg-olive-800 px-4 text-base font-bold text-white">{cargando ? "Buscando…" : "Buscar"}</button></div>
+        <div className="mt-1 flex gap-2"><input id="municipio-home" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void cargarMunicipios(); }} autoComplete="address-level2" className="min-h-[52px] min-w-0 flex-1 rounded-xl border-2 border-stone-300 px-4 text-base" placeholder="Ej. Huéscar, Baza o Motril"/><button type="button" onClick={() => void cargarMunicipios()} disabled={cargando || geolocalizando} className="min-h-[52px] rounded-xl bg-olive-800 px-4 text-base font-bold text-white">{cargando ? "Buscando…" : "Buscar"}</button></div>
+        <button type="button" onClick={usarMiUbicacion} disabled={cargando || geolocalizando} className="mt-3 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border-2 border-stone-300 bg-white px-4 text-[15px] font-bold text-stone-800 hover:bg-stone-50 disabled:opacity-60">
+          <span aria-hidden="true">📍</span> {geolocalizando ? "Localizando…" : "Usar mi ubicación"}
+        </button>
+        <p className="mt-1 text-xs leading-relaxed text-stone-500">Voluntario y solo si lo permites. Usamos tu ubicación para seleccionar el municipio más cercano. La previsión es municipal (AEMET/Open-Meteo por municipio), no una medición de tu parcela. Si no concedes permiso o la ubicación es poco precisa, sigue con la búsqueda manual.</p>
+        {geolocalizando ? <p role="status" aria-live="polite" className="mt-2 text-sm font-semibold text-olive-900">Obteniendo tu ubicación… La usaremos solo para elegir el municipio más cercano.</p> : null}
         {cargando ? <p role="status" aria-live="polite" className="mt-2 text-sm font-semibold text-olive-900">Buscando municipios… La ubicación seleccionada no cambiará hasta que elijas un resultado.</p> : null}
         <details className="mt-3 rounded-xl border border-stone-200 p-3">
           <summary className="cursor-pointer text-sm font-bold text-stone-700">Explorar por zona (opcional)</summary>
@@ -125,16 +189,19 @@ export function HomeSinRegistro() {
       <h2 id="confianza-titulo" className="text-lg font-extrabold text-stone-950">¿Cómo funciona?</h2>
       <ol className="mt-3 grid gap-2 text-[15px] leading-relaxed text-stone-700 list-decimal pl-5">
         <li>Eliges tu municipio y cultivo.</li>
-        <li>Consultas el tiempo y los riesgos de helada y viento para 5 días.</li>
-        <li>Al enviar el formulario, los avisos gratis quedan activados en este dispositivo. El equipo puede contactarte después para comprobar los datos; recibirás WhatsApp si una evaluación programada detecta un riesgo relevante.</li>
+        <li>Consultas el tiempo y el resumen agrícola para 5 días.</li>
+        <li>Si te interesa, activas los avisos gratuitos en el formulario.</li>
       </ol>
-      <ul className="mt-3 grid gap-2 text-[15px] leading-relaxed text-stone-700">
-        <li>• Fuentes: AEMET y Open-Meteo.</li>
-        <li>• Datos actualizados cada hora. Fecha visible en el bloque de tiempo.</li>
-        <li>• Información orientativa: no sustituye a AEMET ni a un técnico.</li>
-        <li>• Sin mensajes innecesarios.</li>
-      </ul>
-      <p className="mt-3 text-sm text-stone-600">Consulta nuestra <Link href="/privacidad" className="font-bold text-brand-800 underline">política de privacidad</Link>. Para solicitar la baja o eliminar tus datos, escribe a mcgtecrural@gmail.com.</p>
+      <details className="mt-3 rounded-xl border border-stone-200 bg-stone-50 p-3 text-sm leading-relaxed text-stone-700">
+        <summary className="cursor-pointer font-bold text-stone-800">Detalles</summary>
+        <ul className="mt-2 grid gap-2">
+          <li>• Fuentes: AEMET y Open-Meteo.</li>
+          <li>• Datos actualizados cada hora. Fecha visible en el bloque de tiempo.</li>
+          <li>• Información orientativa: no sustituye a AEMET ni a un técnico.</li>
+          <li>• Sin mensajes innecesarios.</li>
+        </ul>
+        <p className="mt-2 text-sm">Consulta la <Link href="/privacidad" className="font-bold text-brand-800 underline">política de privacidad</Link>. Para darte de baja, escribe a mcgtecrural@gmail.com.</p>
+      </details>
       <a href="#captacion" className="mt-4 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-brand-800 px-5 py-3 text-base font-bold text-white">Recibir avisos de mi zona</a>
     </section>
   </div>;

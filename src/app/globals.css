@@ -39,6 +39,9 @@ html {
   height: 100%;
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
+  /* Reserva el alto de la barra inferior móvil al hacer scroll a un ancla o
+     al enfocar un input: el contenido queda por encima, no tapado. */
+  scroll-padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
 }
 
 /* Principios interfaz rural: tipografía grande, alto contraste, uso con una mano al aire libre */

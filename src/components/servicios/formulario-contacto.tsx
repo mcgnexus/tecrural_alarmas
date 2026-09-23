@@ -140,14 +140,13 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes, munic
     }
   }
 
-  if (estado === "enviado") return activarAvisosGratis ? <div role="status" className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-5"><p className="text-xl font-extrabold text-emerald-900">¡Avisos activados!</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Hemos guardado esta zona y cultivo en este dispositivo y activado el envío de avisos a {telefono.trim()} por WhatsApp. La suscripción queda vinculada al identificador de este navegador para que el servicio la reconozca cuando vuelvas.</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Recibirás mensajes solo cuando las evaluaciones programadas detecten un riesgo relevante. No son alertas en tiempo real. Una persona del equipo podrá contactarte por WhatsApp en menos de 24 horas laborables para comprobar que el alta quedó correcta.</p><p className="mt-3 text-sm font-medium text-emerald-800">Para solicitar la baja o eliminar estos datos, escribe a <a className="font-bold underline" href="mailto:mcgtecrural@gmail.com">mcgtecrural@gmail.com</a>.</p></div> : <div role="status" className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-5"><p className="text-xl font-extrabold text-emerald-900">Solicitud recibida</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Una persona del equipo de TecRural revisará tus datos y te contactará por WhatsApp en menos de 24 horas laborables.</p><p className="mt-3 text-sm font-medium text-emerald-800">Para cancelar la solicitud, escribe a <a className="font-bold underline" href="mailto:mcgtecrural@gmail.com">mcgtecrural@gmail.com</a>.</p></div>;
+  if (estado === "enviado") return activarAvisosGratis ? <div role="status" className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-5"><p className="text-xl font-extrabold text-emerald-900">¡Avisos activados!</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Los avisos llegarán al WhatsApp <strong>{telefono.trim()}</strong> que has escrito — no al teléfono desde el que navegas y sin necesidad de mantener este navegador abierto.</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Además guardamos una referencia en este navegador (cookie/identificador) para que veas la suscripción al volver. Si cambias de móvil, usas otro navegador o borras los datos del sitio, esa referencia local se pierde, pero los avisos seguirán llegando al número indicado hasta que pidas la baja.</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Recibirás mensajes solo cuando las evaluaciones programadas detecten un riesgo relevante. No son alertas en tiempo real.</p><p className="mt-3 text-sm font-medium text-emerald-800">Para gestionar la suscripción o darte de baja, escribe a <a className="font-bold underline" href="mailto:mcgtecrural@gmail.com">mcgtecrural@gmail.com</a> indicando ese número.</p></div> : <div role="status" className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-5"><p className="text-xl font-extrabold text-emerald-900">Solicitud recibida</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Una persona del equipo de TecRural revisará tus datos y te contactará por WhatsApp en menos de 24 horas laborables.</p><p className="mt-3 text-sm font-medium text-emerald-800">Para cancelar la solicitud, escribe a <a className="font-bold underline" href="mailto:mcgtecrural@gmail.com">mcgtecrural@gmail.com</a>.</p></div>;
 
   const listaErrores = Object.values(errores).filter(Boolean);
   return (
     <form onSubmit={enviar} noValidate className="rounded-2xl border-2 border-brand-800 bg-white p-5 shadow-sm">
        <h3 className="text-xl font-extrabold text-stone-900">Recibe avisos por WhatsApp</h3>
        <p className="mt-1 text-base text-stone-700">Déjanos estos datos y te avisaremos gratis de lo importante para tu cultivo.</p>
-        <div className="mt-3 rounded-xl border border-brand-200 bg-brand-50 p-3 text-sm leading-relaxed text-brand-950"><p><strong>¿Qué recogemos?</strong> Nombre, teléfono o WhatsApp, municipio y cultivo.</p><p className="mt-1"><strong>¿Para qué?</strong> Para crear en este dispositivo la parcela y la suscripción de avisos de WhatsApp que solicitas.</p><p className="mt-1"><strong>¿Qué pasa después?</strong> Al enviar el formulario, el alta gratuita se activa automáticamente y queda vinculada a este navegador/dispositivo. Las evaluaciones se ejecutan de forma programada y se envía WhatsApp solo si se detecta una condición relevante para esa zona y cultivo; no es un servicio en tiempo real. Una persona del equipo puede escribirte en menos de 24 horas laborables para comprobar que todo quedó correcto.</p><p className="mt-1"><strong>¿Cómo cancelas?</strong> Solicita la baja o eliminación de tus datos en mcgtecrural@gmail.com.</p></div>
       <div className="sr-only" aria-hidden="true">
         <label htmlFor="contacto-website">No rellenar</label>
         <input id="contacto-website" name="website" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} />
@@ -181,14 +180,24 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes, munic
           <span className="text-[15px] font-medium text-stone-900"><strong>Opcional:</strong> acepto recibir comunicaciones comerciales de TecRural. Puedo retirarlo cuando quiera.</span>
         </label>
 
-        <div className="mt-4 rounded-xl border-2 border-olive-300 bg-olive-50 p-3 text-sm leading-relaxed text-olive-950" aria-label="Qué ocurrirá al solicitar los avisos">
-          <p className="font-extrabold">Antes de enviar: esto es lo que ocurrirá</p>
+        <div className="mt-4 rounded-xl border border-stone-200 bg-wheat-50 p-3 text-sm leading-relaxed text-stone-700" aria-label="Qué ocurrirá al solicitar los avisos">
+          <p className="font-bold text-stone-900">Antes de enviar</p>
           <ul className="mt-1 list-disc space-y-1 pl-5">
-            <li>Al enviar, se crea la parcela y se activa automáticamente la suscripción de WhatsApp gratuita en este dispositivo.</li>
-            <li>El sistema evaluará los riesgos según su programación y enviará WhatsApp solo cuando detecte condiciones relevantes para la zona y el cultivo.</li>
-            <li>Las alertas no son en tiempo real. La persona del equipo puede contactarte después para comprobar que los datos y el alta sean correctos.</li>
+            <li><strong>Qué se activa:</strong> el envío de avisos al WhatsApp que escribas arriba. Los mensajes llegan a ese número.</li>
+            <li><strong>Cuándo se evalúa:</strong> de forma programada (no continua).</li>
+            <li><strong>Tiempo real:</strong> no; solo avisamos si hay riesgo relevante.</li>
           </ul>
+          <p className="mt-2 text-xs text-stone-500">Guardamos una referencia en este navegador para que veas la suscripción al volver. Si cambias de móvil, usas otro navegador o borras los datos del sitio, esa referencia se pierde pero los avisos siguen llegando al número indicado hasta que pidas la baja.</p>
         </div>
+        <details className="mt-3 rounded-xl border border-stone-200 bg-stone-50 p-3 text-sm leading-relaxed text-stone-700">
+          <summary className="cursor-pointer font-bold text-stone-800">Detalles sobre datos y privacidad</summary>
+          <div className="mt-2 space-y-1">
+            <p><strong>Qué recogemos:</strong> nombre, teléfono/WhatsApp, municipio y cultivo.</p>
+            <p><strong>Para qué:</strong> crear la parcela y activar los avisos que solicitas.</p>
+            <p><strong>Cancelación:</strong> escribe a mcgtecrural@gmail.com para darte de baja o borrar tus datos. Consulta la <Link href="/privacidad" className="font-bold text-brand-800 underline">política de privacidad</Link>.</p>
+            <p>Fuentes: AEMET y Open-Meteo. Datos orientativos, no sustituyen a un técnico. Sin mensajes innecesarios.</p>
+          </div>
+        </details>
 
         {estado === "validando" ? <p role="status" className="mt-3 text-sm font-semibold text-stone-600">Validando…</p> : null}
        {listaErrores.length ? <div role="alert" className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 p-3"><p className="font-bold text-red-900">Datos incompletos</p><ul className="mt-1 list-disc pl-5 text-[15px] font-semibold text-red-800">{listaErrores.map((e) => <li key={e}>{e}</li>)}</ul></div> : null}

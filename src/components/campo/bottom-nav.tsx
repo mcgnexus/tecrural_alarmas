@@ -15,6 +15,7 @@ const items: ItemNav[] = [
   { href: "/#prevision", etiqueta: "Tiempo", icono: "tiempo" },
   { href: "/#captacion", etiqueta: "Avisos", icono: "campana" },
   { href: "/#como-funciona", etiqueta: "¿Cómo funciona?", icono: "ayuda" },
+  { href: "/cuenta", etiqueta: "Acceso", icono: "acceso" },
 ];
 
 function Icono({ nombre }: { nombre: string }) {
@@ -29,28 +30,28 @@ function Icono({ nombre }: { nombre: string }) {
   switch (nombre) {
     case "home":
       return (
-        <svg viewBox="0 0 24 24" className="h-7 w-7" aria-hidden="true" {...common}>
+        <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true" {...common}>
           <path d="M3 10.5 12 3l9 7.5" />
           <path d="M5 9.5V21h14V9.5" />
         </svg>
       );
     case "pin":
       return (
-        <svg viewBox="0 0 24 24" className="h-7 w-7" aria-hidden="true" {...common}>
+        <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true" {...common}>
           <path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11Z" />
           <circle cx="12" cy="10" r="2.5" />
         </svg>
       );
     case "campana":
       return (
-        <svg viewBox="0 0 24 24" className="h-7 w-7" aria-hidden="true" {...common}>
+        <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true" {...common}>
           <path d="M6 8a6 6 0 0 1 12 0c0 7 2 8 2 8H4s2-1 2-8" />
           <path d="M10 21a2 2 0 0 0 4 0" />
         </svg>
       );
     case "maletin":
       return (
-        <svg viewBox="0 0 24 24" className="h-7 w-7" aria-hidden="true" {...common}>
+        <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true" {...common}>
           <rect x="4" y="8" width="16" height="11" rx="2" />
           <path d="M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
           <path d="M2 13h20" />
@@ -58,17 +59,24 @@ function Icono({ nombre }: { nombre: string }) {
       );
     case "tiempo":
       return (
-        <svg viewBox="0 0 24 24" className="h-7 w-7" aria-hidden="true" {...common}>
+        <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true" {...common}>
           <circle cx="12" cy="12" r="5" />
           <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.66 17.66l1.42 1.42M4.93 19.07l1.42-1.42M17.66 6.34l1.42-1.42" />
         </svg>
       );
     case "ayuda":
       return (
-        <svg viewBox="0 0 24 24" className="h-7 w-7" aria-hidden="true" {...common}>
+        <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true" {...common}>
           <circle cx="12" cy="12" r="9" />
           <path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-1.5 2-1.5 3" />
           <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "acceso":
+      return (
+        <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true" {...common}>
+          <circle cx="12" cy="8" r="4" />
+          <path d="M5 19a7 7 0 0 1 14 0" />
         </svg>
       );
     default:
@@ -112,7 +120,7 @@ export function BottomNav() {
 
   return (
     <nav className="sticky bottom-0 z-10 border-t-2 border-stone-900/10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/95 md:hidden">
-      <div className="mx-auto grid w-full max-w-5xl grid-cols-4 gap-0.5 px-2 pb-[env(safe-area-inset-bottom)] pt-1">
+      <div className="mx-auto grid w-full max-w-5xl grid-cols-5 gap-0.5 px-2 pb-[env(safe-area-inset-bottom)] pt-0.5">
         {items.map((item) => {
           const base = item.href.split("#")[0] || "/";
           const activo =
@@ -126,7 +134,7 @@ export function BottomNav() {
               aria-current={activo ? "page" : undefined}
               aria-label={item.etiqueta}
               onClick={(e) => desplazarEnPagina(e, item.href, pathname)}
-              className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[13px] font-semibold leading-none sm:text-[15px] ${
+              className={`flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[13px] font-semibold leading-none sm:text-[15px] ${
                 activo
                   ? "bg-brand-800 text-white shadow-sm"
                   : "text-stone-700 hover:bg-stone-100 active:bg-stone-200"

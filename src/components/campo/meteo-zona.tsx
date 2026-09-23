@@ -215,7 +215,7 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
         </>
       ) : null}
 
-      {esStaleMeteo ? <div role="alert" className="mt-3 rounded-xl border-2 border-stone-300 bg-stone-100 p-3 text-center text-sm font-bold text-stone-700">Dato horario antiguo — corresponde a {fechaDatos ? fechaLocal(fechaDatos) : "una hora desconocida"}. No tomes decisiones con esta información.</div> : null}
+      {esStaleMeteo ? <div role="alert" className="mt-3 rounded-xl border-2 border-stone-300 bg-stone-100 p-3 text-center"><p className="text-sm font-bold text-stone-700">Dato horario antiguo — corresponde a {fechaDatos ? fechaLocal(fechaDatos) : "una hora desconocida"} (hora peninsular). No tomes decisiones con esta información.</p><p className="mt-1 text-xs text-stone-600">Último dato válido conservado: {fechaDatos ? fechaLocal(fechaDatos) : "—"} — no es información actual.</p><button type="button" onClick={() => { setError(null); setCargando(true); setIntento((n) => n + 1); }} className="mt-3 inline-flex min-h-[44px] items-center rounded-xl bg-stone-800 px-4 text-sm font-bold text-white">Reintentar consulta</button></div> : null}
       <p className="mt-3 text-[12px] leading-relaxed text-stone-500">Es una previsión general para el municipio, orientativa y no equivalente a una medición en tu parcela. No sustituye a AEMET, RAIF ni a un técnico agrícola.</p>
     </section>
   );

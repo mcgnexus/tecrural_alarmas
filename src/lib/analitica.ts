@@ -7,6 +7,7 @@ import type { LeadEventType } from "@/lib/dominio/lead-events";
  */
 export type EventoEmbudo =
   | "municipality_selected"
+  | "geolocation_used"
   | "crop_selected"
   | "weather_viewed"
   | "forecast_viewed"
@@ -26,6 +27,7 @@ export type EventoEmbudo =
 
 const EVENTO_LEAD: Record<EventoEmbudo, LeadEventType | null> = {
   municipality_selected: "LOCATION_SELECTED",
+  geolocation_used: "LOCATION_SELECTED",
   crop_selected: "CROP_SELECTED",
   weather_viewed: null,
   forecast_viewed: null,
