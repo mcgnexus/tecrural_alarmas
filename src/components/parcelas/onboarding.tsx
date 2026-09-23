@@ -274,7 +274,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
           <div className="mt-4 rounded-xl border-2 border-stone-900 bg-stone-50 p-4">
             <p className="text-sm font-bold text-stone-900">Privacidad — consentimiento explícito</p>
             <p className="mt-1 text-sm leading-snug text-stone-700">
-               Usamos nombre, ubicación, cultivos y coordenadas para guardar la parcela y generar alertas. Ver <a href="/privacidad" target="_blank" className="font-semibold text-brand-800 underline">política de privacidad</a>. Las comunicaciones comerciales son opcionales y separadas.
+                Usamos nombre, ubicación, cultivos y coordenadas para guardar la parcela y generar alertas. Ver <a href="/privacidad" target="_blank" className="inline-flex min-h-11 items-center py-2 font-semibold text-brand-800 underline">política de privacidad</a>. Las comunicaciones comerciales son opcionales y separadas.
             </p>
             <label className="mt-3 flex items-start gap-3 rounded-xl border-2 border-stone-300 bg-white p-3">
               <input type="checkbox" checked={privacidad} onChange={(e) => setPrivacidad(e.target.checked)} className="mt-1 h-5 w-5" />

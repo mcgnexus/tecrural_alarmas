@@ -19,24 +19,26 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "TecRural Campo",
-    template: "%s · TecRural Campo",
+    default: "Avisos de helada y viento para tu cultivo · Granada",
+    template: "%s | TecRural Campo",
   },
   description:
-    "Riesgos agroclimáticos para tu parcela y cultivo, explicados de forma sencilla.",
+    "Consulta el tiempo municipal y recibe avisos gratuitos de helada y viento para tu cultivo en Granada. Previsión sencilla y alertas por WhatsApp.",
   openGraph: {
     type: "website",
     locale: "es_ES",
     siteName: "TecRural Campo",
-    title: "TecRural Campo | Alertas para tu cultivo",
+    title: "Avisos de helada y viento para tu cultivo · Granada",
     description:
-      "Riesgos agroclimáticos para tu parcela y cultivo, explicados de forma sencilla.",
+      "Consulta el tiempo municipal y recibe avisos gratuitos de helada y viento para tu cultivo en Granada. Previsión sencilla y alertas por WhatsApp.",
+    images: [{ url: new URL("/opengraph-image", siteUrl), width: 1200, height: 630, alt: "Avisos de helada y viento para tu cultivo, gratis" }],
   },
   twitter: {
-    card: "summary",
-    title: "TecRural Campo | Alertas para tu cultivo",
+    card: "summary_large_image",
+    title: "Avisos de helada y viento para tu cultivo · Granada",
     description:
-      "Riesgos agroclimáticos para tu parcela y cultivo, explicados de forma sencilla.",
+      "Consulta el tiempo municipal y recibe avisos gratuitos de helada y viento para tu cultivo en Granada. Previsión sencilla y alertas por WhatsApp.",
+    images: [new URL("/opengraph-image", siteUrl)],
   },
   robots: {
     index: true,

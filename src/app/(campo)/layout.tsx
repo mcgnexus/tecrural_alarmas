@@ -8,9 +8,9 @@ export default function CampoLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col">
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col">
       <Header />
-      <main className="flex flex-1 flex-col gap-5 px-4 pb-6 pt-4 md:px-6 md:py-6">
+      <main className="flex flex-1 flex-col gap-5 px-4 pb-6 pt-4 md:px-8 md:py-6">
         {children}
       </main>
       <BottomNav />

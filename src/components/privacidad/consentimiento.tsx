@@ -41,7 +41,7 @@ export function Consentimiento({ userId, onAceptado }: { userId: string; onAcept
         Usamos tus datos solo para alertas agroclimáticas (finalidad clara, minimización). No consideramos que activar una alerta equivalga a aceptar publicidad.
       </p>
       <p className="mt-1 text-sm">
-        <a href="/privacidad" className="font-semibold text-brand-800 underline">Política de privacidad</a> · Versión {CURRENT_VERSION}
+        <a href="/privacidad" className="inline-flex min-h-11 items-center py-2 font-semibold text-brand-800 underline">Política de privacidad</a> · Versión {CURRENT_VERSION}
       </p>
 
       <label className="mt-4 flex items-start gap-3 rounded-xl border-2 border-stone-300 p-3">

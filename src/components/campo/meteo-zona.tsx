@@ -156,7 +156,7 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
   return (
     <section className="rounded-2xl border-2 border-sky-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-xl font-extrabold text-stone-950">Tiempo general de tu zona · {ubicacion.nombre}</h2>
+        <h2 className="text-xl font-extrabold text-stone-950">Ahora · {ubicacion.nombre}</h2>
         <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-700">Gratis, sin registro</span>
       </div>
 

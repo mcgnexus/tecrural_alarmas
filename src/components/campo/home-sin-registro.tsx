@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { registrarEventoEmbudo } from "@/lib/analitica";
 import { MeteoZona } from "@/components/campo/meteo-zona";
@@ -9,25 +10,15 @@ import { FormularioContacto } from "@/components/servicios/formulario-contacto";
 import { catalogoCultivos } from "@/lib/cultivos/catalogo";
 import type { CulturaId } from "@/lib/cultivos/catalogo";
 import { leerUbicacionGuardada, municipioDeUbicacion, type UbicacionGuardada } from "@/lib/datos/ubicacion";
+import { MUNICIPIOS_PUBLICOS } from "@/lib/datos/municipios-publicos";
+import { EMAIL_CONTACTO, enlaceTelefono, enlaceWhatsapp, TELEFONO_VISIBLE } from "@/lib/config/contacto";
 
 type Municipio = { name: string; province: string; region: string; latitude: number; longitude: number; aemetMunicipio?: string };
 type Ubicacion = UbicacionGuardada;
 
 const idsCultivos = Object.keys(catalogoCultivos) as CulturaId[];
 
-const MUNICIPIOS_CERCANOS: Municipio[] = [
-  { name: "Huéscar", province: "Granada", region: "Altiplano de Granada", latitude: 37.8106, longitude: -2.5412, aemetMunicipio: "18098" },
-  { name: "Baza", province: "Granada", region: "Altiplano de Granada", latitude: 37.4897, longitude: -2.7735, aemetMunicipio: "18023" },
-  { name: "Puebla de Don Fadrique", province: "Granada", region: "Altiplano de Granada", latitude: 37.9587, longitude: -2.4354, aemetMunicipio: "18164" },
-  { name: "Castril", province: "Granada", region: "Altiplano de Granada", latitude: 37.7969, longitude: -2.9415, aemetMunicipio: "18046" },
-  { name: "Orce", province: "Granada", region: "Altiplano de Granada", latitude: 37.6425, longitude: -2.4788, aemetMunicipio: "18145" },
-  { name: "Galera", province: "Granada", region: "Altiplano de Granada", latitude: 37.6833, longitude: -2.55, aemetMunicipio: "18077" },
-  { name: "Cúllar", province: "Granada", region: "Altiplano de Granada", latitude: 37.5833, longitude: -2.4744, aemetMunicipio: "18057" },
-  { name: "Almuñécar", province: "Granada", region: "Costa Tropical", latitude: 36.7352, longitude: -3.6916, aemetMunicipio: "18017" },
-  { name: "La Herradura", province: "Granada", region: "Costa Tropical", latitude: 36.6206, longitude: -3.7348, aemetMunicipio: "18017" },
-  { name: "Salobreña", province: "Granada", region: "Costa Tropical", latitude: 36.7447, longitude: -3.5849, aemetMunicipio: "18173" },
-  { name: "Motril", province: "Granada", region: "Costa Tropical", latitude: 36.7448, longitude: -3.3426, aemetMunicipio: "18140" },
-];
+const MUNICIPIOS_CERCANOS: Municipio[] = MUNICIPIOS_PUBLICOS;
 
 function municipioMasCercano(lat: number, lon: number): Municipio {
   let mejor = MUNICIPIOS_CERCANOS[0];
@@ -44,16 +35,25 @@ export function HomeSinRegistro() {
   const [query, setQuery] = useState("");
   const [municipios, setMunicipios] = useState<Municipio[]>([]);
   const [ubicacion, setUbicacion] = useState<Ubicacion | null>(null);
-  const [cultivo, setCultivo] = useState<CulturaId | "">("");
+  const [cultivo, setCultivo] = useState<CulturaId | "otro" | "">("");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [geolocalizando, setGeolocalizando] = useState(false);
 
   useEffect(() => {
-    const restaurarUbicacion = () => setUbicacion(leerUbicacionGuardada());
-    restaurarUbicacion();
-    window.addEventListener("tecrural:datos-actualizados", restaurarUbicacion);
-    return () => window.removeEventListener("tecrural:datos-actualizados", restaurarUbicacion);
+    const restaurarDatos = () => {
+      setUbicacion(leerUbicacionGuardada());
+      try {
+        const guardado = localStorage.getItem("tecrural:cultivo") ?? "";
+        const id = idsCultivos.find((idCultivo) => idCultivo === guardado || catalogoCultivos[idCultivo].nombre === guardado);
+        setCultivo(guardado === "otro" || guardado === "Otro" ? "otro" : id ?? "");
+      } catch {
+        setCultivo("");
+      }
+    };
+    restaurarDatos();
+    window.addEventListener("tecrural:datos-actualizados", restaurarDatos);
+    return () => window.removeEventListener("tecrural:datos-actualizados", restaurarDatos);
   }, []);
 
   async function cargarMunicipios(z?: "altiplano" | "costa" | "todas") {
@@ -123,9 +123,30 @@ export function HomeSinRegistro() {
   return <div className="flex flex-col gap-5">
     {/* BLOQUE 1: propuesta principal */}
     <section className="rounded-3xl border-2 border-earth-700 bg-wheat-50 p-6 shadow-sm">
-      <p className="text-[15px] font-bold uppercase tracking-wider text-olive-700">TecRural Campo</p>
-      <h1 className="mt-2 text-[30px] font-black leading-tight text-stone-950">Protege tu cultivo frente a heladas y viento</h1>
+      <div className="flex items-center gap-2">
+        <Image src="/logo-tecrural.webp" alt="Logo de TecRural" width={40} height={40} preload className="h-10 w-10" />
+        <p className="text-[15px] font-bold uppercase tracking-wider text-olive-700">TecRural Campo</p>
+      </div>
+      <h1 className="mt-2 text-4xl font-black leading-tight text-stone-950 sm:text-5xl lg:text-6xl">Protege tu cultivo frente a heladas y viento</h1>
       <p className="mt-3 text-lg leading-relaxed text-stone-700">Consulta el tiempo de tu zona y recibe avisos sencillos sobre heladas y viento que pueden afectar a tu cultivo.</p>
+
+      <aside className="mt-5 rounded-2xl border-2 border-olive-200 bg-white p-4" aria-label="Quién está detrás de TecRural">
+        <div className="flex items-start gap-3">
+          <Image src="/perfil.webp" alt="Manuel Carrasco García, de Huéscar" width={64} height={64} preload className="h-16 w-16 shrink-0 rounded-full border-2 border-olive-200 object-cover object-[center_28%]" />
+          <div>
+            <p className="text-sm font-bold uppercase tracking-wide text-olive-800">Detrás de TecRural</p>
+            <p className="mt-0.5 text-lg font-extrabold text-stone-950">Manuel Carrasco García</p>
+            <p className="text-base text-stone-700">De Huéscar, Granada</p>
+          </div>
+        </div>
+        <p className="mt-3 text-sm leading-relaxed text-stone-700">Soy el responsable de TecRural y del tratamiento de tus datos. Si tienes dudas, puedes hablar conmigo directamente.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {enlaceWhatsapp("Hola Manuel, tengo una consulta sobre TecRural Campo.") ? <a href={enlaceWhatsapp("Hola Manuel, tengo una consulta sobre TecRural Campo")!} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-olive-800 px-4 py-2 font-bold text-white">Escríbeme por WhatsApp</a> : null}
+          {enlaceTelefono() ? <a href={enlaceTelefono()!} className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-stone-300 px-4 py-2 font-bold text-stone-800">Llamar{TELEFONO_VISIBLE ? `: ${TELEFONO_VISIBLE}` : ""}</a> : null}
+          {!enlaceWhatsapp() && !enlaceTelefono() ? <a href={`mailto:${EMAIL_CONTACTO}`} className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-stone-300 px-4 py-2 font-bold text-stone-800">Escríbeme por correo</a> : null}
+        </div>
+        <p className="mt-2 text-xs text-stone-500">Responsable del tratamiento · <Link href="/privacidad" className="inline-flex min-h-11 items-center py-2 font-semibold underline">Ver política de privacidad</Link></p>
+      </aside>
 
       <div id="zona" className="scroll-mt-24 mt-6 rounded-2xl border-2 border-olive-700 bg-white p-5 shadow-sm">
         <p className="text-[15px] font-bold uppercase tracking-wide text-olive-700">Paso 1 — tu zona</p>
@@ -154,7 +175,7 @@ export function HomeSinRegistro() {
         <label htmlFor="cultivo-home" className="block text-base font-bold text-stone-900">Tu cultivo</label>
         <p className="mt-1 text-sm text-stone-600">Para adaptar helada y viento a tu caso.</p>
         {/* Cultivos incluidos en MVP: Almendro, Olivar, Pistacho, Aguacate, Mango, Chirimoyo, Cereal + Otro */}
-        <select id="cultivo-home" value={cultivo} onChange={(e) => { const raw = e.target.value; const v = raw === "otro" ? "" : raw as CulturaId | ""; setCultivo(v); try { localStorage.setItem("tecrural:cultivo", raw === "otro" ? "Otro" : v ? catalogoCultivos[v].nombre : ""); window.dispatchEvent(new Event("tecrural:datos-actualizados")); } catch {} if (raw) registrarEventoEmbudo("crop_selected", { cultivo: raw, municipio: ubicacion?.nombre ?? null }); }} className="mt-2 min-h-[52px] w-full rounded-xl border-2 border-stone-300 bg-white px-4 text-base font-semibold text-stone-900">
+        <select id="cultivo-home" value={cultivo} onChange={(e) => { const raw = e.target.value; const v = raw === "otro" ? "otro" : raw as CulturaId | ""; setCultivo(v); try { localStorage.setItem("tecrural:cultivo", raw); window.dispatchEvent(new Event("tecrural:datos-actualizados")); } catch {} if (raw) registrarEventoEmbudo("crop_selected", { cultivo: raw, municipio: ubicacion?.nombre ?? null }); }} className="mt-2 min-h-[52px] w-full rounded-xl border-2 border-stone-300 bg-white px-4 text-base font-semibold text-stone-900">
           <option value="">Elige tu cultivo</option>
           {idsCultivos.map((id) => <option key={id} value={id}>{catalogoCultivos[id].nombre}</option>)}
           <option value="otro">Otro</option>
@@ -168,13 +189,13 @@ export function HomeSinRegistro() {
     </section>
 
     {/* BLOQUE 2: consulta meteorológica (solo tras municipio) */}
-    {ubicacion ? <section id="prevision" className="scroll-mt-24 flex flex-col gap-3">
+    {ubicacion ? <section id="prevision" aria-label="Tiempo de tu zona" className="scroll-mt-24 flex flex-col gap-3">
       <h2 className="text-xl font-extrabold text-stone-950">Tiempo de tu zona</h2>
       <MeteoZona key={`${ubicacion.lat}-${ubicacion.lon}`} ubicacion={ubicacion} />
     </section> : null}
 
     {/* BLOQUE 3: explicación valor agrícola */}
-    {ubicacion ? <BloqueValorAgricola key={`${ubicacion.lat}-${ubicacion.lon}-${cultivo}`} ubicacion={ubicacion} cultivo={cultivo || undefined} /> : null}
+    {ubicacion ? <BloqueValorAgricola key={`${ubicacion.lat}-${ubicacion.lon}-${cultivo}`} ubicacion={ubicacion} cultivo={cultivo && cultivo !== "otro" ? cultivo : undefined} /> : null}
 
     {/* CTA intercalada: activar avisos solo tras ver previsión */}
     <section aria-label="Activar avisos" className="flex flex-col gap-2">
@@ -194,10 +215,9 @@ export function HomeSinRegistro() {
     </section>
 
     {/* BLOQUE 4: captación */}
-    <section id="captacion" className="scroll-mt-24">
-      <h2 className="text-xl font-extrabold text-stone-950">Recibe avisos por WhatsApp</h2>
-      <p className="mt-1 text-base text-stone-700">Avisos gratuitos y solo cuando haya algo relevante para tu municipio y cultivo.</p>
-      <div className="mt-3"><FormularioContacto key={ubicacion?.nombre ?? "sin-ubicacion"} municipioInicial={ubicacion ? municipioDeUbicacion(ubicacion.nombre) : ""} cultivoInicial={cultivo ? catalogoCultivos[cultivo].nombre : ""} onCultivoChange={(nombre) => setCultivo(idsCultivos.find((id) => catalogoCultivos[id].nombre === nombre) ?? "")} activarAvisosGratis ubicacionAvisos={ubicacion ? { lat: ubicacion.lat, lon: ubicacion.lon } : null} /></div>
+    <section id="captacion" aria-label="Activar avisos gratuitos" className="scroll-mt-24">
+      <h2 className="text-xl font-extrabold text-stone-950">Activa avisos gratuitos para tu zona</h2>
+      <div className="mt-3"><FormularioContacto key={ubicacion?.nombre ?? "sin-ubicacion"} municipioInicial={ubicacion ? municipioDeUbicacion(ubicacion.nombre) : ""} cultivoInicial={cultivo && cultivo !== "otro" ? catalogoCultivos[cultivo].nombre : ""} onCultivoChange={(nombre) => setCultivo(idsCultivos.find((id) => catalogoCultivos[id].nombre === nombre) ?? "")} activarAvisosGratis ubicacionAvisos={ubicacion ? { lat: ubicacion.lat, lon: ubicacion.lon } : null} /></div>
     </section>
 
     {/* BLOQUE 5: confianza */}
@@ -216,7 +236,7 @@ export function HomeSinRegistro() {
           <li>• Información orientativa: no sustituye a AEMET ni a un técnico.</li>
           <li>• Sin mensajes innecesarios.</li>
         </ul>
-        <p className="mt-2 text-sm">Consulta la <Link href="/privacidad" className="font-bold text-brand-800 underline">política de privacidad</Link>. Para darte de baja, escribe a mcgtecrural@gmail.com.</p>
+        <p className="mt-2 text-sm">Consulta la <Link href="/privacidad" className="inline-flex min-h-11 items-center py-2 font-bold text-brand-800 underline">política de privacidad</Link>. Para darte de baja, escribe a {EMAIL_CONTACTO}.</p>
       </details>
       <a href="#captacion" className="mt-4 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-brand-800 px-5 py-3 text-base font-bold text-white">Recibir avisos de mi zona</a>
     </section>

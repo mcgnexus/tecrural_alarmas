@@ -5,6 +5,7 @@ import Link from "next/link";
 import { asegurarSesionDispositivo, obtenerDispositivoId } from "@/lib/datos/dispositivo";
 import { registrarEventoEmbudo } from "@/lib/analitica";
 import { VERSION_CONSENTIMIENTO } from "@/lib/privacidad/consentimiento";
+import { EMAIL_CONTACTO } from "@/lib/config/contacto";
 
 interface Mensaje {
   de: "bot" | "usuario";
@@ -120,7 +121,7 @@ export function AsistenteChat() {
       registrarEventoEmbudo("lead_submitted", { origen: "asistente", tipoExplotacion: perfil ?? null, problema });
       setMensajes((m) => [
         ...m,
-          { de: "bot", texto: "Solicitud recibida. Una persona del equipo de TecRural revisará tus datos y te contactará por WhatsApp en menos de 24 horas laborables para resolver dudas sobre el servicio. Esta solicitud de contacto no activa avisos automáticamente. Para retirar la solicitud, escribe a mcgtecrural@gmail.com." },
+          { de: "bot", texto: `Solicitud recibida. Una persona del equipo de TecRural revisará tus datos y te contactará por WhatsApp en menos de 24 horas laborables para resolver dudas sobre el servicio. Esta solicitud de contacto no activa avisos automáticamente. Para retirar la solicitud, escribe a ${EMAIL_CONTACTO}.` },
       ]);
       setPaso("enviado");
     } catch {
@@ -200,7 +201,7 @@ export function AsistenteChat() {
                 {paso === "error" ? (
                   <p role="alert" className="text-xs font-semibold text-red-700">Revisa los datos (nombre, teléfono y municipio) e inténtalo de nuevo.</p>
                 ) : null}
-                <label htmlFor="asistente-privacidad" className="flex items-start gap-2 text-[11px] leading-snug text-stone-600"><input id="asistente-privacidad" type="checkbox" checked={aceptaPrivacidad} onChange={(e) => setAceptaPrivacidad(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0" /><span><strong>Obligatorio:</strong> acepto el tratamiento de mis datos para gestionar esta solicitud y he leído la <Link href="/privacidad" className="font-bold text-brand-800 underline">política de privacidad</Link> ({VERSION_CONSENTIMIENTO}).</span></label>
+                <label htmlFor="asistente-privacidad" className="flex items-start gap-2 text-[11px] leading-snug text-stone-600"><input id="asistente-privacidad" type="checkbox" checked={aceptaPrivacidad} onChange={(e) => setAceptaPrivacidad(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0" /><span><strong>Obligatorio:</strong> acepto el tratamiento de mis datos para gestionar esta solicitud y he leído la <Link href="/privacidad" className="inline-flex min-h-11 items-center py-2 font-bold text-brand-800 underline">política de privacidad</Link> ({VERSION_CONSENTIMIENTO}).</span></label>
                 <button
                   type="button"
                   onClick={enviar}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { asegurarSesionDispositivo } from "@/lib/datos/dispositivo";
+import { EMAIL_CONTACTO, enlaceWhatsapp } from "@/lib/config/contacto";
 
 type Cuenta = {
   usuario: { id: string; nombre: string | null; email: string | null; telefono: string | null; creadoEl: string };
@@ -75,12 +76,17 @@ export default function CuentaPage() {
   }
 
   if (!autenticado) {
+    const enlaceAyudaWhatsapp = enlaceWhatsapp("Hola, he perdido el enlace de acceso a mi cuenta de TecRural. ¿Podéis ayudarme a recuperarlo?");
     return (
       <section className="mx-auto w-full max-w-xl rounded-2xl border-2 border-earth-300 bg-white p-6 shadow-sm">
         <h1 className="text-xl font-extrabold text-stone-950">Mi cuenta</h1>
         <p className="mt-2 text-[15px] text-stone-700">
-          Tu cuenta se activa con el enlace que te enviamos por WhatsApp. Si lo has perdido, pídelo de nuevo.
+          Tu cuenta se activa con el enlace que te enviamos por WhatsApp. Si lo has perdido, escríbenos y te ayudaremos a recuperarlo.
         </p>
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          {enlaceAyudaWhatsapp ? <a href={enlaceAyudaWhatsapp} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[48px] items-center justify-center rounded-xl bg-olive-800 px-4 py-3 text-sm font-bold text-white">Pedir ayuda por WhatsApp</a> : null}
+          <a href={`mailto:${EMAIL_CONTACTO}?subject=${encodeURIComponent("Recuperar acceso a mi cuenta TecRural")}`} className="inline-flex min-h-[48px] items-center justify-center rounded-xl border-2 border-stone-300 px-4 py-3 text-sm font-bold text-stone-800">Escribir por correo</a>
+        </div>
         <Link href="/" className="mt-4 inline-flex min-h-[52px] items-center font-bold text-olive-800 underline">
           Volver al inicio
         </Link>

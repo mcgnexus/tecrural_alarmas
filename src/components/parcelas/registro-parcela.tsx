@@ -97,7 +97,7 @@ export function RegistroParcela({
     <section className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm">
       <h2 className="text-lg font-bold text-stone-900">Nueva parcela</h2>
       <p className="mt-1 text-base leading-snug text-stone-700">
-         Se guarda en la nube y queda asociada de forma segura a este dispositivo. Usamos estos datos para guardar la parcela y calcular alertas; consulta la <a href="/privacidad" className="font-semibold underline">política de privacidad</a>. Si activas una cuenta, podrás conservarla y recuperarla desde otros dispositivos.
+          Se guarda en la nube y queda asociada de forma segura a este dispositivo. Usamos estos datos para guardar la parcela y calcular alertas; consulta la <a href="/privacidad" className="inline-flex min-h-11 items-center py-2 font-semibold underline">política de privacidad</a>. Si activas una cuenta, podrás conservarla y recuperarla desde otros dispositivos.
       </p>
 
       <div className="mt-3 grid gap-3">

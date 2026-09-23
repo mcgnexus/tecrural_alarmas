@@ -15,7 +15,7 @@ export default function ConfiguracionPage() {
       <section>
         <h1 className="text-lg font-semibold text-stone-800">Ajustes</h1>
         <p className="mt-1 text-[13px] text-stone-500">
-          Recibe avisos por WhatsApp. Las parcelas se guardan asociadas a este dispositivo. Consulta la <Link href="/privacidad" className="font-semibold underline">política de privacidad</Link>.
+          Recibe avisos por WhatsApp. Las parcelas se guardan asociadas a este dispositivo. Consulta la <Link href="/privacidad" className="inline-flex min-h-11 items-center py-2 font-semibold underline">política de privacidad</Link>.
         </p>
       </section>
 
