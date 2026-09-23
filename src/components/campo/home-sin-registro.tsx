@@ -161,11 +161,10 @@ export function HomeSinRegistro() {
         </select>
       </div>
 
-      <a href="#captacion" onClick={() => registrarEventoEmbudo("lead_started", { origen: "cta_principal" })} className="mt-6 inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-brand-800 px-5 py-3 text-lg font-black text-white hover:bg-brand-900">
-        Recibir avisos de mi zona
+      <a href={ubicacion ? "#prevision" : "#zona"} onClick={() => registrarEventoEmbudo("lead_started", { origen: "cta_principal" })} className="mt-6 inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-brand-800 px-5 py-3 text-lg font-black text-white hover:bg-brand-900">
+        Ver tiempo y riesgos
       </a>
-      <p className="mt-2 text-center text-sm text-stone-600">Gratis, sin registro. Sin mensajes innecesarios.</p>
-      {!ubicacion ? <a href="#zona" className="mt-3 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl border-2 border-stone-300 bg-white px-5 py-3 text-base font-bold text-stone-800">Elegir mi municipio</a> : null}
+      <p className="mt-2 text-center text-sm text-stone-600">Gratis, sin registro. Primero elige tu municipio.</p>
     </section>
 
     {/* BLOQUE 2: consulta meteorológica (solo tras municipio) */}
@@ -176,6 +175,23 @@ export function HomeSinRegistro() {
 
     {/* BLOQUE 3: explicación valor agrícola */}
     {ubicacion ? <BloqueValorAgricola key={`${ubicacion.lat}-${ubicacion.lon}-${cultivo}`} ubicacion={ubicacion} cultivo={cultivo || undefined} /> : null}
+
+    {/* CTA intercalada: activar avisos solo tras ver previsión */}
+    <section aria-label="Activar avisos" className="flex flex-col gap-2">
+      {ubicacion ? (
+        <>
+          <a href="#captacion" onClick={() => registrarEventoEmbudo("lead_started", { origen: "cta_post_prevision" })} className="inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-brand-800 px-5 py-3 text-lg font-black text-white hover:bg-brand-900">
+            Activar avisos gratis
+          </a>
+          <p className="text-center text-sm text-stone-600">Para {ubicacion.nombre} · Solo si hay riesgo relevante</p>
+        </>
+      ) : (
+        <div className="rounded-xl border-2 border-dashed border-stone-300 bg-stone-50 p-4 text-center">
+          <p className="text-sm font-semibold text-stone-700">Elige tu municipio arriba para activar avisos gratuitos</p>
+          <a href="#zona" className="mt-3 inline-flex min-h-[44px] items-center justify-center rounded-xl border-2 border-stone-300 bg-white px-4 text-sm font-bold text-stone-800">Elegir municipio</a>
+        </div>
+      )}
+    </section>
 
     {/* BLOQUE 4: captación */}
     <section id="captacion" className="scroll-mt-24">

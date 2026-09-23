@@ -146,7 +146,7 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes, munic
   return (
     <form onSubmit={enviar} noValidate className="rounded-2xl border-2 border-brand-800 bg-white p-5 shadow-sm">
        <h3 className="text-xl font-extrabold text-stone-900">Recibe avisos por WhatsApp</h3>
-       <p className="mt-1 text-base text-stone-700">Déjanos estos datos y te avisaremos gratis de lo importante para tu cultivo.</p>
+       <p className="mt-1 text-base text-stone-700">Completa tus datos y activa los avisos gratuitos de tu zona.</p>
       <div className="sr-only" aria-hidden="true">
         <label htmlFor="contacto-website">No rellenar</label>
         <input id="contacto-website" name="website" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} />
@@ -180,14 +180,13 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes, munic
           <span className="text-[15px] font-medium text-stone-900"><strong>Opcional:</strong> acepto recibir comunicaciones comerciales de TecRural. Puedo retirarlo cuando quiera.</span>
         </label>
 
-        <div className="mt-4 rounded-xl border border-stone-200 bg-wheat-50 p-3 text-sm leading-relaxed text-stone-700" aria-label="Qué ocurrirá al solicitar los avisos">
-          <p className="font-bold text-stone-900">Antes de enviar</p>
-          <ul className="mt-1 list-disc space-y-1 pl-5">
-            <li><strong>Qué se activa:</strong> el envío de avisos al WhatsApp que escribas arriba. Los mensajes llegan a ese número.</li>
-            <li><strong>Cuándo se evalúa:</strong> de forma programada (no continua).</li>
-            <li><strong>Tiempo real:</strong> no; solo avisamos si hay riesgo relevante.</li>
+        <div className="mt-3 rounded-xl border border-stone-200 bg-wheat-50 p-3 text-sm leading-snug text-stone-700" aria-label="Resumen de los avisos">
+          <p className="font-bold text-stone-900">Importante sobre los avisos</p>
+          <ul className="mt-1 space-y-1">
+            <li><strong>Destino:</strong> WhatsApp {telefono.trim() || "del número indicado"}.</li>
+            <li><strong>Evaluación:</strong> programada, según la zona y el cultivo.</li>
+            <li><strong>Envío:</strong> solo ante riesgo relevante; no es en tiempo real.</li>
           </ul>
-          <p className="mt-2 text-xs text-stone-500">Guardamos una referencia en este navegador para que veas la suscripción al volver. Si cambias de móvil, usas otro navegador o borras los datos del sitio, esa referencia se pierde pero los avisos siguen llegando al número indicado hasta que pidas la baja.</p>
         </div>
         <details className="mt-3 rounded-xl border border-stone-200 bg-stone-50 p-3 text-sm leading-relaxed text-stone-700">
           <summary className="cursor-pointer font-bold text-stone-800">Detalles sobre datos y privacidad</summary>
@@ -195,6 +194,7 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes, munic
             <p><strong>Qué recogemos:</strong> nombre, teléfono/WhatsApp, municipio y cultivo.</p>
             <p><strong>Para qué:</strong> crear la parcela y activar los avisos que solicitas.</p>
             <p><strong>Cancelación:</strong> escribe a mcgtecrural@gmail.com para darte de baja o borrar tus datos. Consulta la <Link href="/privacidad" className="font-bold text-brand-800 underline">política de privacidad</Link>.</p>
+            <p><strong>Referencia en este navegador:</strong> guardamos una referencia local para reconocer la suscripción cuando vuelvas. Si cambias de móvil o navegador, o borras los datos del sitio, esa referencia se pierde; los avisos seguirán llegando al WhatsApp indicado hasta que solicites la baja.</p>
             <p>Fuentes: AEMET y Open-Meteo. Datos orientativos, no sustituyen a un técnico. Sin mensajes innecesarios.</p>
           </div>
         </details>

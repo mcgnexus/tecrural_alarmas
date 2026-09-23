@@ -5,14 +5,16 @@ import path from "path";
 function read(p:string){ return fs.readFileSync(path.join(process.cwd(), p),"utf8"); }
 
 describe("Fase10 UX", () => {
-  it("una sola CTA principal Recibir avisos de mi zona", () => {
+  it("CTA principal prioriza probar antes de pedir datos", () => {
     const home = read("src/components/campo/home-sin-registro.tsx");
-    const ctas = (home.match(/Recibir avisos de mi zona/g) || []).length;
-    // debe existir y ser la principal (2-3 apariciones máx: hero + como funciona)
-    expect(ctas).toBeGreaterThanOrEqual(2);
-    expect(ctas).toBeLessThanOrEqual(3);
-    // secundarios también llevan al mismo formulario
+    // Hero prioriza ver tiempo/riesgos antes de pedir datos
+    expect(home).toContain("Ver tiempo y riesgos");
+    // Activar avisos aparece tras la previsión y solo cuando hay zona
+    expect(home).toContain("Activar avisos gratis");
     expect(home).toContain('href="#captacion"');
+    // No debe haber Recibir avisos antes de elegir municipio en bloque superior
+    const heroRecibir = (home.match(/Recibir avisos de mi zona/g) || []).length;
+    expect(heroRecibir).toBeLessThanOrEqual(1);
   });
   it("formulario único en portada", () => {
     const page = read("src/app/(campo)/page.tsx");
