@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { registrarEventoEmbudo } from "@/lib/analitica";
 import { MeteoZona } from "@/components/campo/meteo-zona";
 import { BloqueValorAgricola } from "@/components/campo/bloque-valor-agricola";
@@ -36,9 +36,15 @@ export function HomeSinRegistro() {
   const [municipios, setMunicipios] = useState<Municipio[]>([]);
   const [ubicacion, setUbicacion] = useState<Ubicacion | null>(null);
   const [cultivo, setCultivo] = useState<CulturaId | "otro" | "">("");
+  const [tiempoConsultado, setTiempoConsultado] = useState(false);
+  const [resumenConsultado, setResumenConsultado] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [geolocalizando, setGeolocalizando] = useState(false);
+  const datosConsultados = Boolean(ubicacion) && tiempoConsultado && resumenConsultado;
+
+  const marcarTiempoConsultado = useCallback(() => setTiempoConsultado(true), []);
+  const marcarResumenConsultado = useCallback(() => setResumenConsultado(true), []);
 
   useEffect(() => {
     const restaurarDatos = () => {
@@ -82,6 +88,7 @@ export function HomeSinRegistro() {
   function elegir(m: Municipio) {
     const u = { lat: Number(m.latitude), lon: Number(m.longitude), nombre: `${m.name}, ${m.province}`, province: m.province, aemetMunicipio: m.aemetMunicipio };
     setUbicacion(u); setMunicipios([]); setQuery("");
+    setTiempoConsultado(false); setResumenConsultado(false);
      try { localStorage.setItem("tecrural:ubicacion", JSON.stringify(u)); localStorage.setItem("tecrural:zona", zona ?? m.region); window.dispatchEvent(new Event("tecrural:datos-actualizados")); } catch {}
     registrarEventoEmbudo("municipality_selected", { municipio: m.name, zona: zona ?? m.region });
   }
@@ -130,23 +137,7 @@ export function HomeSinRegistro() {
       <h1 className="mt-2 text-4xl font-black leading-tight text-stone-950 sm:text-5xl lg:text-6xl">Protege tu cultivo frente a heladas y viento</h1>
       <p className="mt-3 text-lg leading-relaxed text-stone-700">Consulta el tiempo de tu zona y recibe avisos sencillos sobre heladas y viento que pueden afectar a tu cultivo.</p>
 
-      <aside className="mt-5 rounded-2xl border-2 border-olive-200 bg-white p-4" aria-label="Quién está detrás de TecRural">
-        <div className="flex items-start gap-3">
-          <Image src="/perfil.webp" alt="Manuel Carrasco García, de Huéscar" width={64} height={64} preload className="h-16 w-16 shrink-0 rounded-full border-2 border-olive-200 object-cover object-[center_28%]" />
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wide text-olive-800">Detrás de TecRural</p>
-            <p className="mt-0.5 text-lg font-extrabold text-stone-950">Manuel Carrasco García</p>
-            <p className="text-base text-stone-700">De Huéscar, Granada</p>
-          </div>
-        </div>
-        <p className="mt-3 text-sm leading-relaxed text-stone-700">Soy el responsable de TecRural y del tratamiento de tus datos. Si tienes dudas, puedes hablar conmigo directamente.</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {enlaceWhatsapp("Hola Manuel, tengo una consulta sobre TecRural Campo.") ? <a href={enlaceWhatsapp("Hola Manuel, tengo una consulta sobre TecRural Campo")!} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-olive-800 px-4 py-2 font-bold text-white">Escríbeme por WhatsApp</a> : null}
-          {enlaceTelefono() ? <a href={enlaceTelefono()!} className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-stone-300 px-4 py-2 font-bold text-stone-800">Llamar{TELEFONO_VISIBLE ? `: ${TELEFONO_VISIBLE}` : ""}</a> : null}
-          {!enlaceWhatsapp() && !enlaceTelefono() ? <a href={`mailto:${EMAIL_CONTACTO}`} className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-stone-300 px-4 py-2 font-bold text-stone-800">Escríbeme por correo</a> : null}
-        </div>
-        <p className="mt-2 text-xs text-stone-500">Responsable del tratamiento · <Link href="/privacidad" className="inline-flex min-h-11 items-center py-2 font-semibold underline">Ver política de privacidad</Link></p>
-      </aside>
+      <p className="mt-3 text-sm text-stone-600">Servicio local creado por <strong className="text-stone-800">Manuel Carrasco, de Huéscar</strong>.</p>
 
       <div id="zona" className="scroll-mt-24 mt-6 rounded-2xl border-2 border-olive-700 bg-white p-5 shadow-sm">
         <p className="text-[15px] font-bold uppercase tracking-wide text-olive-700">Paso 1 — tu zona</p>
@@ -175,7 +166,7 @@ export function HomeSinRegistro() {
         <label htmlFor="cultivo-home" className="block text-base font-bold text-stone-900">Tu cultivo</label>
         <p className="mt-1 text-sm text-stone-600">Para adaptar helada y viento a tu caso.</p>
         {/* Cultivos incluidos en MVP: Almendro, Olivar, Pistacho, Aguacate, Mango, Chirimoyo, Cereal + Otro */}
-        <select id="cultivo-home" value={cultivo} onChange={(e) => { const raw = e.target.value; const v = raw === "otro" ? "otro" : raw as CulturaId | ""; setCultivo(v); try { localStorage.setItem("tecrural:cultivo", raw); window.dispatchEvent(new Event("tecrural:datos-actualizados")); } catch {} if (raw) registrarEventoEmbudo("crop_selected", { cultivo: raw, municipio: ubicacion?.nombre ?? null }); }} className="mt-2 min-h-[52px] w-full rounded-xl border-2 border-stone-300 bg-white px-4 text-base font-semibold text-stone-900">
+        <select id="cultivo-home" value={cultivo} onChange={(e) => { const raw = e.target.value; const v = raw === "otro" ? "otro" : raw as CulturaId | ""; setCultivo(v); setResumenConsultado(false); try { localStorage.setItem("tecrural:cultivo", raw); window.dispatchEvent(new Event("tecrural:datos-actualizados")); } catch {} if (raw) registrarEventoEmbudo("crop_selected", { cultivo: raw, municipio: ubicacion?.nombre ?? null }); }} className="mt-2 min-h-[52px] w-full rounded-xl border-2 border-stone-300 bg-white px-4 text-base font-semibold text-stone-900">
           <option value="">Elige tu cultivo</option>
           {idsCultivos.map((id) => <option key={id} value={id}>{catalogoCultivos[id].nombre}</option>)}
           <option value="otro">Otro</option>
@@ -191,21 +182,43 @@ export function HomeSinRegistro() {
     {/* BLOQUE 2: consulta meteorológica (solo tras municipio) */}
     {ubicacion ? <section id="prevision" aria-label="Tiempo de tu zona" className="scroll-mt-24 flex flex-col gap-3">
       <h2 className="text-xl font-extrabold text-stone-950">Tiempo de tu zona</h2>
-      <MeteoZona key={`${ubicacion.lat}-${ubicacion.lon}`} ubicacion={ubicacion} />
+      <MeteoZona key={`${ubicacion.lat}-${ubicacion.lon}`} ubicacion={ubicacion} onComplete={marcarTiempoConsultado} />
     </section> : null}
 
     {/* BLOQUE 3: explicación valor agrícola */}
-    {ubicacion ? <BloqueValorAgricola key={`${ubicacion.lat}-${ubicacion.lon}-${cultivo}`} ubicacion={ubicacion} cultivo={cultivo && cultivo !== "otro" ? cultivo : undefined} /> : null}
+    {ubicacion ? <BloqueValorAgricola key={`${ubicacion.lat}-${ubicacion.lon}-${cultivo}`} ubicacion={ubicacion} cultivo={cultivo && cultivo !== "otro" ? cultivo : undefined} onComplete={marcarResumenConsultado} /> : null}
+
+    {datosConsultados ? <aside className="rounded-2xl border-2 border-olive-200 bg-white p-5 shadow-sm" aria-label="Contacto directo con el responsable de TecRural">
+      <div className="flex items-center gap-3">
+        <Image src="/perfil.webp" alt="Manuel Carrasco García, de Huéscar" width={64} height={64} className="h-16 w-16 shrink-0 rounded-full border-2 border-olive-200 object-cover object-[center_28%]" />
+        <div>
+          <p className="text-sm font-bold uppercase tracking-wide text-olive-800">¿Tienes alguna duda?</p>
+          <p className="text-lg font-extrabold text-stone-950">Manuel Carrasco García</p>
+          <p className="text-sm text-stone-700">De Huéscar · responsable de TecRural y de tus datos</p>
+        </div>
+      </div>
+      <p className="mt-3 text-sm leading-relaxed text-stone-700">Después de consultar el tiempo y el resumen de tu zona, puedes contactar directamente conmigo.</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {enlaceWhatsapp("Hola Manuel, tengo una consulta sobre TecRural Campo.") ? <a href={enlaceWhatsapp("Hola Manuel, tengo una consulta sobre TecRural Campo")!} onClick={() => registrarEventoEmbudo("whatsapp_clicked", { origen: "ficha_personal", canal: "whatsapp" })} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-olive-800 px-4 py-2 font-bold text-white">Escríbeme por WhatsApp</a> : null}
+        {enlaceTelefono() ? <a href={enlaceTelefono()!} onClick={() => registrarEventoEmbudo("phone_clicked", { origen: "ficha_personal", canal: "telefono" })} className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-stone-300 px-4 py-2 font-bold text-stone-800">Llamar{TELEFONO_VISIBLE ? `: ${TELEFONO_VISIBLE}` : ""}</a> : null}
+        {!enlaceWhatsapp() && !enlaceTelefono() ? <a href={`mailto:${EMAIL_CONTACTO}`} onClick={() => registrarEventoEmbudo("email_clicked", { origen: "ficha_personal", canal: "correo" })} className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-stone-300 px-4 py-2 font-bold text-stone-800">Escríbeme por correo</a> : null}
+      </div>
+      <p className="mt-2 text-xs text-stone-500">Responsable del tratamiento · <Link href="/privacidad" className="inline-flex min-h-11 items-center py-2 font-semibold underline">Ver política de privacidad</Link></p>
+    </aside> : null}
 
     {/* CTA intercalada: activar avisos solo tras ver previsión */}
     <section aria-label="Activar avisos" className="flex flex-col gap-2">
-      {ubicacion ? (
+      {datosConsultados ? (
         <>
           <a href="#captacion" onClick={() => registrarEventoEmbudo("lead_started", { origen: "cta_post_prevision" })} className="inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-brand-800 px-5 py-3 text-lg font-black text-white hover:bg-brand-900">
             Activar avisos gratis
           </a>
-          <p className="text-center text-sm text-stone-600">Para {ubicacion.nombre} · Solo si hay riesgo relevante</p>
+          <p className="text-center text-sm text-stone-600">Para {ubicacion?.nombre ?? "tu zona"} · Solo si hay riesgo relevante</p>
         </>
+      ) : ubicacion ? (
+        <div role="status" aria-live="polite" className="rounded-xl border-2 border-sky-200 bg-sky-50 p-4 text-center">
+          <p className="text-sm font-semibold text-sky-950">Estamos consultando el tiempo y preparando el resumen agrícola de {ubicacion.nombre}.</p>
+        </div>
       ) : (
         <div className="rounded-xl border-2 border-dashed border-stone-300 bg-stone-50 p-4 text-center">
           <p className="text-sm font-semibold text-stone-700">Elige tu municipio arriba para activar avisos gratuitos</p>
@@ -216,8 +229,14 @@ export function HomeSinRegistro() {
 
     {/* BLOQUE 4: captación */}
     <section id="captacion" aria-label="Activar avisos gratuitos" className="scroll-mt-24">
-      <h2 className="text-xl font-extrabold text-stone-950">Activa avisos gratuitos para tu zona</h2>
-      <div className="mt-3"><FormularioContacto key={ubicacion?.nombre ?? "sin-ubicacion"} municipioInicial={ubicacion ? municipioDeUbicacion(ubicacion.nombre) : ""} cultivoInicial={cultivo && cultivo !== "otro" ? catalogoCultivos[cultivo].nombre : ""} onCultivoChange={(nombre) => setCultivo(idsCultivos.find((id) => catalogoCultivos[id].nombre === nombre) ?? "")} activarAvisosGratis ubicacionAvisos={ubicacion ? { lat: ubicacion.lat, lon: ubicacion.lon } : null} /></div>
+      {datosConsultados ? <>
+        <h2 className="text-xl font-extrabold text-stone-950">Activa avisos gratuitos para tu zona</h2>
+        <div className="mt-3"><FormularioContacto key={ubicacion?.nombre ?? "sin-ubicacion"} municipioInicial={ubicacion ? municipioDeUbicacion(ubicacion.nombre) : ""} cultivoInicial={cultivo && cultivo !== "otro" ? catalogoCultivos[cultivo].nombre : ""} onCultivoChange={(nombre) => setCultivo(idsCultivos.find((id) => catalogoCultivos[id].nombre === nombre) ?? "")} activarAvisosGratis ubicacionAvisos={ubicacion ? { lat: ubicacion.lat, lon: ubicacion.lon } : null} /></div>
+      </> : <div className="rounded-2xl border-2 border-olive-200 bg-white p-5">
+        <h2 className="text-xl font-extrabold text-stone-950">Primero, consulta tu zona</h2>
+        <p className="mt-2 text-base leading-relaxed text-stone-700">Elige tu municipio y revisa el tiempo y el resumen agrícola. Después podrás activar avisos gratuitos por WhatsApp.</p>
+        <a href={ubicacion ? "#prevision" : "#zona"} className="mt-4 inline-flex min-h-[48px] items-center justify-center rounded-xl border-2 border-olive-800 px-5 py-3 font-bold text-olive-900">{ubicacion ? "Ver la consulta" : "Elegir municipio"}</a>
+      </div>}
     </section>
 
     {/* BLOQUE 5: confianza */}

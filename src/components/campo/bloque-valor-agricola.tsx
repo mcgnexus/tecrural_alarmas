@@ -176,7 +176,7 @@ function nivelDelDia(
  * Resumen agrícola: nivel de riesgo, día de mayor riesgo y explicación breve.
  * Los datos diarios detallados vive en `MeteoZona`; aquí solo la conclusión.
  */
-export function BloqueValorAgricola({ ubicacion, cultivo }: { ubicacion: Ubicacion; cultivo?: CulturaId }) {
+export function BloqueValorAgricola({ ubicacion, cultivo, onComplete }: { ubicacion: Ubicacion; cultivo?: CulturaId; onComplete?: () => void }) {
   const plan = planForUser();
   const puedeHelada = canUseFeature(plan, "frost_alert");
   const puedeViento = canUseFeature(plan, "wind_alert");
@@ -278,10 +278,15 @@ export function BloqueValorAgricola({ ubicacion, cultivo }: { ubicacion: Ubicaci
       for (const d of dias) if (!peor || ORDEN[d.nivel] > ORDEN[peor.nivel]) peor = d;
       setNivel(peor ? peor.nivel : "info");
       setPeorDia(peor);
-    }).catch(() => { if (activo) setFailed(true); }).finally(() => { if (activo) setCargando(false); });
+    }).catch(() => { if (activo) setFailed(true); }).finally(() => {
+      if (activo) {
+        setCargando(false);
+        onComplete?.();
+      }
+    });
 
     return () => { activo = false; };
-  }, [ubicacion.lat, ubicacion.lon, ubicacion.aemetMunicipio, ubicacion.nombre, cultivo, intento, puedeHelada, puedeViento]);
+  }, [ubicacion.lat, ubicacion.lon, ubicacion.aemetMunicipio, ubicacion.nombre, cultivo, intento, puedeHelada, puedeViento, onComplete]);
 
   if (!puedeHelada && !puedeViento) return null;
   if (cargando) return (

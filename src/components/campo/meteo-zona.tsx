@@ -96,7 +96,7 @@ function extremosPorDia(horas: Hora[]): DiaExtremos[] {
   return Array.from(porDia.values()).slice(0, DIAS_PREVISION);
 }
 
-export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
+export function MeteoZona({ ubicacion, onComplete }: { ubicacion: Ubicacion; onComplete?: () => void }) {
   const [actual, setActual] = useState<Hora | null>(null);
   const [dias, setDias] = useState<DiaExtremos[]>([]);
   const [minima, setMinima] = useState<number | null>(null);
@@ -143,10 +143,15 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
         }
       })
       .catch(() => { if (activo) setError("No pudimos cargar el tiempo de tu zona. Inténtalo de nuevo."); })
-      .finally(() => { if (activo) setCargando(false); });
+      .finally(() => {
+        if (activo) {
+          setCargando(false);
+          onComplete?.();
+        }
+      });
 
     return () => { activo = false; };
-  }, [ubicacion, intento]);
+  }, [ubicacion, intento, onComplete]);
 
   const horaDatoEsFutura = actual?.timestamp && consultadoEl ? Date.parse(actual.timestamp) > Date.parse(consultadoEl) : false;
   // Fase 5: caducidad 90m — no mostrar como actual si stale

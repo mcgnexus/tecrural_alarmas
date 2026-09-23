@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type MouseEvent } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -104,7 +104,7 @@ function desplazarEnPagina(
   if (destino) {
     e.preventDefault();
     destino.scrollIntoView({ behavior: "smooth", block: "start" });
-    if (hash) window.history.replaceState(null, "", `#${hash}`);
+    if (destino.id) window.history.replaceState(null, "", `#${destino.id}`);
     return;
   }
 
@@ -115,13 +115,44 @@ function desplazarEnPagina(
   }
 }
 
+function useTieneUbicacion(): boolean {
+  const [tieneUbicacion, setTieneUbicacion] = useState(false);
+
+  useEffect(() => {
+    const revisar = () => {
+      try {
+        setTieneUbicacion(Boolean(localStorage.getItem("tecrural:ubicacion")));
+      } catch {
+        setTieneUbicacion(false);
+      }
+    };
+    revisar();
+    window.addEventListener("tecrural:datos-actualizados", revisar);
+    window.addEventListener("storage", revisar);
+    return () => {
+      window.removeEventListener("tecrural:datos-actualizados", revisar);
+      window.removeEventListener("storage", revisar);
+    };
+  }, []);
+
+  return tieneUbicacion;
+}
+
+function hrefDeItem(item: ItemNav, tieneUbicacion: boolean): string {
+  return item.etiqueta === "Tiempo"
+    ? tieneUbicacion ? "/#prevision" : "/#zona"
+    : item.href;
+}
+
 export function BottomNav() {
   const pathname = usePathname();
+  const tieneUbicacion = useTieneUbicacion();
 
   return (
     <nav className="sticky bottom-0 z-10 border-t-2 border-stone-900/10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/95 md:hidden">
       <div className="mx-auto grid w-full max-w-5xl grid-cols-5 gap-0.5 px-2 pb-[env(safe-area-inset-bottom)] pt-0.5">
         {items.map((item) => {
+          const href = hrefDeItem(item, tieneUbicacion);
           const base = item.href.split("#")[0] || "/";
           const activo =
             base === "/"
@@ -130,10 +161,10 @@ export function BottomNav() {
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={href}
               aria-current={activo ? "page" : undefined}
               aria-label={item.etiqueta}
-              onClick={(e) => desplazarEnPagina(e, item.href, pathname)}
+              onClick={(e) => desplazarEnPagina(e, href, pathname)}
               className={`flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[13px] font-semibold leading-none sm:text-[15px] ${
                 activo
                   ? "bg-brand-800 text-white shadow-sm"
@@ -153,6 +184,7 @@ export function BottomNav() {
 /** Navegación superior para escritorio; en móvil se usa `BottomNav`. */
 export function NavEscritorio() {
   const pathname = usePathname();
+  const tieneUbicacion = useTieneUbicacion();
   const [seleccion, setSeleccion] = useState<{ path: string; href: string } | null>(
     null
   );
@@ -160,6 +192,7 @@ export function NavEscritorio() {
   return (
     <nav className="hidden items-center gap-1 md:flex">
       {items.map((item) => {
+        const href = hrefDeItem(item, tieneUbicacion);
         const activoRuta =
           item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
         const activo =
@@ -169,11 +202,11 @@ export function NavEscritorio() {
         return (
           <Link
             key={item.href}
-            href={item.href}
+            href={href}
             aria-current={activo ? "page" : undefined}
             onClick={(e) => {
-              setSeleccion({ path: pathname, href: item.href });
-              desplazarEnPagina(e, item.href, pathname);
+              setSeleccion({ path: pathname, href });
+              desplazarEnPagina(e, href, pathname);
             }}
             className={`inline-flex min-h-[44px] items-center rounded-xl px-2 text-[14px] font-semibold transition-colors lg:px-3 lg:text-[15px] ${
               activo

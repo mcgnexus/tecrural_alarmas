@@ -17,6 +17,8 @@ export type EventoEmbudo =
   | "lead_form_submitted"
   | "lead_form_error"
   | "whatsapp_clicked"
+  | "phone_clicked"
+  | "email_clicked"
   | "premium_feature_locked"
   // legacy alias para no romper calls existentes
   | "click_whatsapp"
@@ -37,6 +39,8 @@ const EVENTO_LEAD: Record<EventoEmbudo, LeadEventType | null> = {
   lead_form_submitted: "CONTACT_REQUESTED",
   lead_form_error: null,
   whatsapp_clicked: "CONTACT_REQUESTED",
+  phone_clicked: "CONTACT_REQUESTED",
+  email_clicked: "CONTACT_REQUESTED",
   premium_feature_locked: null,
   // legacy
   click_whatsapp: "CONTACT_REQUESTED",
