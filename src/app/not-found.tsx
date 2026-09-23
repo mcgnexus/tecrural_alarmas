@@ -6,7 +6,7 @@ export default function NotFound() {
     <main className="mx-auto flex w-full max-w-xl flex-1 items-center px-4 py-12">
       <section className="w-full rounded-3xl border-2 border-earth-300 bg-white p-6 text-center shadow-sm sm:p-8">
         <Link href="/" aria-label="TecRural Campo, ir al inicio" className="mx-auto inline-flex items-center gap-2">
-          <Image src="/logo-tecrural.webp" alt="Logo de TecRural" width={48} height={48} preload />
+          <Image src="/TecRural_icono.png" alt="Logo de TecRural" width={48} height={48} preload />
           <span className="text-lg font-black text-olive-950">TecRural Campo</span>
         </Link>
         <p className="mt-6 text-sm font-bold uppercase tracking-widest text-olive-700">Error 404</p>

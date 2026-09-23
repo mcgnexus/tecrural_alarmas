@@ -151,6 +151,9 @@ export default function AdminPage() {
           <a href="/admin/suscritos" className="rounded-2xl border-2 border-emerald-700 bg-emerald-50 px-5 py-4 text-center text-base font-bold text-emerald-900 hover:bg-emerald-100">
             Ver control de suscritos — datos, consentimiento, parcelas e interacción
           </a>
+          <a href="/admin/users" className="rounded-2xl border-2 border-olive-700 bg-wheat-50 px-5 py-4 text-center text-base font-bold text-olive-900 hover:bg-olive-100">
+            Gestionar usuarios, solicitudes recibidas y planes de suscripción
+          </a>
           <a
             href="/gestion"
             className="rounded-2xl border-2 border-brand-800 bg-brand-50 px-5 py-4 text-center text-base font-bold text-brand-900 hover:bg-brand-100"

@@ -19,7 +19,7 @@ const datosEstructurados = {
       "@type": "Organization",
       name: "TecRural Campo",
       url: "https://tecrural.es",
-      logo: "https://tecrural.es/logo-tecrural.webp",
+      logo: "https://tecrural.es/TecRural_icono.png",
       founder: { "@type": "Person", name: "Manuel Carrasco García", address: { "@type": "PostalAddress", addressLocality: "Huéscar", addressRegion: "Granada", addressCountry: "ES" } },
       email: EMAIL_CONTACTO,
     },

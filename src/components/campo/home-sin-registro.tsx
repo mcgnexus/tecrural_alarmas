@@ -124,7 +124,7 @@ export function HomeSinRegistro() {
     {/* BLOQUE 1: propuesta principal */}
     <section className="rounded-3xl border-2 border-earth-700 bg-wheat-50 p-6 shadow-sm">
       <div className="flex items-center gap-2">
-        <Image src="/logo-tecrural.webp" alt="Logo de TecRural" width={40} height={40} preload className="h-10 w-10" />
+        <Image src="/TecRural_icono.png" alt="Logo de TecRural" width={40} height={40} preload className="h-10 w-10" />
         <p className="text-[15px] font-bold uppercase tracking-wider text-olive-700">TecRural Campo</p>
       </div>
       <h1 className="mt-2 text-4xl font-black leading-tight text-stone-950 sm:text-5xl lg:text-6xl">Protege tu cultivo frente a heladas y viento</h1>

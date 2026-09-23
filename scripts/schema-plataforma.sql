@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS plataforma.users (
   phone text,
   name text,
   auth_provider text NOT NULL DEFAULT 'anon',
+  subscription_plan text NOT NULL DEFAULT 'free',
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   marketing_consent boolean NOT NULL DEFAULT false,
@@ -28,6 +29,8 @@ CREATE TABLE IF NOT EXISTS plataforma.users (
   consent_version text,
   consent_timestamp timestamptz
 );
+
+ALTER TABLE plataforma.users ADD COLUMN IF NOT EXISTS subscription_plan text NOT NULL DEFAULT 'free';
 
 -- RGPD: consentimiento explícito separado (no auto-equivalencia alerta=publicidad)
 ALTER TABLE plataforma.users ADD COLUMN IF NOT EXISTS consent_version text;

@@ -24,6 +24,7 @@ export const usuarios = plataforma.table("users", {
   phone: text("phone"),
   name: text("name"),
   authProvider: text("auth_provider").notNull().default("anon"),
+  subscriptionPlan: text("subscription_plan").notNull().default("free"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

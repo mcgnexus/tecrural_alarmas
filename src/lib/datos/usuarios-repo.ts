@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { obtenerDb } from "./db";
 import { tokensUsuario, usuarios } from "./plataforma-schema";
+import type { Plan } from "@/lib/planes/permisos";
 
 export type Usuario = typeof usuarios.$inferSelect;
 
@@ -12,6 +13,7 @@ export interface NuevoUsuario {
   authProvider?: string;
   consentVersion?: string | null;
   marketingConsent?: boolean;
+  subscriptionPlan?: Plan;
 }
 
 /** Duración de una invitación de acceso (14 días). */
@@ -31,6 +33,7 @@ export async function crearUsuario(input: NuevoUsuario): Promise<Usuario> {
       phone: input.telefono?.trim() || null,
       email: input.email?.trim().toLowerCase() || null,
       authProvider: input.authProvider ?? "manual",
+      subscriptionPlan: input.subscriptionPlan ?? "free",
       consentVersion: input.consentVersion ?? null,
       consentTimestamp: input.consentVersion ? ahora : null,
       marketingConsent: input.marketingConsent ?? false,
@@ -54,7 +57,7 @@ export async function listarUsuarios(limite = 200): Promise<Usuario[]> {
 
 export async function actualizarUsuario(
   id: string,
-  cambios: Partial<Pick<Usuario, "name" | "phone" | "email" | "marketingConsent">>,
+  cambios: Partial<Pick<Usuario, "name" | "phone" | "email" | "marketingConsent" | "subscriptionPlan">>,
 ): Promise<void> {
   const db = obtenerDb();
   await db
