@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { colorTemperatura, etiquetaTermica } from "@/lib/ui/temperatura";
 import { colorHumedad, etiquetaHumedad } from "@/lib/ui/humedad";
 import { registrarEventoEmbudo } from "@/lib/analitica";
-import { zonaCultivoPorCoordenadas } from "@/lib/cultivos/zona";
 
 type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
 
@@ -98,7 +97,6 @@ function extremosPorDia(horas: Hora[]): DiaExtremos[] {
 }
 
 export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
-  const esCostaTropical = zonaCultivoPorCoordenadas(ubicacion.lat, ubicacion.lon) === "costa";
   const [actual, setActual] = useState<Hora | null>(null);
   const [dias, setDias] = useState<DiaExtremos[]>([]);
   const [minima, setMinima] = useState<number | null>(null);
@@ -150,9 +148,6 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
     return () => { activo = false; };
   }, [ubicacion, intento]);
 
-  const hayHelada = minima !== null && minima <= 0;
-  const riesgoHelada = minima !== null && minima <= 2;
-  const diasRiesgo = dias.filter((d) => d.minima !== null && d.minima <= 2);
   const horaDatoEsFutura = actual?.timestamp && consultadoEl ? Date.parse(actual.timestamp) > Date.parse(consultadoEl) : false;
   // Fase 5: caducidad 90m — no mostrar como actual si stale
   const fechaDatos = actual?.timestamp ? new Date(actual.timestamp).toISOString() : null;
@@ -203,42 +198,19 @@ export function MeteoZona({ ubicacion }: { ubicacion: Ubicacion }) {
                 <span className="text-[11px] font-bold uppercase tracking-wide text-stone-500">Temperatura · lluvia · viento</span>
               </div>
               <ul className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {dias.map((dia) => {
-                  const helada = dia.minima !== null && dia.minima <= 0;
-                  const riesgo = dia.minima !== null && dia.minima <= 2;
-                  const vientoFuerte = dia.rachaMaxima !== null && dia.rachaMaxima >= 50;
-                  return (
-                    <li key={dia.clave} className="rounded-xl border-2 border-stone-200 bg-wheat-50 p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[15px] font-bold capitalize text-stone-800">{dia.etiqueta}</span>
-                        {riesgo ? <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${helada ? "bg-blue-100 text-blue-800" : "bg-amber-100 text-amber-800"}`}>{helada ? "Helada" : "Riesgo de frío"}</span> : vientoFuerte ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">Viento fuerte</span> : null}
-                      </div>
-                      <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-                        <p><span className="text-stone-500">Mín / Máx</span><br /><strong className={colorTemperatura(dia.minima)}>{numero(dia.minima, "°", 0)}</strong> / <strong className={colorTemperatura(dia.maxima)}>{numero(dia.maxima, "°", 0)}</strong></p>
-                        <p><span className="text-stone-500">Lluvia</span><br /><strong>{numero(dia.lluviaTotal, " mm", 1)}</strong></p>
-                        <p><span className="text-stone-500">Viento máx.</span><br /><strong>{numero(dia.vientoMaximo, " km/h")}</strong></p>
-                        <p><span className="text-stone-500">Rachas</span><br /><strong>{numero(dia.rachaMaxima, " km/h")}</strong></p>
-                      </div>
-                    </li>
-                  );
-                })}
+                {dias.map((dia) => (
+                  <li key={dia.clave} className="rounded-xl border-2 border-stone-200 bg-wheat-50 p-3">
+                    <span className="text-[15px] font-bold capitalize text-stone-800">{dia.etiqueta}</span>
+                    <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                      <p><span className="text-stone-500">Mín / Máx</span><br /><strong className={colorTemperatura(dia.minima)}>{numero(dia.minima, "°", 0)}</strong> / <strong className={colorTemperatura(dia.maxima)}>{numero(dia.maxima, "°", 0)}</strong></p>
+                      <p><span className="text-stone-500">Lluvia</span><br /><strong>{numero(dia.lluviaTotal, " mm", 1)}</strong></p>
+                      <p><span className="text-stone-500">Viento máx.</span><br /><strong>{numero(dia.vientoMaximo, " km/h")}</strong></p>
+                      <p><span className="text-stone-500">Rachas</span><br /><strong>{numero(dia.rachaMaxima, " km/h")}</strong></p>
+                    </div>
+                  </li>
+                ))}
               </ul>
             </div>
-          ) : null}
-
-          {esCostaTropical ? (
-            <p className="mt-4 rounded-xl border-2 border-sky-200 bg-sky-50 p-3 text-[14px] font-semibold text-sky-950">Viento fuerte: se consideran relevantes las rachas previstas de 50 km/h o más. Consulta la previsión diaria superior para ver los días con mayor intensidad.</p>
-          ) : riesgoHelada ? (
-            <div className={`mt-4 rounded-xl border-2 p-4 ${hayHelada ? "border-blue-300 bg-blue-50" : "border-amber-300 bg-amber-50"}`}>
-              <p className={`text-[15px] font-extrabold ${hayHelada ? "text-blue-900" : "text-amber-900"}`}>
-                {hayHelada ? `Helada probable: mínima de ${numero(minima, " °C", 1)} en los próximos ${DIAS_PREVISION} días` : `Vigila el frío: mínima de ${numero(minima, " °C", 1)} en los próximos ${DIAS_PREVISION} días`}
-              </p>
-              <p className="mt-1 text-[13px] leading-relaxed text-stone-700">
-                Días con riesgo: {diasRiesgo.map((d) => d.etiqueta).join(", ")}. Protege los cultivos sensibles durante la madrugada. Es una estimación orientativa, no un aviso oficial.
-              </p>
-            </div>
-          ) : minima !== null ? (
-            <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-[14px] font-semibold text-emerald-900">Sin riesgo de helada en los próximos {DIAS_PREVISION} días (mínima {numero(minima, " °C", 1)}).</p>
           ) : null}
         </>
       ) : null}

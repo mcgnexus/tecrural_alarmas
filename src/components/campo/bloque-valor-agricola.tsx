@@ -8,6 +8,59 @@ import { registrarEventoEmbudo } from "@/lib/analitica";
 
 type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
 
+type Hora = {
+  timestamp: string;
+  temperatureC: number | null;
+  windGustKmh: number | null;
+};
+
+type Nivel = "info" | "aviso" | "alerta" | "critica";
+
+type Alerta = { tipo: string; severidad: string; mensaje: string };
+
+type ResultadoRiesgo = {
+  alertas: Alerta[];
+  fenofase?: string | null;
+  estadoEvaluacion?: string;
+  fechaCaducidad?: string;
+  evaluadoEl?: string;
+};
+
+type DiaRiesgo = {
+  clave: string;
+  etiqueta: string;
+  minima: number | null;
+  rachaMaxima: number | null;
+  nivel: Nivel;
+  helada: boolean;
+  viento: boolean;
+  umbralHelada: number;
+  umbralViento: number;
+};
+
+const DIAS_PREVISION = 5;
+const UMBRAL_GENERICO = { tminMortal: -5, tminHelada: 1, vientoCriticoKmh: 50 };
+
+const ORDEN: Record<Nivel, number> = { info: 0, aviso: 1, alerta: 2, critica: 3 };
+const ETIQUETA_NIVEL: Record<Nivel, string> = {
+  info: "Sin riesgo",
+  aviso: "Aviso",
+  alerta: "Alerta",
+  critica: "Crítico",
+};
+const COLOR_NIVEL: Record<Nivel, string> = {
+  info: "text-emerald-700",
+  aviso: "text-amber-800",
+  alerta: "text-orange-800",
+  critica: "text-red-700",
+};
+const PARCHES_NIVEL: Record<Nivel, string> = {
+  info: "border-emerald-300 bg-emerald-50 text-emerald-800",
+  aviso: "border-amber-300 bg-amber-50 text-amber-900",
+  alerta: "border-orange-300 bg-orange-50 text-orange-900",
+  critica: "border-red-300 bg-red-50 text-red-900",
+};
+
 function fechaLocal(valor: string): string {
   return new Intl.DateTimeFormat("es-ES", {
     timeZone: "Europe/Madrid",
@@ -16,20 +69,73 @@ function fechaLocal(valor: string): string {
   }).format(new Date(valor));
 }
 
-type Hora = {
-  timestamp: string;
-  temperatureC: number | null;
-  windGustKmh: number | null;
-  windSpeedKmh: number | null;
-};
+function peorNivel(a: Nivel, b: Nivel): Nivel {
+  return ORDEN[a] >= ORDEN[b] ? a : b;
+}
 
+function nivelDeSeveridad(severidad: string): Nivel {
+  return severidad === "critica" || severidad === "alerta" || severidad === "aviso"
+    ? severidad
+    : "info";
+}
+
+/** Resume la serie horaria por día: mínima y racha máxima. */
+function diasDesdeHoras(horas: Hora[]): Array<{
+  clave: string;
+  etiqueta: string;
+  minima: number | null;
+  rachaMaxima: number | null;
+}> {
+  const porDia = new Map<string, { clave: string; etiqueta: string; minima: number | null; rachaMaxima: number | null }>();
+  for (const hora of horas) {
+    const t = typeof hora.temperatureC === "number" && Number.isFinite(hora.temperatureC) ? hora.temperatureC : null;
+    const racha = typeof hora.windGustKmh === "number" && Number.isFinite(hora.windGustKmh) ? hora.windGustKmh : null;
+    if (t === null && racha === null) continue;
+    const fecha = new Date(hora.timestamp);
+    if (Number.isNaN(fecha.getTime())) continue;
+    const clave = `${fecha.getFullYear()}-${fecha.getMonth()}-${fecha.getDate()}`;
+    const etiqueta = fecha.toLocaleDateString("es-ES", { weekday: "short", day: "2-digit" });
+    const actual = porDia.get(clave);
+    if (!actual) porDia.set(clave, { clave, etiqueta, minima: t, rachaMaxima: racha });
+    else {
+      if (t !== null && (actual.minima === null || t < actual.minima)) actual.minima = t;
+      if (racha !== null && (actual.rachaMaxima === null || racha > actual.rachaMaxima)) actual.rachaMaxima = racha;
+    }
+  }
+  return Array.from(porDia.values()).slice(0, DIAS_PREVISION);
+}
+
+function nivelDelDia(
+  minima: number | null,
+  rachaMaxima: number | null,
+  umbral: { tminMortal: number; tminHelada: number; vientoCriticoKmh: number },
+  puedeHelada: boolean,
+  puedeViento: boolean,
+): { nivel: Nivel; helada: boolean; viento: boolean } {
+  let nivel: Nivel = "info";
+  let helada = false;
+  let viento = false;
+  if (puedeHelada && minima !== null) {
+    if (minima <= umbral.tminMortal) { nivel = peorNivel(nivel, "critica"); helada = true; }
+    else if (minima <= umbral.tminHelada) { nivel = peorNivel(nivel, "aviso"); helada = true; }
+  }
+  if (puedeViento && rachaMaxima !== null) {
+    if (rachaMaxima >= umbral.vientoCriticoKmh * 1.4) { nivel = peorNivel(nivel, "alerta"); viento = true; }
+    else if (rachaMaxima >= umbral.vientoCriticoKmh) { nivel = peorNivel(nivel, "aviso"); viento = true; }
+  }
+  return { nivel, helada, viento };
+}
+
+/**
+ * Resumen agrícola: nivel de riesgo, día de mayor riesgo y explicación breve.
+ * Los datos diarios detallados vive en `MeteoZona`; aquí solo la conclusión.
+ */
 export function BloqueValorAgricola({ ubicacion, cultivo }: { ubicacion: Ubicacion; cultivo?: CulturaId }) {
   const plan = planForUser();
-  // Fase 4: centralizado — no hardcodear `if (feature==='rain')` disperso
   const puedeHelada = canUseFeature(plan, "frost_alert");
   const puedeViento = canUseFeature(plan, "wind_alert");
-  const [heladaTexto, setHeladaTexto] = useState<string | null>(null);
-  const [vientoTexto, setVientoTexto] = useState<string | null>(null);
+  const [nivel, setNivel] = useState<Nivel>("info");
+  const [peorDia, setPeorDia] = useState<DiaRiesgo | null>(null);
   const [cargando, setCargando] = useState(true);
   const [failed, setFailed] = useState(false);
   const [stale, setStale] = useState(false);
@@ -41,122 +147,166 @@ export function BloqueValorAgricola({ ubicacion, cultivo }: { ubicacion: Ubicaci
     let activo = true;
     const qs = new URLSearchParams({ lat: String(ubicacion.lat), lon: String(ubicacion.lon) });
     if (ubicacion.aemetMunicipio) qs.set("aemetMunicipio", ubicacion.aemetMunicipio);
+    const umbral = cultivo ? catalogoCultivos[cultivo].umbrales : UMBRAL_GENERICO;
 
-    // Previsión 5 días para helada/viento
-    const horasQ = `${qs.toString()}&hours=120`;
-    // Intentamos riesgo simplificado vía /api/riesgo si hay cultivo, si no usamos meteo directa
-    const usarRiesgo = cultivo ? fetch("/api/riesgo", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ latitud: ubicacion.lat, longitud: ubicacion.lon, cultivo, aemetMunicipio: ubicacion.aemetMunicipio || undefined }),
+    const usarRiesgo = cultivo
+      ? fetch("/api/riesgo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ latitud: ubicacion.lat, longitud: ubicacion.lon, cultivo, aemetMunicipio: ubicacion.aemetMunicipio || undefined }),
+          cache: "no-store",
+          signal: AbortSignal.timeout(20000),
+        }).then(async (r) => {
+          if (r.ok) return await r.json() as ResultadoRiesgo;
+          const j = await r.json().catch(() => null) as { estadoEvaluacion?: string } | null;
+          if (j?.estadoEvaluacion === "failed") throw new Error("EVAL_FAILED");
+          return null;
+        }).catch(() => { throw new Error("EVAL_FAILED"); })
+      : Promise.resolve(null);
+
+    const usarMeteo = fetch(`/api/v1/weather/forecast?${qs.toString()}&hours=${DIAS_PREVISION * 24}`, {
       cache: "no-store",
       signal: AbortSignal.timeout(20000),
-    }).then(async r => {
-      if (r.ok) return await r.json() as { alertas: Array<{ tipo:string; severidad:string; mensaje:string }>, fenofase?:string | null, estadoEvaluacion?:string, fechaCaducidad?:string, evaluadoEl?:string, fechaDatos?:string };
-      // Fase 5: failed — no mostrar verde ni "sin riesgo"
-      const j = await r.json().catch(()=>null) as { code?:string, estadoEvaluacion?:string, errorTecnico?:string } | null;
-      if (j?.estadoEvaluacion === "failed") throw new Error(j.code || "EVAL_FAILED");
-      return null;
-    }).catch(()=> { throw new Error("EVAL_FAILED"); }) : Promise.resolve(null);
+    }).then((r) => (r.ok ? r.json() as Promise<Hora[]> : null)).catch(() => null);
 
-    const usarMeteo = fetch(`/api/v1/weather/forecast?${horasQ}`, { cache: "no-store", signal: AbortSignal.timeout(20000) })
-      .then(r=> r.ok ? r.json() as Promise<Hora[]> : null).catch(()=>null);
+    Promise.all([usarRiesgo, usarMeteo]).then(([riesgo, horas]) => {
+      if (!activo) return;
+      if (riesgo?.estadoEvaluacion === "failed") { setFailed(true); return; }
+      const alertas = riesgo && Array.isArray(riesgo.alertas) ? riesgo.alertas : null;
+      if (!alertas && (!horas || !horas.length)) { setFailed(true); return; }
 
-    Promise.all([usarRiesgo, usarMeteo]).then(([riesgo, horas])=>{
-      if(!activo) return;
-      // Fase 5: manejar stale/failed sin sobrescribir válido como actual
-      if (riesgo && (riesgo as unknown as { estadoEvaluacion?:string; fechaCaducidad?:string }).estadoEvaluacion === "failed") {
-        setFailed(true); return;
-      }
-      if ((!riesgo || !Array.isArray(riesgo.alertas)) && (!horas || !horas.length)) {
-        setFailed(true);
-        return;
-      }
       if (riesgo) {
-        const evaluado = riesgo.evaluadoEl ?? new Date().toISOString();
-        setEvaluadoEl(evaluado);
+        setEvaluadoEl(riesgo.evaluadoEl ?? new Date().toISOString());
         setFenofase(riesgo.fenofase ?? null);
-        const caducidad = (riesgo as unknown as { fechaCaducidad?:string }).fechaCaducidad;
-        if (caducidad && Date.now() > new Date(caducidad).getTime()) setStale(true);
+        if (riesgo.fechaCaducidad && Date.now() > new Date(riesgo.fechaCaducidad).getTime()) setStale(true);
       } else {
         setEvaluadoEl(new Date().toISOString());
         setFenofase(null);
       }
-      // Helada y viento desde riesgo si existe
-      if (riesgo && Array.isArray(riesgo.alertas)) {
-        const helada = riesgo.alertas.find(a=> a.tipo==="helada" && a.severidad!=="info");
-        const viento = riesgo.alertas.find(a=> a.tipo==="viento" && a.severidad!=="info");
-        if (helada) { setHeladaTexto(helada.mensaje); registrarEventoEmbudo("frost_alert_viewed",{ municipio: ubicacion.nombre }); }
-        else setHeladaTexto("Helada: sin riesgo previsto durante los próximos 5 días.");
-        if (viento) { setVientoTexto(viento.mensaje); registrarEventoEmbudo("wind_alert_viewed",{ municipio: ubicacion.nombre }); }
-        else if (horas && horas.length) {
-          const maxRacha = Math.max(...horas.map(h=> h.windGustKmh ?? 0).filter(Number.isFinite));
-          if (maxRacha >= 50) setVientoTexto(`Viento: se esperan rachas de hasta ${Math.round(maxRacha)} km/h. Revisa tutores, estructuras y árboles jóvenes.`);
-          else setVientoTexto("Viento: sin rachas relevantes en los próximos 5 días.");
-        } else setVientoTexto("Viento: sin riesgo previsto durante los próximos 5 días.");
-      } else if (horas && horas.length) {
-        // Fallback sin cultivo: heurística simple
-        const temps = horas.map(h=> h.temperatureC).filter((v):v is number=> typeof v==="number" && Number.isFinite(v));
-        const min = temps.length ? Math.min(...temps) : null;
-        const maxRacha = Math.max(...horas.map(h=> h.windGustKmh ?? 0).filter(Number.isFinite));
-        if (min !== null && min <= 1) setHeladaTexto(`Helada: posible helada con mínima de ${min.toFixed(1)} °C en 5 días. Protege cultivos sensibles de madrugada.`);
-        else setHeladaTexto("Helada: sin riesgo previsto durante los próximos 5 días.");
-        if (maxRacha >= 50) setVientoTexto(`Viento: se esperan rachas fuertes (hasta ${Math.round(maxRacha)} km/h). Revisa tutores, estructuras y árboles jóvenes.`);
-        else setVientoTexto("Viento: sin rachas relevantes en los próximos 5 días.");
-      } else {
-        setHeladaTexto("Helada: sin datos suficientes. Elige cultivo para un aviso más preciso.");
-        setVientoTexto("Viento: sin datos suficientes.");
+
+      if (alertas) {
+        if (puedeHelada && alertas.some((a) => a.tipo === "helada" && a.severidad !== "info")) {
+          registrarEventoEmbudo("frost_alert_viewed", { municipio: ubicacion.nombre });
+        }
+        if (puedeViento && alertas.some((a) => a.tipo === "viento" && a.severidad !== "info")) {
+          registrarEventoEmbudo("wind_alert_viewed", { municipio: ubicacion.nombre });
+        }
       }
-    }).catch(()=> { if(activo) setFailed(true); }).finally(()=> { if(activo) setCargando(false); });
-    return ()=>{ activo=false; };
-  }, [ubicacion.lat, ubicacion.lon, ubicacion.aemetMunicipio, ubicacion.nombre, cultivo, intento]);
+
+      const apiNivel = alertas
+        ? alertas
+            .filter((a) => (a.tipo === "helada" && puedeHelada) || (a.tipo === "viento" && puedeViento))
+            .reduce<Nivel>((acc, a) => peorNivel(acc, nivelDeSeveridad(a.severidad)), "info")
+        : "info";
+      const apiHelada = Boolean(alertas && puedeHelada && alertas.some((a) => a.tipo === "helada" && a.severidad !== "info"));
+      const apiViento = Boolean(alertas && puedeViento && alertas.some((a) => a.tipo === "viento" && a.severidad !== "info"));
+
+      const dias: DiaRiesgo[] = diasDesdeHoras(horas ?? []).map((d, i) => {
+        const propio = nivelDelDia(d.minima, d.rachaMaxima, umbral, puedeHelada, puedeViento);
+        const esHoy = i === 0 && alertas !== null;
+        return {
+          ...d,
+          nivel: esHoy ? peorNivel(propio.nivel, apiNivel) : propio.nivel,
+          helada: propio.helada || (esHoy && apiHelada),
+          viento: propio.viento || (esHoy && apiViento),
+          umbralHelada: umbral.tminHelada,
+          umbralViento: umbral.vientoCriticoKmh,
+        };
+      });
+
+      if (!dias.length && alertas) {
+        dias.push({
+          clave: "hoy",
+          etiqueta: "hoy",
+          minima: null,
+          rachaMaxima: null,
+          nivel: apiNivel,
+          helada: apiHelada,
+          viento: apiViento,
+          umbralHelada: umbral.tminHelada,
+          umbralViento: umbral.vientoCriticoKmh,
+        });
+      }
+
+      let peor: DiaRiesgo | null = null;
+      for (const d of dias) if (!peor || ORDEN[d.nivel] > ORDEN[peor.nivel]) peor = d;
+      setNivel(peor ? peor.nivel : "info");
+      setPeorDia(peor);
+    }).catch(() => { if (activo) setFailed(true); }).finally(() => { if (activo) setCargando(false); });
+
+    return () => { activo = false; };
+  }, [ubicacion.lat, ubicacion.lon, ubicacion.aemetMunicipio, ubicacion.nombre, cultivo, intento, puedeHelada, puedeViento]);
 
   if (!puedeHelada && !puedeViento) return null;
-  if (cargando) return <section aria-live="polite" className="rounded-2xl border-2 border-earth-200 bg-wheat-50 p-5"><h2 className="text-lg font-extrabold text-stone-950">Calculando riesgos para tu cultivo…</h2><p className="mt-1 text-[15px] text-stone-600">Interpretando riesgos. Puede tardar unos segundos; si no se completa, podrás reintentar.</p></section>;
+  if (cargando) return (
+    <section aria-live="polite" className="rounded-2xl border-2 border-earth-200 bg-wheat-50 p-5">
+      <h2 className="text-lg font-extrabold text-stone-950">Calculando riesgos para tu cultivo…</h2>
+      <p className="mt-1 text-[15px] text-stone-600">Interpretando riesgos. Puede tardar unos segundos; si no se completa, podrás reintentar.</p>
+    </section>
+  );
   if (failed) return (
     <section className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
       <h2 className="text-lg font-extrabold text-amber-900">No disponible</h2>
       <p className="mt-1 text-[15px] text-amber-800">No pudimos evaluar helada y viento ahora. No es “sin riesgo”.</p>
-      <button type="button" onClick={()=> { setFailed(false); setStale(false); setCargando(true); setIntento((actual) => actual + 1); }} className="mt-3 inline-flex min-h-[48px] items-center rounded-xl bg-amber-700 px-4 text-sm font-bold text-white">Reintentar evaluación</button>
+      <button type="button" onClick={() => { setFailed(false); setStale(false); setCargando(true); setIntento((actual) => actual + 1); }} className="mt-3 inline-flex min-h-[48px] items-center rounded-xl bg-amber-700 px-4 text-sm font-bold text-white">Reintentar evaluación</button>
       <p className="mt-2 text-xs text-amber-700">Si vuelve a fallar, consulta más tarde. No mostramos “sin riesgo” mientras no haya datos válidos.</p>
     </section>
   );
-  if (stale) {
-    return (
-      <section className="rounded-2xl border-2 border-stone-300 bg-stone-100 p-5">
-        <h2 className="text-lg font-extrabold text-stone-800">Datos desactualizados</h2>
-        <p className="mt-1 text-[15px] text-stone-700">Última evaluación de riesgos: {evaluadoEl ? `${fechaLocal(evaluadoEl)} (hora peninsular)` : "hora desconocida"}. No tomes decisiones con esta información.</p>
-        <p className="mt-2 text-xs text-stone-500">Mostrando último dato válido marcado como antiguo.</p>
-      </section>
-    );
-  }
+  if (stale) return (
+    <section className="rounded-2xl border-2 border-stone-300 bg-stone-100 p-5">
+      <h2 className="text-lg font-extrabold text-stone-800">Datos desactualizados</h2>
+      <p className="mt-1 text-[15px] text-stone-700">Última evaluación de riesgos: {evaluadoEl ? `${fechaLocal(evaluadoEl)} (hora peninsular)` : "hora desconocida"}. No tomes decisiones con esta información.</p>
+      <p className="mt-2 text-xs text-stone-500">Mostrando último dato válido marcado como antiguo.</p>
+    </section>
+  );
 
   const nombreCultivo = cultivo ? catalogoCultivos[cultivo].nombre : null;
-  const hayRiesgoHelada = Boolean(heladaTexto && !heladaTexto.startsWith("Helada: sin riesgo") && !heladaTexto.includes("sin datos"));
-  const hayRiesgoViento = Boolean(vientoTexto && !vientoTexto.startsWith("Viento: sin rachas") && !vientoTexto.startsWith("Viento: sin riesgo") && !vientoTexto.includes("sin datos"));
+  const hayRiesgo = nivel !== "info" && peorDia !== null;
+  const detallePeor = peorDia
+    ? [
+        peorDia.minima !== null ? `mín ${peorDia.minima.toFixed(1)} °C` : null,
+        peorDia.rachaMaxima !== null ? `rachas ${Math.round(peorDia.rachaMaxima)} km/h` : null,
+      ].filter(Boolean).join(" · ")
+    : "";
+
+  function explicacion(): string {
+    if (!hayRiesgo || !peorDia) {
+      return `Sin riesgo en los próximos ${DIAS_PREVISION} días: la previsión no supera los umbrales ${nombreCultivo ? `de ${nombreCultivo}` : "genéricos"}.`;
+    }
+    const partes: string[] = [];
+    if (peorDia.helada && peorDia.minima !== null) partes.push(`mínima de ${peorDia.minima.toFixed(1)} °C (umbral ${peorDia.umbralHelada} °C)`);
+    if (peorDia.viento && peorDia.rachaMaxima !== null) partes.push(`rachas de ${Math.round(peorDia.rachaMaxima)} km/h (umbral ${peorDia.umbralViento} km/h)`);
+    if (!partes.length) partes.push("valores cercanos a los umbrales aplicados");
+    const acciones: string[] = [];
+    if (peorDia.helada) acciones.push("Protege los cultivos sensibles de madrugada.");
+    if (peorDia.viento) acciones.push("Revisa tutores, cubiertas y elementos sueltos.");
+    return `El peor día de los próximos ${DIAS_PREVISION} es ${peorDia.etiqueta}: ${partes.join(" y ")}. ${acciones.join(" ")}`.trim();
+  }
 
   return (
     <section className="rounded-2xl border-2 border-earth-200 bg-wheat-50 p-5 shadow-sm">
-      <h2 className="text-lg font-extrabold text-stone-950">Riesgos para tu cultivo</h2>
-      <p className="mt-1 text-xs leading-relaxed text-stone-600"><strong>Estado: Actualizado</strong> · Última evaluación de riesgos: {evaluadoEl ? `${fechaLocal(evaluadoEl)} (hora peninsular)` : "hora desconocida"} · Evaluación basada en previsiones de AEMET/Open-Meteo.</p>
-      <p className="mt-2 rounded-xl border border-stone-200 bg-white p-3 text-sm leading-relaxed text-stone-700">
-        {nombreCultivo
-          ? <>Cultivo seleccionado: <strong>{nombreCultivo}</strong>{fenofase ? <> · Fase estimada: <strong>{fenofase}</strong></> : null}. Estos datos intervienen en los umbrales que se comparan con la previsión; la fase se estima por calendario y zona, no se confirma en campo.</>
-          : "Sin cultivo seleccionado, la señal se basa en la previsión general y no aplica umbrales específicos de cultivo."}
-      </p>
-      <div className="mt-3 grid gap-3">
-        {puedeHelada ? <article className="rounded-xl bg-white p-4 border border-stone-200">
-          <h3 className="font-bold text-stone-900">Helada</h3>
-          <p className="mt-1 text-[15px] leading-relaxed text-stone-700">{heladaTexto}</p>
-          {hayRiesgoHelada ? <p className="mt-2 rounded-lg bg-blue-50 p-3 text-sm leading-relaxed text-blue-950"><strong>Qué hacer:</strong> comprueba la previsión y las condiciones de tu parcela, especialmente en zonas bajas. Si tienes medidas de protección frente al frío, revisa su disponibilidad y sigue las indicaciones técnicas adecuadas para tu cultivo. El aviso se fundamenta en la mínima prevista y el umbral indicado arriba.</p> : null}
-        </article> : null}
-        {puedeViento ? <article className="rounded-xl bg-white p-4 border border-stone-200">
-          <h3 className="font-bold text-stone-900">Viento</h3>
-          <p className="mt-1 text-[15px] leading-relaxed text-stone-700">{vientoTexto}</p>
-          {hayRiesgoViento ? <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm leading-relaxed text-amber-950"><strong>Qué hacer:</strong> revisa tutores, cubiertas y elementos sueltos, y evita trabajos expuestos durante las rachas. El aviso compara la racha máxima prevista con el umbral del cultivo indicado arriba.</p> : null}
-        </article> : null}
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-lg font-extrabold text-stone-950">Resumen agrícola</h2>
+        <span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${PARCHES_NIVEL[nivel]}`}>{ETIQUETA_NIVEL[nivel]}</span>
       </div>
-      <p className="mt-3 text-xs text-stone-500">Si no aparece riesgo, significa que la previsión no supera los umbrales aplicados en esta evaluación; no garantiza que no haya daños locales. Estimación orientativa de 5 días, no sustituye la observación de la parcela ni el criterio de un técnico.</p>
+      <p className="mt-1 text-xs leading-relaxed text-stone-600">
+        {nombreCultivo ? `Cultivo: ${nombreCultivo}${fenofase ? ` · ${fenofase}` : ""}` : "Sin cultivo: umbrales genéricos"} · Evaluado {evaluadoEl ? fechaLocal(evaluadoEl) : "ahora"} (hora peninsular)
+      </p>
+
+      <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-stone-200 bg-white p-4">
+          <dt className="text-[11px] font-bold uppercase tracking-wide text-stone-500">Nivel</dt>
+          <dd className={`mt-1 text-xl font-extrabold ${COLOR_NIVEL[nivel]}`}>{ETIQUETA_NIVEL[nivel]}</dd>
+        </div>
+        <div className="rounded-xl border border-stone-200 bg-white p-4">
+          <dt className="text-[11px] font-bold uppercase tracking-wide text-stone-500">Día de mayor riesgo</dt>
+          <dd className="mt-1 text-xl font-extrabold text-stone-950">{hayRiesgo && peorDia ? peorDia.etiqueta : "Ninguno"}</dd>
+          {hayRiesgo && detallePeor ? <p className="mt-0.5 text-xs text-stone-500">{detallePeor}</p> : null}
+        </div>
+      </dl>
+
+      <p className="mt-3 rounded-xl border border-stone-200 bg-white p-3 text-sm leading-relaxed text-stone-700">{explicacion()}</p>
+      <p className="mt-2 text-xs text-stone-500">Estimación orientativa de {DIAS_PREVISION} días (AEMET/Open-Meteo). No sustituye la observación de la parcela ni el criterio de un técnico.</p>
     </section>
   );
 }
