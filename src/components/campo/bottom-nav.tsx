@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -12,7 +13,7 @@ interface ItemNav {
 const items: ItemNav[] = [
   { href: "/", etiqueta: "Inicio", icono: "home" },
   { href: "/#prevision", etiqueta: "Tiempo", icono: "tiempo" },
-  { href: "/#avisos", etiqueta: "Avisos", icono: "campana" },
+  { href: "/#captacion", etiqueta: "Avisos", icono: "campana" },
   { href: "/#como-funciona", etiqueta: "¿Cómo funciona?", icono: "ayuda" },
 ];
 
@@ -75,6 +76,37 @@ function Icono({ nombre }: { nombre: string }) {
   }
 }
 
+/**
+ * Desplaza a la sección del enlace cuando ya estamos en su página.
+ * Evita que `next/link` ignore el hash (misma ruta) y no haga scroll.
+ */
+function desplazarEnPagina(
+  e: MouseEvent<HTMLAnchorElement>,
+  href: string,
+  pathname: string
+) {
+  const [ruta, hash] = href.split("#");
+  const rutaBase = ruta || "/";
+  if (rutaBase !== pathname) return;
+
+  const destino =
+    (hash ? document.getElementById(hash) : null) ??
+    (hash === "prevision" ? document.getElementById("zona") : null);
+
+  if (destino) {
+    e.preventDefault();
+    destino.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (hash) window.history.replaceState(null, "", `#${hash}`);
+    return;
+  }
+
+  if (href === "/") {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.history.replaceState(null, "", "/");
+  }
+}
+
 export function BottomNav() {
   const pathname = usePathname();
 
@@ -93,6 +125,7 @@ export function BottomNav() {
               href={item.href}
               aria-current={activo ? "page" : undefined}
               aria-label={item.etiqueta}
+              onClick={(e) => desplazarEnPagina(e, item.href, pathname)}
               className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[13px] font-semibold leading-none sm:text-[15px] ${
                 activo
                   ? "bg-brand-800 text-white shadow-sm"
@@ -112,21 +145,32 @@ export function BottomNav() {
 /** Navegación superior para escritorio; en móvil se usa `BottomNav`. */
 export function NavEscritorio() {
   const pathname = usePathname();
+  const [seleccion, setSeleccion] = useState<{ path: string; href: string } | null>(
+    null
+  );
 
   return (
     <nav className="hidden items-center gap-1 md:flex">
       {items.map((item) => {
-        const activo =
+        const activoRuta =
           item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        const activo =
+          seleccion && seleccion.path === pathname
+            ? seleccion.href === item.href
+            : activoRuta;
         return (
           <Link
             key={item.href}
             href={item.href}
             aria-current={activo ? "page" : undefined}
-            className={`inline-flex min-h-[44px] items-center rounded-xl px-2 text-[14px] font-semibold lg:px-3 lg:text-[15px] ${
+            onClick={(e) => {
+              setSeleccion({ path: pathname, href: item.href });
+              desplazarEnPagina(e, item.href, pathname);
+            }}
+            className={`inline-flex min-h-[44px] items-center rounded-xl px-2 text-[14px] font-semibold transition-colors lg:px-3 lg:text-[15px] ${
               activo
                 ? "bg-brand-800 text-white"
-                : "text-stone-700 hover:bg-stone-100"
+                : "text-stone-700 hover:bg-stone-100 active:bg-brand-800 active:text-white"
             }`}
           >
             {item.etiqueta}
