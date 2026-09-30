@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimit, ipDePeticion } from "@/lib/rate-limit";
 
 export function middleware(req: NextRequest) {
   // Rate limiting + CSRF solo para APIs.
   if (req.nextUrl.pathname.startsWith("/api/")) {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const ip = ipDePeticion(req);
     const key = `${ip}:${req.nextUrl.pathname}`;
     const { ok, remaining, resetAt } = rateLimit(key, 60, 60_000);
     const res = ok

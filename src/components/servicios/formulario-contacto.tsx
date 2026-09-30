@@ -26,6 +26,9 @@ type Errores = Partial<Record<"nombre" | "telefono" | "municipio" | "cultivo" | 
  */
 const cultivos = ["Almendro", "Olivar", "Pistacho", "Cereal", "Aguacate", "Mango", "Chirimoyo", "Otro"] as const;
 
+/** Cultivos con umbrales en catálogo y, por tanto, con avisos automáticos. */
+const cultivosConAvisoAutomatico = cultivos.filter((c) => c !== "Otro");
+
 /** Tipo de explotacion ya indicado antes por el visitante, si consta. */
 function idCultivoPorNombre(nombre: string): CulturaId | null {
   const entrada = Object.entries(catalogoCultivos).find(([, cultura]) => cultura.nombre.toLocaleLowerCase("es-ES") === nombre.trim().toLocaleLowerCase("es-ES"));
@@ -44,6 +47,11 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes, munic
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const [errores, setErrores] = useState<Errores>({});
   const [leadIniciado, setLeadIniciado] = useState(false);
+  // true cuando /api/contacto ya guardó la solicitud pero el alta automática
+  // falló: reintentar solo el segundo paso es seguro (servidor idempotente:
+  // dedup por visitante, parcela reutilizada y suscripción reactivada).
+  const [altaPendiente, setAltaPendiente] = useState(false);
+  const [reintentando, setReintentando] = useState(false);
   const cultivo = onCultivoChange ? cultivoInicial : cultivoLocal;
 
   function iniciarLead() {
@@ -60,7 +68,9 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes, munic
     if (!municipio.trim()) siguientes.municipio = "Escribe tu municipio.";
     if (activarAvisosGratis && !ubicacionAvisos) siguientes.ubicacion = "Busca y selecciona el municipio para asociar los avisos a su zona.";
     if (!cultivo) siguientes.cultivo = "Selecciona tu cultivo.";
-    if (activarAvisosGratis && cultivo && !idCultivoPorNombre(cultivo)) siguientes.cultivo = "Para activar avisos automáticos, selecciona uno de los cultivos disponibles.";
+    // "Otro" no bloquea el envío: se registra como solicitud manual (ver enviar()).
+    // El motor de riesgo solo conoce los cultivos del catálogo, así que el alta
+    // automática requiere uno de ellos.
     if (!acepta) siguientes.privacidad = "Acepta recibir avisos por WhatsApp.";
     return siguientes;
   }
@@ -91,6 +101,7 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes, munic
     evento.preventDefault();
     setEstado("validando");
     setErrorEnvio(null);
+    setAltaPendiente(false);
     const siguientes = validar();
     setErrores(siguientes);
     if (Object.keys(siguientes).length) { registrarEventoEmbudo("lead_form_error", { origen: "formulario", campos: Object.keys(siguientes).join(",") }); setEstado("inicial"); return; }
@@ -110,38 +121,71 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes, munic
       });
       if (!resp.ok) throw new Error();
       contactoRecibido = true;
-      if (activarAvisosGratis && ubicacionAvisos) {
-        const activacion = await fetch("/api/avisos/activar-gratis", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({
-            dispositivoId,
-            nombre: municipio.trim(),
-            cultivo: idCultivoPorNombre(cultivo),
-            latitud: ubicacionAvisos.lat,
-            longitud: ubicacionAvisos.lon,
-            telefono: telefono.trim(),
-            aceptaAvisos: acepta,
-          }),
-        });
-        if (!activacion.ok) {
-          const detalle = await activacion.json().catch(() => null) as { error?: string } | null;
-          throw new Error(detalle?.error ?? "No se pudieron activar los avisos. Revisa la conexión e inténtalo de nuevo.");
-        }
-      }
+      await activarAltaAutomatica(dispositivoId);
       setEstado("enviado");
+      setAltaPendiente(false);
       registrarEventoEmbudo("lead_form_submitted", { origen: "formulario", servicioKey: servicioKey ?? null });
     } catch (error) {
       setEstado("error");
       registrarEventoEmbudo("lead_form_error", { origen: "formulario" });
-      setErrorEnvio(contactoRecibido
-        ? `Recibimos tus datos, pero no se pudo completar el alta automática. ${error instanceof Error ? error.message : "Inténtalo de nuevo para finalizar la activación."}`
-        : "No se pudo enviar. Revisa la conexión e inténtalo de nuevo.");
+      const parcial = contactoRecibido && activarAvisosGratis && Boolean(ubicacionAvisos) && Boolean(idCultivoPorNombre(cultivo));
+      setAltaPendiente(parcial);
+      setErrorEnvio(parcial
+        ? `Tus datos están guardados y no se duplicará la solicitud si reintentas. ${error instanceof Error ? error.message : "No se pudo completar el alta automática."}`
+        : contactoRecibido
+          ? `Recibimos tus datos, pero no se pudo completar el alta automática. ${error instanceof Error ? error.message : "Inténtalo de nuevo para finalizar la activación."}`
+          : "No se pudo enviar. Revisa la conexión e inténtalo de nuevo.");
     }
   }
 
-  if (estado === "enviado") return activarAvisosGratis ? <div role="status" className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-5"><p className="text-xl font-extrabold text-emerald-900">¡Avisos activados!</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Los avisos llegarán al WhatsApp <strong>{telefono.trim()}</strong> que has escrito — no al teléfono desde el que navegas y sin necesidad de mantener este navegador abierto.</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Además guardamos una referencia en este navegador (cookie/identificador) para que veas la suscripción al volver. Si cambias de móvil, usas otro navegador o borras los datos del sitio, esa referencia local se pierde, pero los avisos seguirán llegando al número indicado hasta que pidas la baja.</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Recibirás mensajes solo cuando las evaluaciones programadas detecten un riesgo relevante. No son alertas en tiempo real.</p><p className="mt-3 text-sm font-medium text-emerald-800">Para gestionar la suscripción o darte de baja, escribe a <a className="font-bold underline" href={`mailto:${EMAIL_CONTACTO}`}>{EMAIL_CONTACTO}</a> indicando ese número.</p></div> : <div role="status" className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-5"><p className="text-xl font-extrabold text-emerald-900">Solicitud recibida</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Una persona del equipo de TecRural revisará tus datos y te contactará por WhatsApp en menos de 24 horas laborables.</p><p className="mt-3 text-sm font-medium text-emerald-800">Para cancelar la solicitud, escribe a <a className="font-bold underline" href={`mailto:${EMAIL_CONTACTO}`}>{EMAIL_CONTACTO}</a>.</p></div>;
+  /** Segundo paso (idempotente en servidor): solo el alta de avisos. */
+  async function activarAltaAutomatica(dispositivoId: string) {
+    const idCultivo = idCultivoPorNombre(cultivo);
+    // Solo hay alta automática si el cultivo tiene umbrales en el catálogo.
+    // Con "Otro" (u otro valor sin catálogo) dejamos la solicitud registrada
+    // como contacto manual: el equipo la revisa y propone alternativa.
+    if (!(activarAvisosGratis && ubicacionAvisos && idCultivo)) return;
+    const activacion = await fetch("/api/avisos/activar-gratis", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        dispositivoId,
+        nombre: municipio.trim(),
+        cultivo: idCultivo,
+        latitud: ubicacionAvisos.lat,
+        longitud: ubicacionAvisos.lon,
+        telefono: telefono.trim(),
+        aceptaAvisos: acepta,
+      }),
+    });
+    if (!activacion.ok) {
+      const detalle = await activacion.json().catch(() => null) as { error?: string } | null;
+      throw new Error(detalle?.error ?? "No se pudieron activar los avisos. Revisa la conexión e inténtalo de nuevo.");
+    }
+  }
+
+  /** Reintenta solo el alta automática tras un éxito parcial (sin reenviar el contacto). */
+  async function reintentarAlta() {
+    setReintentando(true);
+    setErrorEnvio(null);
+    try {
+      await asegurarSesionDispositivo();
+      await activarAltaAutomatica(obtenerDispositivoId());
+      setEstado("enviado");
+      setAltaPendiente(false);
+      registrarEventoEmbudo("lead_form_submitted", { origen: "formulario-reintento", servicioKey: servicioKey ?? null });
+    } catch (error) {
+      setErrorEnvio(error instanceof Error ? error.message : "No se pudo completar el alta automática.");
+    } finally {
+      setReintentando(false);
+    }
+  }
+
+  const esOtroCultivo = cultivo === "Otro";
+  const altaAutomaticaPosible = !activarAvisosGratis || Boolean(idCultivoPorNombre(cultivo));
+
+  if (estado === "enviado") return activarAvisosGratis && altaAutomaticaPosible ? <div role="status" className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-5"><p className="text-xl font-extrabold text-emerald-900">¡Avisos activados!</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Los avisos llegarán al WhatsApp <strong>{telefono.trim()}</strong> que has escrito — no al teléfono desde el que navegas y sin necesidad de mantener este navegador abierto.</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Además guardamos una referencia en este navegador (cookie/identificador) para que veas la suscripción al volver. Si cambias de móvil, usas otro navegador o borras los datos del sitio, esa referencia local se pierde, pero los avisos seguirán llegando al número indicado hasta que pidas la baja.</p><p className="mt-2 text-base leading-relaxed text-emerald-900">Recibirás mensajes solo cuando las evaluaciones programadas detecten un riesgo relevante. No son alertas en tiempo real.</p><p className="mt-3 text-sm font-medium text-emerald-800">Para gestionar la suscripción o darte de baja, escribe a <a className="font-bold underline" href={`mailto:${EMAIL_CONTACTO}`}>{EMAIL_CONTACTO}</a> indicando ese número.</p></div> : <div role="status" className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-5"><p className="text-xl font-extrabold text-emerald-900">Solicitud recibida</p><p className="mt-2 text-base leading-relaxed text-emerald-900">{activarAvisosGratis ? "Tu cultivo aún no tiene avisos automáticos. Una persona del equipo de TecRural revisará tu solicitud y te contactará por WhatsApp en menos de 24 horas laborables para proponerte una alternativa." : "Una persona del equipo de TecRural revisará tus datos y te contactará por WhatsApp en menos de 24 horas laborables."}</p><p className="mt-3 text-sm font-medium text-emerald-800">Para cancelar la solicitud, escribe a <a className="font-bold underline" href={`mailto:${EMAIL_CONTACTO}`}>{EMAIL_CONTACTO}</a>.</p></div>;
 
   const listaErrores = Object.values(errores).filter(Boolean);
   return (
@@ -167,10 +211,12 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes, munic
         {errores.ubicacion ? <p className="mt-1 text-sm font-semibold text-red-700">{errores.ubicacion}</p> : null}
 
        <label className="mt-3 block text-base font-bold text-stone-900" htmlFor="contacto-cultivo">Cultivo que recibirá avisos</label>
-       <select id="contacto-cultivo" required value={cultivo} onBlur={() => actualizarError("cultivo", cultivo)} onChange={(e) => { const valor = e.target.value; setCultivoLocal(valor); onCultivoChange?.(valor); actualizarError("cultivo", valor); }} aria-invalid={Boolean(errores.cultivo)} className="mt-1 min-h-[52px] w-full rounded-xl border-2 border-stone-300 bg-white px-4 py-3 text-base">
+       <select id="contacto-cultivo" required value={cultivo} onBlur={() => actualizarError("cultivo", cultivo)} onChange={(e) => { const valor = e.target.value; setCultivoLocal(valor); onCultivoChange?.(valor); actualizarError("cultivo", valor); }} aria-invalid={Boolean(errores.cultivo)} aria-describedby={activarAvisosGratis ? "contacto-cultivo-ayuda" : undefined} className="mt-1 min-h-[52px] w-full rounded-xl border-2 border-stone-300 bg-white px-4 py-3 text-base">
          <option value="">Selecciona tu cultivo</option>{cultivos.map((opcion) => <option key={opcion}>{opcion}</option>)}
        </select>
+       {activarAvisosGratis ? <p id="contacto-cultivo-ayuda" className="mt-1 text-sm text-stone-600">Avisos automáticos disponibles para: {cultivosConAvisoAutomatico.join(", ")}. Si eliges «Otro», registramos tu solicitud y te contactamos para activarlos manualmente.</p> : null}
        {errores.cultivo ? <p className="mt-1 text-sm font-semibold text-red-700">{errores.cultivo}</p> : null}
+       {activarAvisosGratis && esOtroCultivo ? <p role="note" className="mt-2 rounded-xl border-2 border-sky-200 bg-sky-50 p-3 text-sm leading-relaxed text-sky-950">Con «Otro» no hay alta automática porque el motor de riesgo necesita los umbrales del cultivo. Puedes enviar el formulario igualmente: guardamos tus datos y te proponemos una alternativa manual.</p> : null}
 
        <label className="mt-4 flex min-h-[52px] cursor-pointer items-start gap-3 rounded-xl border-2 border-stone-300 p-3">
           <input type="checkbox" required checked={acepta} onChange={(e) => { const valor = e.target.checked; setAcepta(valor); actualizarError("privacidad", valor); }} className="h-6 w-6 shrink-0 accent-brand-800" />
@@ -202,8 +248,8 @@ export function FormularioContacto({ servicioKey, servicioNombre, interes, munic
 
         {estado === "validando" ? <p role="status" className="mt-3 text-sm font-semibold text-stone-600">Validando…</p> : null}
        {listaErrores.length ? <div role="alert" className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 p-3"><p className="font-bold text-red-900">Datos incompletos</p><ul className="mt-1 list-disc pl-5 text-[15px] font-semibold text-red-800">{listaErrores.map((e) => <li key={e}>{e}</li>)}</ul></div> : null}
-        {estado === "error" ? <div role="alert" className="mt-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-3"><p className="font-bold text-amber-900">{activarAvisosGratis ? "No se completó la activación" : "Error temporal"}</p><p className="mt-1 text-sm text-amber-800">{errorEnvio ?? "No se pudo enviar. Inténtalo de nuevo en unos minutos."}</p></div> : null}
-        <button type="submit" disabled={estado === "enviando" || estado === "validando"} className="mt-4 min-h-[52px] w-full rounded-xl bg-brand-800 px-5 py-3 text-base font-extrabold text-white hover:bg-brand-900 disabled:opacity-60">{estado === "enviando" ? "Enviando…" : estado === "validando" ? "Validando…" : "Quiero recibir avisos"}</button>
+        {estado === "error" ? <div role="alert" className="mt-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-3"><p className="font-bold text-amber-900">{altaPendiente ? "Datos guardados, falta activar los avisos" : activarAvisosGratis ? "No se completó la activación" : "Error temporal"}</p><p className="mt-1 text-sm text-amber-800">{errorEnvio ?? "No se pudo enviar. Inténtalo de nuevo en unos minutos."}</p>{altaPendiente ? <button type="button" onClick={() => void reintentarAlta()} disabled={reintentando} className="mt-3 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-olive-800 px-4 text-sm font-bold text-white disabled:opacity-60">{reintentando ? "Reintentando…" : "Reintentar activación"}</button> : null}</div> : null}
+        <button type="submit" disabled={estado === "enviando" || estado === "validando"} className="mt-4 min-h-[52px] w-full rounded-xl bg-brand-800 px-5 py-3 text-base font-extrabold text-white hover:bg-brand-900 disabled:opacity-60">{estado === "enviando" ? "Enviando…" : estado === "validando" ? "Validando…" : activarAvisosGratis && esOtroCultivo ? "Enviar solicitud" : "Quiero recibir avisos"}</button>
     </form>
   );
 }

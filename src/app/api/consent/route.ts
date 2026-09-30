@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { obtenerDb } from "@/lib/datos/db";
 import { usuarios } from "@/lib/datos/plataforma-schema";
+import { usuarioAutenticado } from "@/lib/datos/sesion-usuario";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
 import { VERSION_CONSENTIMIENTO } from "@/lib/privacidad/consentimiento";
@@ -11,6 +12,11 @@ export const dynamic = "force-dynamic";
 const CURRENT_VERSION = VERSION_CONSENTIMIENTO;
 
 export async function POST(req: Request) {
+  const sesionUserId = usuarioAutenticado(req);
+  if (!sesionUserId) {
+    return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  }
+
   const body = (await req.json().catch(() => null)) as {
     userId?: string;
     privacyConsent?: boolean;
@@ -18,9 +24,16 @@ export async function POST(req: Request) {
     consentVersion?: string;
   } | null;
 
-  if (!body?.userId || typeof body.privacyConsent !== "boolean") {
-    return NextResponse.json({ error: "Falta userId o privacyConsent." }, { status: 400 });
+  if (typeof body?.privacyConsent !== "boolean") {
+    return NextResponse.json({ error: "Falta privacyConsent." }, { status: 400 });
   }
+
+  // El userId del cuerpo, si se envía por compatibilidad, debe coincidir
+  // con la identidad autenticada; nunca se usa para elegir otro usuario.
+  if (body.userId != null && body.userId !== sesionUserId) {
+    return NextResponse.json({ error: "Prohibido." }, { status: 403 });
+  }
+  const userId = sesionUserId;
 
   // No considerar alerta == publicidad: marketingConsent es separado y opcional
   if (body.privacyConsent !== true) {
@@ -45,7 +58,7 @@ export async function POST(req: Request) {
           marketingConsentAt: body.marketingConsent === true ? now : null,
           updatedAt: now,
         })
-        .where(eq(usuarios.id, body.userId!));
+        .where(eq(usuarios.id, userId));
 
       log.info("consent.ok", { status: 200, duracion_ms: Date.now() - inicio, data: { version } });
       return conCabeceraRequestId(NextResponse.json({ consent_version: version, consent_timestamp: now.toISOString() }), requestId);
@@ -57,8 +70,15 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  const userId = new URL(req.url).searchParams.get("userId");
-  if (!userId) return NextResponse.json({ error: "Falta userId." }, { status: 400 });
+  const sesionUserId = usuarioAutenticado(req);
+  if (!sesionUserId) return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  const paramUserId = new URL(req.url).searchParams.get("userId");
+  // El parámetro, si se envía por compatibilidad, debe coincidir con la
+  // sesión; la lectura siempre usa la identidad autenticada.
+  if (paramUserId != null && paramUserId !== sesionUserId) {
+    return NextResponse.json({ error: "Prohibido." }, { status: 403 });
+  }
+  const userId = sesionUserId;
   return conRequestId({}, async (requestId) => {
     try {
       const db = obtenerDb();

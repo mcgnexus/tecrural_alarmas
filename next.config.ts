@@ -8,15 +8,20 @@ const nextConfig: NextConfig = {
   // declararlas aquí garantiza su presencia en páginas, estáticos y API sin
   // interferir con el routing.
   async headers() {
+    // 'unsafe-inline' en script/style sigue siendo necesario para el runtime
+    // de Next.js y el JSON-LD inline; el paso a nonces/hashes sería la mejora
+    // siguiente. Se elimina 'unsafe-eval' (sin uso) y los comodines https: en
+    // scripts/frames: solo se permite el script de Vercel Analytics y ningún
+    // iframe (la app no incrusta ninguno).
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
-      "style-src 'self' 'unsafe-inline' https:",
+      "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
+      "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https: blob:",
       "font-src 'self' data: https:",
-      "connect-src 'self' https:",
+      "connect-src 'self' https://va.vercel-scripts.com https://vitals.vercel-insights.com",
       "frame-ancestors 'none'",
-      "frame-src https:",
+      "frame-src 'none'",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -39,7 +44,7 @@ const nextConfig: NextConfig = {
           { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            value: "camera=(), microphone=(), geolocation=(self)",
           },
         ],
       },

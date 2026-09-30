@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { VERSION_CONSENTIMIENTO as CURRENT_VERSION } from "@/lib/privacidad/consentimiento";
 
-export function Consentimiento({ userId, onAceptado }: { userId: string; onAceptado?: () => void }) {
+export function Consentimiento({ onAceptado }: { userId?: string; onAceptado?: () => void }) {
   const [privacy, setPrivacy] = useState(false);
   const [marketing, setMarketing] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -20,7 +20,9 @@ export function Consentimiento({ userId, onAceptado }: { userId: string; onAcept
       const r = await fetch("/api/consent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, privacyConsent: true, marketingConsent: marketing, consentVersion: CURRENT_VERSION }),
+        // La identidad la aporta la cookie de sesión HttpOnly; no se envía
+        // userId como autoridad.
+        body: JSON.stringify({ privacyConsent: true, marketingConsent: marketing, consentVersion: CURRENT_VERSION }),
       });
       if (!r.ok) {
         const j = await r.json().catch(() => ({}));

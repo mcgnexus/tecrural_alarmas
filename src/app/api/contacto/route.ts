@@ -6,7 +6,7 @@ import { notificarSolicitudContacto } from "@/lib/notificaciones/aviso-negocio";
 import { conCabeceraRequestId, conRequestId } from "@/lib/log/http";
 import { crearLogger } from "@/lib/log/logger";
 import { VERSION_CONSENTIMIENTO } from "@/lib/privacidad/consentimiento";
-import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { rateLimit, rateLimitResponse, ipDePeticion } from "@/lib/rate-limit";
 import { esSolicitudDePrueba } from "@/lib/dominio/solicitud-contacto";
 
 const log = crearLogger("api.contacto");
@@ -80,8 +80,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, prueba: true }, { status: 201 });
   }
 
-  // Límite por IP: frena el envío masivo y el spam al chat de Telegram.
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  // Límite por IP: freno oportunista en memoria (ver rate-limit.ts). La
+  // protección real es el honeypot + la deduplicación por visitante en BD.
+  const ip = ipDePeticion(req);
   const limite = rateLimit(`contacto:${ip}`, LIMITE_POR_IP, VENTANA_LIMITE_MS);
   if (!limite.ok) {
     return NextResponse.json(

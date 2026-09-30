@@ -20,16 +20,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/fitosanitario",
   ];
 
+  // Sin lastModified: no hay fechas reales de actualización (contenido
+  // estático) y usar `new Date()` haría que todo pareciese modificado en
+  // cada generación, provocando rastreo innecesario.
   const paginasGenerales: MetadataRoute.Sitemap = rutas.map((ruta) => ({
     url: `${baseUrl()}${ruta}`,
-    lastModified: new Date(),
     changeFrequency: ruta === "/" || ruta === "/alertas" ? "hourly" : "daily",
     priority: ruta === "/" ? 1 : ruta.startsWith("/parcelas") ? 0.8 : 0.6,
   }));
 
   const paginasMunicipales = MUNICIPIOS_PUBLICOS.map((municipio) => ({
     url: `${baseUrl()}/avisos-helada-viento/${municipio.slug}`,
-    lastModified: new Date(),
     changeFrequency: "daily" as const,
     priority: 0.8,
   }));
