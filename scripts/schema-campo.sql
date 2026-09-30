@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS campo.alertas (
   CONSTRAINT alertas_severidad_ok
     CHECK (severidad IN ('info', 'aviso', 'alerta', 'critica')),
   CONSTRAINT alertas_tipo_ok
-    CHECK (tipo IN ('helada', 'golpe-de-calor', 'viento', 'demanda-hidrica'))
+    CHECK (tipo IN ('helada', 'golpe-de-calor', 'viento', 'lluvia', 'demanda-hidrica'))
 );
 
 CREATE TABLE IF NOT EXISTS campo.weather_cache (
@@ -118,3 +118,10 @@ ALTER TABLE campo.suscripciones_aviso ADD COLUMN IF NOT EXISTS user_id uuid;
 CREATE INDEX IF NOT EXISTS parcelas_usuario_idx ON campo.parcelas (user_id);
 CREATE INDEX IF NOT EXISTS suscripciones_usuario_idx
   ON campo.suscripciones_aviso (user_id, activa);
+
+-- Alerta de lluvia: el CHECK original no incluía 'lluvia'. Se reconstruye la
+-- restricción para que las bases ya migradas acepten el nuevo tipo.
+ALTER TABLE campo.alertas DROP CONSTRAINT IF EXISTS alertas_tipo_ok;
+ALTER TABLE campo.alertas
+  ADD CONSTRAINT alertas_tipo_ok
+  CHECK (tipo IN ('helada', 'golpe-de-calor', 'viento', 'lluvia', 'demanda-hidrica'));

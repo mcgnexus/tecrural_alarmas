@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { colorTemperatura, etiquetaTermica } from "@/lib/ui/temperatura";
 import { colorHumedad, etiquetaHumedad } from "@/lib/ui/humedad";
 import { registrarEventoEmbudo } from "@/lib/analitica";
+import { GraficoPrevision } from "./grafico-prevision";
 
 type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
 
@@ -45,10 +46,10 @@ function numero(valor: number | null | undefined, unidad: string, decimales = 0)
   return `${valor.toFixed(decimales)}${unidad}`;
 }
 
-function Dato({ etiqueta, valor, claseValor, titulo }: { etiqueta: string; valor: string; claseValor?: string; titulo?: string }) {
+function Dato({ etiqueta, valor, claseValor, titulo, icono }: { etiqueta: string; valor: string; claseValor?: string; titulo?: string; icono?: string }) {
   return (
     <div className="rounded-xl border border-stone-200 bg-wheat-50 p-3">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-stone-500">{etiqueta}</p>
+      <p className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-stone-500">{icono ? <span aria-hidden="true" className="text-sm">{icono}</span> : null}{etiqueta}</p>
       <p title={titulo} className={`mt-0.5 text-lg font-extrabold ${claseValor ?? "text-stone-950"}`}>{valor}</p>
     </div>
   );
@@ -187,13 +188,13 @@ export function MeteoZona({ ubicacion, onComplete }: { ubicacion: Ubicacion; onC
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-3">
-            <Dato etiqueta="Viento" valor={numero(actual.windSpeedKmh, " km/h")} />
-            <Dato etiqueta="Rachas" valor={numero(actual.windGustKmh, " km/h")} />
-            <Dato etiqueta="Lluvia 1 h" valor={numero(actual.precipitationMm, " mm", 1)} />
-            <Dato etiqueta="Prob. lluvia" valor={numero(actual.precipitationProbabilityPct, " %")} />
-            <Dato etiqueta="Humedad ambiente" valor={numero(actual.relativeHumidityPct, " %", 0)} claseValor={colorHumedad(actual.relativeHumidityPct)} titulo={etiquetaHumedad(actual.relativeHumidityPct)} />
-            <Dato etiqueta="Máx. 5 días" valor={numero(maxima, " °C", 1)} claseValor={colorTemperatura(maxima)} titulo={etiquetaTermica(maxima)} />
-            <Dato etiqueta="Mín. 5 días" valor={numero(minima, " °C", 1)} claseValor={colorTemperatura(minima)} titulo={etiquetaTermica(minima)} />
+            <Dato etiqueta="Viento" valor={numero(actual.windSpeedKmh, " km/h")} icono="💨" />
+            <Dato etiqueta="Rachas" valor={numero(actual.windGustKmh, " km/h")} icono="🌬️" />
+            <Dato etiqueta="Lluvia 1 h" valor={numero(actual.precipitationMm, " mm", 1)} icono="🌧️" />
+            <Dato etiqueta="Prob. lluvia" valor={numero(actual.precipitationProbabilityPct, " %")} icono="☔" />
+            <Dato etiqueta="Humedad ambiente" valor={numero(actual.relativeHumidityPct, " %", 0)} claseValor={colorHumedad(actual.relativeHumidityPct)} titulo={etiquetaHumedad(actual.relativeHumidityPct)} icono="💧" />
+            <Dato etiqueta="Máx. 5 días" valor={numero(maxima, " °C", 1)} claseValor={colorTemperatura(maxima)} titulo={etiquetaTermica(maxima)} icono="🔥" />
+            <Dato etiqueta="Mín. 5 días" valor={numero(minima, " °C", 1)} claseValor={colorTemperatura(minima)} titulo={etiquetaTermica(minima)} icono="❄️" />
           </div>
 
           {dias.length ? (
@@ -202,7 +203,8 @@ export function MeteoZona({ ubicacion, onComplete }: { ubicacion: Ubicacion; onC
                 <h3 className="text-[15px] font-extrabold text-stone-900">Previsión diaria · {dias.length} días</h3>
                 <span className="text-[11px] font-bold uppercase tracking-wide text-stone-500">Temperatura · lluvia · viento</span>
               </div>
-              <ul className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <GraficoPrevision dias={dias} />
+              <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {dias.map((dia) => (
                   <li key={dia.clave} className="rounded-xl border-2 border-stone-200 bg-wheat-50 p-3">
                     <span className="text-[15px] font-bold capitalize text-stone-800">{dia.etiqueta}</span>

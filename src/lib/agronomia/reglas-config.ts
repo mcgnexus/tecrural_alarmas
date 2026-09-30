@@ -14,19 +14,35 @@ export function ajustarCultivoPorParametros(
   const temperatura = parameters?.temperature as
     | { orange?: number; red?: number }
     | undefined;
-  if (!temperatura) return cultivo;
+  const lluvia = parameters?.thresholds as
+    | { rain24h?: { yellow?: number; orange?: number; red?: number } }
+    | undefined;
+  if (!temperatura && !lluvia) return cultivo;
 
   const umbrales = { ...cultivo.umbrales };
-  if (riskType === "helada") {
-    if (typeof temperatura.orange === "number") {
-      umbrales.tminHelada = temperatura.orange;
+  if (temperatura) {
+    if (riskType === "helada") {
+      if (typeof temperatura.orange === "number") {
+        umbrales.tminHelada = temperatura.orange;
+      }
+      if (typeof temperatura.red === "number") {
+        umbrales.tminMortal = temperatura.red;
+      }
+    } else if (riskType === "golpe-de-calor") {
+      if (typeof temperatura.orange === "number") {
+        umbrales.tmaxEstres = temperatura.orange;
+      }
     }
-    if (typeof temperatura.red === "number") {
-      umbrales.tminMortal = temperatura.red;
-    }
-  } else if (riskType === "golpe-de-calor") {
-    if (typeof temperatura.orange === "number") {
-      umbrales.tmaxEstres = temperatura.orange;
+  }
+  if (lluvia && riskType === "lluvia") {
+    const ventana = lluvia.rain24h;
+    if (ventana) {
+      if (typeof ventana.yellow === "number") {
+        umbrales.lluviaAvisoMm = ventana.yellow;
+      }
+      if (typeof ventana.red === "number") {
+        umbrales.lluviaCriticaMm = ventana.red;
+      }
     }
   }
   return { ...cultivo, umbrales };

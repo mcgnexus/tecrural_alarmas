@@ -42,6 +42,13 @@ const CTAS: Record<string, Cta> = {
     href: "/servicios#estacion-local",
     interes: "WEATHER_STATION",
   },
+  lluvia: {
+    key: "lluvia",
+    pregunta: "¿Quieres saber cuánta lluvia cae en tu parcela?",
+    etiqueta: "Sensor TecRural",
+    href: "/servicios#sensor-temperatura",
+    interes: "SENSORS",
+  },
 };
 
 function elegirCta(alertas: Alerta[]): Cta | null {
@@ -49,8 +56,9 @@ function elegirCta(alertas: Alerta[]): Cta | null {
   const tipos = new Set(alertas.map((a) => a.tipo as string));
   if (tipos.has("helada")) return CTAS.helada;
   if (tipos.has("demanda-hidrica")) return CTAS.agua;
+  if (tipos.has("lluvia")) return CTAS.lluvia;
   if (tipos.has("fitosanitario")) return CTAS.fitosanitario;
-  // si solo hay otros (viento, lluvia, calor) cae en general
+  // si solo hay otros (viento, calor) cae en general
   return CTAS.general;
 }
 

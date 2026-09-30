@@ -15,6 +15,10 @@ export interface UmbralesTermicos {
   tmaxEstres: number;
   vientoCriticoKmh: number;
   etdUmbralMm: number;
+  /** Precipitación acumulada diaria (mm) a partir de la cual avisar. */
+  lluviaAvisoMm: number;
+  /** Precipitación acumulada diaria (mm) a partir de la cual avisar como crítica. */
+  lluviaCriticaMm: number;
 }
 
 export interface RangoMeses {
@@ -59,6 +63,8 @@ export const catalogoCultivos: Record<CulturaId, Cultura> = {
       tmaxEstres: 38,
       vientoCriticoKmh: 45,
       etdUmbralMm: 5,
+      lluviaAvisoMm: 20,
+      lluviaCriticaMm: 40,
     },
     fenologia: [
       { id: "reposo", etiqueta: "Reposo vegetativo", mesDesde: 11, mesHasta: 1, porZona: { costa: { mesDesde: 11, mesHasta: 12 } }, factorKc: 0.4 },
@@ -80,6 +86,8 @@ export const catalogoCultivos: Record<CulturaId, Cultura> = {
       tmaxEstres: 42,
       vientoCriticoKmh: 70,
       etdUmbralMm: 4.5,
+      lluviaAvisoMm: 30,
+      lluviaCriticaMm: 60,
     },
     fenologia: [
       { id: "reposo", etiqueta: "Reposo vegetativo", mesDesde: 11, mesHasta: 1, porZona: { costa: { mesDesde: 11, mesHasta: 12 } }, factorKc: 0.5 },
@@ -102,6 +110,8 @@ export const catalogoCultivos: Record<CulturaId, Cultura> = {
       tmaxEstres: 40,
       vientoCriticoKmh: 55,
       etdUmbralMm: 5,
+      lluviaAvisoMm: 20,
+      lluviaCriticaMm: 40,
     },
     fenologia: [
       { id: "reposo", etiqueta: "Reposo", mesDesde: 11, mesHasta: 2, porZona: { costa: { mesDesde: 11, mesHasta: 1 } }, factorKc: 0.4 },
@@ -123,6 +133,8 @@ export const catalogoCultivos: Record<CulturaId, Cultura> = {
       tmaxEstres: 34,
       vientoCriticoKmh: 40,
       etdUmbralMm: 4,
+      lluviaAvisoMm: 20,
+      lluviaCriticaMm: 35,
     },
     fenologia: [
       { id: "siembra", etiqueta: "Siembra", mesDesde: 10, mesHasta: 11, porZona: { costa: { mesDesde: 10, mesHasta: 12 } }, factorKc: 0.3 },
@@ -144,6 +156,8 @@ export const catalogoCultivos: Record<CulturaId, Cultura> = {
       tmaxEstres: 36,
       vientoCriticoKmh: 35,
       etdUmbralMm: 4.5,
+      lluviaAvisoMm: 30,
+      lluviaCriticaMm: 60,
     },
     fenologia: [
       { id: "floracion", etiqueta: "Floración", mesDesde: 3, mesHasta: 4, porZona: { altiplano: { mesDesde: 4, mesHasta: 5 } }, sensibleHelada: 0, factorKc: 0.7 },
@@ -163,6 +177,8 @@ export const catalogoCultivos: Record<CulturaId, Cultura> = {
       tmaxEstres: 38,
       vientoCriticoKmh: 35,
       etdUmbralMm: 5,
+      lluviaAvisoMm: 30,
+      lluviaCriticaMm: 60,
     },
     fenologia: [
       { id: "floracion", etiqueta: "Floración", mesDesde: 2, mesHasta: 4, porZona: { altiplano: { mesDesde: 3, mesHasta: 5 } }, sensibleHelada: 0, factorKc: 0.7 },
@@ -182,6 +198,8 @@ export const catalogoCultivos: Record<CulturaId, Cultura> = {
       tmaxEstres: 36,
       vientoCriticoKmh: 35,
       etdUmbralMm: 4.5,
+      lluviaAvisoMm: 25,
+      lluviaCriticaMm: 50,
     },
     fenologia: [
       { id: "brotacion", etiqueta: "Brotación", mesDesde: 2, mesHasta: 3, porZona: { altiplano: { mesDesde: 3, mesHasta: 4 } }, sensibleHelada: 1, factorKc: 0.6 },

@@ -13,6 +13,7 @@ export type EventoEmbudo =
   | "forecast_viewed"
   | "frost_alert_viewed"
   | "wind_alert_viewed"
+  | "rain_alert_viewed"
   | "lead_form_started"
   | "lead_form_submitted"
   | "lead_form_error"
@@ -35,6 +36,7 @@ const EVENTO_LEAD: Record<EventoEmbudo, LeadEventType | null> = {
   forecast_viewed: null,
   frost_alert_viewed: "ALERT_OPENED",
   wind_alert_viewed: "ALERT_OPENED",
+  rain_alert_viewed: "ALERT_OPENED",
   lead_form_started: null,
   lead_form_submitted: "CONTACT_REQUESTED",
   lead_form_error: null,

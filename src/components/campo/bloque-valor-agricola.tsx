@@ -5,6 +5,9 @@ import type { CulturaId } from "@/lib/cultivos/catalogo";
 import { catalogoCultivos } from "@/lib/cultivos/catalogo";
 import { canUseFeature, planForUser } from "@/lib/planes/permisos";
 import { registrarEventoEmbudo } from "@/lib/analitica";
+import type { Alerta } from "@/lib/dominio/tipos";
+import { AlertaCard } from "@/components/riesgo/alerta-card";
+import { GraficoRiesgo, type DiaRiesgoGrafico } from "./grafico-riesgo";
 
 type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
 
@@ -12,11 +15,10 @@ type Hora = {
   timestamp: string;
   temperatureC: number | null;
   windGustKmh: number | null;
+  precipitationMm: number | null;
 };
 
 type Nivel = "info" | "aviso" | "alerta" | "critica";
-
-type Alerta = { tipo: string; severidad: string; mensaje: string };
 
 type ResultadoRiesgo = {
   alertas: Alerta[];
@@ -31,15 +33,24 @@ type DiaRiesgo = {
   etiqueta: string;
   minima: number | null;
   rachaMaxima: number | null;
+  lluviaTotal: number | null;
   nivel: Nivel;
   helada: boolean;
   viento: boolean;
+  lluvia: boolean;
   umbralHelada: number;
   umbralViento: number;
+  umbralLluvia: number;
 };
 
 const DIAS_PREVISION = 5;
-const UMBRAL_GENERICO = { tminMortal: -5, tminHelada: 1, vientoCriticoKmh: 50 };
+const UMBRAL_GENERICO = {
+  tminMortal: -5,
+  tminHelada: 1,
+  vientoCriticoKmh: 50,
+  lluviaAvisoMm: 20,
+  lluviaCriticaMm: 40,
+};
 
 const ORDEN: Record<Nivel, number> = { info: 0, aviso: 1, alerta: 2, critica: 3 };
 const ETIQUETA_NIVEL: Record<Nivel, string> = {
@@ -60,6 +71,7 @@ const PARCHES_NIVEL: Record<Nivel, string> = {
   alerta: "border-orange-300 bg-orange-50 text-orange-900",
   critica: "border-red-300 bg-red-50 text-red-900",
 };
+const EMOJI_NIVEL: Record<Nivel, string> = { info: "✅", aviso: "🟡", alerta: "🟠", critica: "🔴" };
 
 function IconoNivel({ nivel }: { nivel: Nivel }) {
   const common = { fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" } as const;
@@ -125,27 +137,30 @@ function nivelDeSeveridad(severidad: string): Nivel {
     : "info";
 }
 
-/** Resume la serie horaria por día: mínima y racha máxima. */
+/** Resume la serie horaria por día: mínima, racha máxima y lluvia acumulada. */
 function diasDesdeHoras(horas: Hora[]): Array<{
   clave: string;
   etiqueta: string;
   minima: number | null;
   rachaMaxima: number | null;
+  lluviaTotal: number | null;
 }> {
-  const porDia = new Map<string, { clave: string; etiqueta: string; minima: number | null; rachaMaxima: number | null }>();
+  const porDia = new Map<string, { clave: string; etiqueta: string; minima: number | null; rachaMaxima: number | null; lluviaTotal: number | null }>();
   for (const hora of horas) {
     const t = typeof hora.temperatureC === "number" && Number.isFinite(hora.temperatureC) ? hora.temperatureC : null;
     const racha = typeof hora.windGustKmh === "number" && Number.isFinite(hora.windGustKmh) ? hora.windGustKmh : null;
-    if (t === null && racha === null) continue;
+    const lluvia = typeof hora.precipitationMm === "number" && Number.isFinite(hora.precipitationMm) ? hora.precipitationMm : null;
+    if (t === null && racha === null && lluvia === null) continue;
     const fecha = new Date(hora.timestamp);
     if (Number.isNaN(fecha.getTime())) continue;
     const clave = `${fecha.getFullYear()}-${fecha.getMonth()}-${fecha.getDate()}`;
     const etiqueta = fecha.toLocaleDateString("es-ES", { weekday: "short", day: "2-digit" });
     const actual = porDia.get(clave);
-    if (!actual) porDia.set(clave, { clave, etiqueta, minima: t, rachaMaxima: racha });
+    if (!actual) porDia.set(clave, { clave, etiqueta, minima: t, rachaMaxima: racha, lluviaTotal: lluvia });
     else {
       if (t !== null && (actual.minima === null || t < actual.minima)) actual.minima = t;
       if (racha !== null && (actual.rachaMaxima === null || racha > actual.rachaMaxima)) actual.rachaMaxima = racha;
+      if (lluvia !== null) actual.lluviaTotal = (actual.lluviaTotal ?? 0) + lluvia;
     }
   }
   return Array.from(porDia.values()).slice(0, DIAS_PREVISION);
@@ -154,13 +169,16 @@ function diasDesdeHoras(horas: Hora[]): Array<{
 function nivelDelDia(
   minima: number | null,
   rachaMaxima: number | null,
-  umbral: { tminMortal: number; tminHelada: number; vientoCriticoKmh: number },
+  lluviaTotal: number | null,
+  umbral: { tminMortal: number; tminHelada: number; vientoCriticoKmh: number; lluviaAvisoMm: number; lluviaCriticaMm: number },
   puedeHelada: boolean,
   puedeViento: boolean,
-): { nivel: Nivel; helada: boolean; viento: boolean } {
+  puedeLluvia: boolean,
+): { nivel: Nivel; helada: boolean; viento: boolean; lluvia: boolean } {
   let nivel: Nivel = "info";
   let helada = false;
   let viento = false;
+  let lluvia = false;
   if (puedeHelada && minima !== null) {
     if (minima <= umbral.tminMortal) { nivel = peorNivel(nivel, "critica"); helada = true; }
     else if (minima <= umbral.tminHelada) { nivel = peorNivel(nivel, "aviso"); helada = true; }
@@ -169,7 +187,11 @@ function nivelDelDia(
     if (rachaMaxima >= umbral.vientoCriticoKmh * 1.4) { nivel = peorNivel(nivel, "alerta"); viento = true; }
     else if (rachaMaxima >= umbral.vientoCriticoKmh) { nivel = peorNivel(nivel, "aviso"); viento = true; }
   }
-  return { nivel, helada, viento };
+  if (puedeLluvia && lluviaTotal !== null) {
+    if (lluviaTotal >= umbral.lluviaCriticaMm) { nivel = peorNivel(nivel, "alerta"); lluvia = true; }
+    else if (lluviaTotal >= umbral.lluviaAvisoMm) { nivel = peorNivel(nivel, "aviso"); lluvia = true; }
+  }
+  return { nivel, helada, viento, lluvia };
 }
 
 /**
@@ -180,8 +202,11 @@ export function BloqueValorAgricola({ ubicacion, cultivo, onComplete }: { ubicac
   const plan = planForUser();
   const puedeHelada = canUseFeature(plan, "frost_alert");
   const puedeViento = canUseFeature(plan, "wind_alert");
+  const puedeLluvia = canUseFeature(plan, "rain_alert");
   const [nivel, setNivel] = useState<Nivel>("info");
   const [peorDia, setPeorDia] = useState<DiaRiesgo | null>(null);
+  const [diasRiesgo, setDiasRiesgo] = useState<DiaRiesgo[]>([]);
+  const [alertasVisibles, setAlertasVisibles] = useState<Alerta[]>([]);
   const [cargando, setCargando] = useState(true);
   const [failed, setFailed] = useState(false);
   const [stale, setStale] = useState(false);
@@ -237,26 +262,36 @@ export function BloqueValorAgricola({ ubicacion, cultivo, onComplete }: { ubicac
         if (puedeViento && alertas.some((a) => a.tipo === "viento" && a.severidad !== "info")) {
           registrarEventoEmbudo("wind_alert_viewed", { municipio: ubicacion.nombre });
         }
+        if (puedeLluvia && alertas.some((a) => a.tipo === "lluvia" && a.severidad !== "info")) {
+          registrarEventoEmbudo("rain_alert_viewed", { municipio: ubicacion.nombre });
+        }
       }
 
+      const permitido = (a: Alerta) =>
+        (a.tipo === "helada" && puedeHelada) ||
+        (a.tipo === "viento" && puedeViento) ||
+        (a.tipo === "lluvia" && puedeLluvia);
       const apiNivel = alertas
         ? alertas
-            .filter((a) => (a.tipo === "helada" && puedeHelada) || (a.tipo === "viento" && puedeViento))
+            .filter(permitido)
             .reduce<Nivel>((acc, a) => peorNivel(acc, nivelDeSeveridad(a.severidad)), "info")
         : "info";
       const apiHelada = Boolean(alertas && puedeHelada && alertas.some((a) => a.tipo === "helada" && a.severidad !== "info"));
       const apiViento = Boolean(alertas && puedeViento && alertas.some((a) => a.tipo === "viento" && a.severidad !== "info"));
+      const apiLluvia = Boolean(alertas && puedeLluvia && alertas.some((a) => a.tipo === "lluvia" && a.severidad !== "info"));
 
       const dias: DiaRiesgo[] = diasDesdeHoras(horas ?? []).map((d, i) => {
-        const propio = nivelDelDia(d.minima, d.rachaMaxima, umbral, puedeHelada, puedeViento);
+        const propio = nivelDelDia(d.minima, d.rachaMaxima, d.lluviaTotal, umbral, puedeHelada, puedeViento, puedeLluvia);
         const esHoy = i === 0 && alertas !== null;
         return {
           ...d,
           nivel: esHoy ? peorNivel(propio.nivel, apiNivel) : propio.nivel,
           helada: propio.helada || (esHoy && apiHelada),
           viento: propio.viento || (esHoy && apiViento),
+          lluvia: propio.lluvia || (esHoy && apiLluvia),
           umbralHelada: umbral.tminHelada,
           umbralViento: umbral.vientoCriticoKmh,
+          umbralLluvia: umbral.lluviaAvisoMm,
         };
       });
 
@@ -266,11 +301,14 @@ export function BloqueValorAgricola({ ubicacion, cultivo, onComplete }: { ubicac
           etiqueta: "hoy",
           minima: null,
           rachaMaxima: null,
+          lluviaTotal: null,
           nivel: apiNivel,
           helada: apiHelada,
           viento: apiViento,
+          lluvia: apiLluvia,
           umbralHelada: umbral.tminHelada,
           umbralViento: umbral.vientoCriticoKmh,
+          umbralLluvia: umbral.lluviaAvisoMm,
         });
       }
 
@@ -278,6 +316,8 @@ export function BloqueValorAgricola({ ubicacion, cultivo, onComplete }: { ubicac
       for (const d of dias) if (!peor || ORDEN[d.nivel] > ORDEN[peor.nivel]) peor = d;
       setNivel(peor ? peor.nivel : "info");
       setPeorDia(peor);
+      setDiasRiesgo(dias);
+      setAlertasVisibles((alertas ?? []).filter((a) => a.severidad !== "info"));
     }).catch(() => { if (activo) setFailed(true); }).finally(() => {
       if (activo) {
         setCargando(false);
@@ -286,9 +326,9 @@ export function BloqueValorAgricola({ ubicacion, cultivo, onComplete }: { ubicac
     });
 
     return () => { activo = false; };
-  }, [ubicacion.lat, ubicacion.lon, ubicacion.aemetMunicipio, ubicacion.nombre, cultivo, intento, puedeHelada, puedeViento, onComplete]);
+  }, [ubicacion.lat, ubicacion.lon, ubicacion.aemetMunicipio, ubicacion.nombre, cultivo, intento, puedeHelada, puedeViento, puedeLluvia, onComplete]);
 
-  if (!puedeHelada && !puedeViento) return null;
+  if (!puedeHelada && !puedeViento && !puedeLluvia) return null;
   if (cargando) return (
     <section aria-live="polite" className="rounded-2xl border-2 border-earth-200 bg-wheat-50 p-5">
       <h2 className="text-lg font-extrabold text-stone-950">Calculando riesgos para tu cultivo…</h2>
@@ -318,8 +358,23 @@ export function BloqueValorAgricola({ ubicacion, cultivo, onComplete }: { ubicac
     ? [
         peorDia.minima !== null ? `mín ${peorDia.minima.toFixed(1)} °C` : null,
         peorDia.rachaMaxima !== null ? `rachas ${Math.round(peorDia.rachaMaxima)} km/h` : null,
+        peorDia.lluviaTotal !== null ? `lluvia ${peorDia.lluviaTotal.toFixed(1)} mm` : null,
       ].filter(Boolean).join(" · ")
     : "";
+
+  const diasGrafico: DiaRiesgoGrafico[] = diasRiesgo.map((d) => {
+    const partes = [
+      d.helada ? "❄️ Helada" : null,
+      d.viento ? "💨 Viento" : null,
+      d.lluvia ? "🌧️ Lluvia" : null,
+      d.minima !== null ? `mín ${d.minima.toFixed(1)} °C` : null,
+      d.rachaMaxima !== null ? `rachas ${Math.round(d.rachaMaxima)} km/h` : null,
+      d.lluviaTotal !== null ? `lluvia ${d.lluviaTotal.toFixed(1)} mm` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    return { clave: d.clave, etiqueta: d.etiqueta, nivel: d.nivel, detalle: partes || "Sin riesgo" };
+  });
 
   function explicacion(): string {
     if (!hayRiesgo || !peorDia) {
@@ -328,18 +383,22 @@ export function BloqueValorAgricola({ ubicacion, cultivo, onComplete }: { ubicac
     const partes: string[] = [];
     if (peorDia.helada && peorDia.minima !== null) partes.push(`mínima de ${peorDia.minima.toFixed(1)} °C (umbral ${peorDia.umbralHelada} °C)`);
     if (peorDia.viento && peorDia.rachaMaxima !== null) partes.push(`rachas de ${Math.round(peorDia.rachaMaxima)} km/h (umbral ${peorDia.umbralViento} km/h)`);
+    if (peorDia.lluvia && peorDia.lluviaTotal !== null) partes.push(`lluvia de ${peorDia.lluviaTotal.toFixed(1)} mm (umbral ${peorDia.umbralLluvia} mm)`);
     if (!partes.length) partes.push("valores cercanos a los umbrales aplicados");
     const acciones: string[] = [];
     if (peorDia.helada) acciones.push("Protege los cultivos sensibles de madrugada.");
     if (peorDia.viento) acciones.push("Revisa tutores, cubiertas y elementos sueltos.");
+    if (peorDia.lluvia) acciones.push("Despeja desagües y evita trabajar el suelo mojado.");
     return `El peor día de los próximos ${DIAS_PREVISION} es ${peorDia.etiqueta}: ${partes.join(" y ")}. ${acciones.join(" ")}`.trim();
   }
 
   return (
+    <>
     <section className="rounded-2xl border-2 border-earth-200 bg-wheat-50 p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-extrabold text-stone-950">Resumen agrícola</h2>
         <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${PARCHES_NIVEL[nivel]}`}>
+          <span aria-hidden="true">{EMOJI_NIVEL[nivel]}</span>
           <IconoNivel nivel={nivel} />
           {ETIQUETA_NIVEL[nivel]}
         </span>
@@ -352,6 +411,7 @@ export function BloqueValorAgricola({ ubicacion, cultivo, onComplete }: { ubicac
         <div className={`rounded-xl border-2 bg-white p-4 ${nivel === "info" ? "border-emerald-200" : nivel === "aviso" ? "border-amber-200" : nivel === "alerta" ? "border-orange-300" : "border-red-300"}`}>
           <dt className="text-[11px] font-bold uppercase tracking-wide text-stone-500">Nivel</dt>
           <dd className={`mt-1 inline-flex items-center gap-2 text-2xl font-black ${COLOR_NIVEL[nivel]}`}>
+            <span aria-hidden="true">{EMOJI_NIVEL[nivel]}</span>
             <IconoNivel nivel={nivel} />
             {ETIQUETA_NIVEL[nivel]}
           </dd>
@@ -365,6 +425,7 @@ export function BloqueValorAgricola({ ubicacion, cultivo, onComplete }: { ubicac
             <span>{hayRiesgo && peorDia ? peorDia.etiqueta : "Ninguno"}</span>
             {hayRiesgo && peorDia ? (
               <span className={`inline-flex items-center gap-1 text-xs font-bold ${COLOR_NIVEL[peorDia.nivel]}`}>
+                <span aria-hidden="true">{EMOJI_NIVEL[peorDia.nivel]}</span>
                 <IconoNivel nivel={peorDia.nivel} />
                 {ETIQUETA_NIVEL[peorDia.nivel]}
               </span>
@@ -374,8 +435,21 @@ export function BloqueValorAgricola({ ubicacion, cultivo, onComplete }: { ubicac
         </div>
       </dl>
 
+      {diasGrafico.length ? <GraficoRiesgo dias={diasGrafico} /> : null}
+
       <p className="mt-3 rounded-xl border border-stone-200 bg-white p-3 text-sm leading-relaxed text-stone-700">{explicacion()}</p>
       <p className="mt-2 text-xs text-stone-500">Estimación orientativa de {DIAS_PREVISION} días (AEMET/Open-Meteo). No sustituye la observación de la parcela ni el criterio de un técnico.</p>
     </section>
+
+    {alertasVisibles.length ? (
+      <section className="flex flex-col gap-3" aria-labelledby="alertas-detectadas-titulo">
+        <h2 id="alertas-detectadas-titulo" className="text-xl font-extrabold text-stone-950">🌾 Alarmas agrícolas TecRural</h2>
+        <p className="text-base leading-snug text-stone-700">Estimadas para el cultivo y sus umbrales. Son independientes de los avisos oficiales de AEMET. Toca una alarma para ver la explicación y las medidas orientativas.</p>
+        {alertasVisibles.map((alerta) => (
+          <AlertaCard key={alerta.id} alerta={alerta} />
+        ))}
+      </section>
+    ) : null}
+    </>
   );
 }

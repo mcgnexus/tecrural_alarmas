@@ -5,9 +5,10 @@ describe("Fase10 Permisos por plan", () => {
   it("gratuito no puede demanda hídrica", () => {
     expect(canUseFeature("free", "water_demand")).toBe(false);
   });
-  it("gratuito puede helada y viento", () => {
+  it("gratuito puede helada, viento y lluvia", () => {
     expect(canUseFeature("free", "frost_alert")).toBe(true);
     expect(canUseFeature("free", "wind_alert")).toBe(true);
+    expect(canUseFeature("free", "rain_alert")).toBe(true);
     expect(canUseFeature("free", "weather_current")).toBe(true);
     expect(canUseFeature("free", "weather_forecast")).toBe(true);
   });
@@ -26,8 +27,9 @@ describe("Fase10 Permisos por plan", () => {
     expect(canAccessServer("pro", "image_diagnosis")).toBe(true);
   });
   it("no muestra funcionalidad gratuita si requiere suscripción", () => {
-    // rain_alert no debe ser true para free
-    expect(canUseFeature("free", "rain_alert")).toBe(false);
+    // helada, viento y lluvia son gratuitas; el resto sigue siendo de pago
     expect(canUseFeature("free", "heat_alert")).toBe(false);
+    expect(canUseFeature("free", "water_demand")).toBe(false);
+    expect(canUseFeature("free", "phytosanitary_alert")).toBe(false);
   });
 });

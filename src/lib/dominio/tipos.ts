@@ -66,6 +66,7 @@ export type TipoAlerta =
   | "helada"
   | "golpe-de-calor"
   | "viento"
+  | "lluvia"
   | "demanda-hidrica";
 
 export interface Alerta {

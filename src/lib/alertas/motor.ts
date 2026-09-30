@@ -43,6 +43,7 @@ export async function evaluarRiesgo(
   const tiposPermitidos = new Set<string>();
   if (canUseFeature(plan, "frost_alert")) tiposPermitidos.add("helada");
   if (canUseFeature(plan, "wind_alert")) tiposPermitidos.add("viento");
+  if (canUseFeature(plan, "rain_alert")) tiposPermitidos.add("lluvia");
   // premium oculto pero conservado: otros tipos solo si plan lo permite (canUseFeature)
 
   const alertas = reglasActivas

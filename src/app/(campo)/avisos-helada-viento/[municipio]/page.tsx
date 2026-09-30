@@ -14,8 +14,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const municipio = municipioPublicoPorSlug(slug);
   if (!municipio) notFound();
 
-  const title = `Avisos de helada y viento en ${municipio.name}`;
-  const description = `Consulta el tiempo municipal de ${municipio.name}, Granada, y revisa los riesgos de helada y viento para tu cultivo. Previsión gratuita y avisos por WhatsApp.`;
+  const title = `Avisos de helada, viento y lluvia en ${municipio.name}`;
+  const description = `Consulta el tiempo municipal de ${municipio.name}, Granada, los avisos oficiales de AEMET y las alarmas agrícolas para tu cultivo.`;
   const canonical = `/avisos-helada-viento/${municipio.slug}`;
 
   return {
@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: "TecRural Campo",
       locale: "es_ES",
       type: "website",
-      images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Avisos de helada y viento para tu cultivo, gratis" }],
+      images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Tiempo, avisos oficiales y alarmas agrícolas" }],
     },
     twitter: {
       card: "summary_large_image",

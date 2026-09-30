@@ -29,6 +29,7 @@ export const PLAN_FEATURES: Record<Plan, readonly Feature[]> = {
     "weather_forecast",
     "frost_alert",
     "wind_alert",
+    "rain_alert",
   ],
   essential: [
     "weather_current",

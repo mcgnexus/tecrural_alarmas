@@ -27,6 +27,8 @@ export function subtituloDeAlerta(tipo: TipoAlerta | string): string {
       return "Horas centrales del día";
     case "viento":
       return "Rachas previstas";
+    case "lluvia":
+      return "Hoy y próximas horas";
     case "demanda-hidrica":
       return "Estimación orientativa de riego";
     default:
@@ -59,6 +61,18 @@ export function metricasDeAlerta(
       if (racha !== null) metricas.push({ etiqueta: "Racha máxima", valor: `${formatear(racha, 0)} km/h` });
       const medio = numeroDe(mensaje, /viento medio\s+([\d.,]+)\s*km\/h/i);
       if (medio !== null) metricas.push({ etiqueta: "Viento medio", valor: `${formatear(medio, 0)} km/h` });
+      return metricas;
+    }
+    case "lluvia": {
+      const metricas: MetricaAlerta[] = [];
+      const acumulado = numeroDe(mensaje, /prev[eé]n\s+([\d.,]+)\s*mm/i);
+      if (acumulado !== null) {
+        metricas.push({ etiqueta: "Lluvia acumulada", valor: `${formatear(acumulado)} mm` });
+      }
+      const probabilidad = numeroDe(mensaje, /probabilidad\s+m[aá]xima\s+del\s+([\d.,]+)\s*%/i);
+      if (probabilidad !== null) {
+        metricas.push({ etiqueta: "Probabilidad máxima", valor: `${formatear(probabilidad, 0)} %` });
+      }
       return metricas;
     }
     case "demanda-hidrica": {

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { registrarEventoEmbudo } from "@/lib/analitica";
 import { MeteoZona } from "@/components/campo/meteo-zona";
+import { AvisosOficialesAemet } from "@/components/campo/avisos-oficiales";
 import { BloqueValorAgricola } from "@/components/campo/bloque-valor-agricola";
 import { FormularioContacto } from "@/components/servicios/formulario-contacto";
 import { catalogoCultivos } from "@/lib/cultivos/catalogo";
@@ -134,8 +135,8 @@ export function HomeSinRegistro() {
         <Image src="/TecRural_icono.png" alt="Logo de TecRural" width={40} height={40} preload className="h-10 w-10" />
         <p className="text-[15px] font-bold uppercase tracking-wider text-olive-700">TecRural Campo</p>
       </div>
-      <h1 className="mt-2 text-4xl font-black leading-tight text-stone-950 sm:text-5xl lg:text-6xl">Protege tu cultivo frente a heladas y viento</h1>
-      <p className="mt-3 text-lg leading-relaxed text-stone-700">Consulta el tiempo de tu zona y recibe avisos sencillos sobre heladas y viento que pueden afectar a tu cultivo.</p>
+      <h1 className="mt-2 text-4xl font-black leading-tight text-stone-950 sm:text-5xl lg:text-6xl">Protege tu cultivo frente a heladas, viento y lluvia intensa</h1>
+      <p className="mt-3 text-lg leading-relaxed text-stone-700">Consulta el tiempo de tu zona, los avisos oficiales de AEMET y las alarmas agrícolas ajustadas a tu cultivo.</p>
 
       <p className="mt-3 text-sm text-stone-600">Servicio local creado por <strong className="text-stone-800">Manuel Carrasco, de Huéscar</strong>.</p>
 
@@ -183,6 +184,7 @@ export function HomeSinRegistro() {
     {ubicacion ? <section id="prevision" aria-label="Tiempo de tu zona" className="scroll-mt-24 flex flex-col gap-3">
       <h2 className="text-xl font-extrabold text-stone-950">Tiempo de tu zona</h2>
       <MeteoZona key={`${ubicacion.lat}-${ubicacion.lon}`} ubicacion={ubicacion} onComplete={marcarTiempoConsultado} />
+      <AvisosOficialesAemet ubicacion={ubicacion} />
     </section> : null}
 
     {/* BLOQUE 3: explicación valor agrícola */}

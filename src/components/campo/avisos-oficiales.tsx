@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  avisoVigente,
+  emojiFenomenoOficial,
+  etiquetaFenomenoOficial,
+  fenomenoOficial,
+  type FenomenoOficial,
+} from "@/lib/ui/avisos-oficiales";
 
 type Ubicacion = { lat: number; lon: number };
 
@@ -19,16 +26,27 @@ type AvisoOficial = {
 
 function colorSeveridad(severidad: string): string {
   const s = severidad.toLowerCase();
-  if (s.includes("rojo") || s.includes("red") || s.includes("severe") || s.includes("extreme")) {
+  if (s.includes("rojo") || s.includes("red") || s.includes("extreme")) {
     return "bg-red-100 text-red-800 border-red-300";
   }
-  if (s.includes("naranja") || s.includes("orange")) {
+  if (s.includes("naranja") || s.includes("orange") || s.includes("severe")) {
     return "bg-orange-100 text-orange-800 border-orange-300";
   }
-  if (s.includes("amarillo") || s.includes("yellow")) {
+  if (s.includes("amarillo") || s.includes("yellow") || s.includes("moderate")) {
     return "bg-amber-100 text-amber-800 border-amber-300";
   }
   return "bg-stone-100 text-stone-700 border-stone-300";
+}
+
+function etiquetaSeveridad(severidad: string, fenomeno: string): string {
+  const s = severidad.toLowerCase();
+  if (s.includes("amarillo") || s.includes("yellow")) return "Aviso amarillo";
+  if (s.includes("naranja") || s.includes("orange")) return "Aviso naranja";
+  if (s.includes("rojo") || s.includes("red")) return "Aviso rojo";
+  if (s.includes("moderate")) return "Moderado";
+  if (s.includes("severe")) return "Severo";
+  if (s.includes("extreme")) return "Extremo";
+  return severidad || fenomeno;
 }
 
 function formatearPeriodo(desde: string, hasta: string): string {
@@ -59,31 +77,40 @@ export function AvisosOficialesAemet({ ubicacion }: { ubicacion: Ubicacion }) {
     return () => { activo = false; };
   }, [ubicacion]);
 
-  return (
-    <section className="rounded-2xl border-2 border-earth-300 bg-white p-5 shadow-sm">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-xl font-extrabold text-stone-950">Avisos oficiales de tu zona</h2>
-        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-700">Gratis, sin registro</span>
-      </div>
+  const avisosRelevantes = avisos
+    .map((aviso) => ({ ...aviso, fenomenoVisible: fenomenoOficial(aviso) }))
+    .filter((aviso): aviso is typeof aviso & { fenomenoVisible: FenomenoOficial } =>
+      aviso.fenomenoVisible !== null && avisoVigente(aviso),
+    );
 
-      {cargando ? <p className="mt-3 text-[15px] text-stone-600">Cargando avisos oficiales…</p> : null}
+  return (
+    <section className="rounded-2xl border-2 border-sky-300 bg-sky-50 p-5 shadow-sm" aria-labelledby="avisos-aemet-titulo">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="avisos-aemet-titulo" className="text-xl font-extrabold text-stone-950">Avisos oficiales AEMET</h2>
+        <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-sky-900">Fuente oficial · por zona</span>
+      </div>
+      <p className="mt-1 text-sm leading-relaxed text-stone-700">Lluvia, temperatura mínima y viento previstos para el municipio. Son avisos meteorológicos oficiales, independientes de las alarmas agrícolas de TecRural.</p>
+
+      {cargando ? <p role="status" className="mt-3 text-[15px] text-stone-600">Cargando avisos oficiales de AEMET…</p> : null}
 
       {!cargando && error ? <p className="mt-3 text-[14px] text-stone-500">No pudimos cargar los avisos oficiales ahora mismo.</p> : null}
 
-      {!cargando && !error && avisos.length === 0 ? (
-        <p className="mt-3 rounded-xl bg-emerald-50 p-3 text-[14px] font-semibold text-emerald-900">Sin avisos oficiales activos en tu zona.</p>
+      {!cargando && !error && avisosRelevantes.length === 0 ? (
+        <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[14px] font-semibold text-emerald-900">AEMET no publica avisos vigentes o previstos para lluvia, temperatura mínima o viento en esta zona.</p>
       ) : null}
 
-      {!cargando && !error && avisos.length > 0 ? (
+      {!cargando && !error && avisosRelevantes.length > 0 ? (
         <ul className="mt-3 flex flex-col gap-2">
-          {avisos.map((aviso) => (
+          {avisosRelevantes.map((aviso) => (
             <li key={aviso.id} className={`rounded-xl border-2 p-3 ${colorSeveridad(aviso.severity)}`}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[15px] font-extrabold">{aviso.headline}</span>
-                <span className="rounded-full bg-white/60 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide">{aviso.severity || aviso.phenomenon}</span>
+                <span className="text-[15px] font-extrabold"><span aria-hidden="true" className="mr-2">{emojiFenomenoOficial(aviso.fenomenoVisible)}</span>{aviso.headline}</span>
+                <span className="rounded-full bg-white/60 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide">{etiquetaSeveridad(aviso.severity, aviso.phenomenon)}</span>
               </div>
+              <p className="mt-1 text-[13px] font-bold">{etiquetaFenomenoOficial(aviso.fenomenoVisible)}</p>
               <p className="mt-1 text-[13px] font-semibold">{formatearPeriodo(aviso.startsAt, aviso.endsAt)}</p>
               {aviso.area ? <p className="text-[12px]">{aviso.area}</p> : null}
+              {aviso.description ? <p className="mt-2 text-sm leading-snug">{aviso.description}</p> : null}
               {aviso.sourceUrl ? (
                 <a href={aviso.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-[12px] font-bold underline">Fuente oficial</a>
               ) : null}
@@ -92,7 +119,7 @@ export function AvisosOficialesAemet({ ubicacion }: { ubicacion: Ubicacion }) {
         </ul>
       ) : null}
 
-      <p className="mt-3 text-[12px] leading-relaxed text-stone-500">Fuente: {avisos[0]?.provider ?? "AEMET"}. TecRural no sustituye a los servicios oficiales.</p>
+      <p className="mt-3 text-[12px] leading-relaxed text-stone-600">Avisos oficiales de AEMET para un área municipal, no mediciones de la parcela. Consulta la fuente oficial para actualizaciones.</p>
     </section>
   );
 }

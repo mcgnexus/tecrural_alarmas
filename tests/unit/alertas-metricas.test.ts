@@ -46,8 +46,20 @@ describe("métricas de alerta por tipo", () => {
     expect(m[0]!.valor).toBe("62 km/h");
   });
 
+  it("lluvia muestra acumulado y probabilidad máxima", () => {
+    const m = metricasDeAlerta("lluvia", "Se prevén 33 mm acumulados con una probabilidad máxima del 80 % para Floración; por encima del umbral de aviso (20 mm).");
+    expect(m.map((x) => x.etiqueta)).toEqual(["Lluvia acumulada", "Probabilidad máxima"]);
+    expect(m[0]!.valor).toBe("33 mm");
+    expect(m[1]!.valor).toBe("80 %");
+  });
+
+  it("lluvia no inventa datos que no están en el mensaje", () => {
+    const m = metricasDeAlerta("lluvia", "Lluvia intensa prevista.");
+    expect(m).toEqual([]);
+  });
+
   it("un tipo desconocido no devuelve métricas", () => {
-    expect(metricasDeAlerta("lluvia", "Precipitación de 20 mm.")).toEqual([]);
+    expect(metricasDeAlerta("lluvia-inundacion", "Precipitación de 20 mm.")).toEqual([]);
   });
 });
 
@@ -55,5 +67,6 @@ describe("subtítulo de alerta", () => {
   it("adapta la frase al tipo", () => {
     expect(subtituloDeAlerta("helada")).toBe("Esta madrugada");
     expect(subtituloDeAlerta("demanda-hidrica")).toBe("Estimación orientativa de riego");
+    expect(subtituloDeAlerta("lluvia")).toBe("Hoy y próximas horas");
   });
 });
