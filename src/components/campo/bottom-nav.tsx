@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 interface ItemNav {
   href: string;
   etiqueta: string;
+  ariaLabel?: string;
   icono: string;
 }
 
@@ -14,7 +15,7 @@ const items: ItemNav[] = [
   { href: "/", etiqueta: "Inicio", icono: "home" },
   { href: "/#prevision", etiqueta: "Tiempo", icono: "tiempo" },
   { href: "/#captacion", etiqueta: "Avisos", icono: "campana" },
-  { href: "/#como-funciona", etiqueta: "¿Cómo funciona?", icono: "ayuda" },
+  { href: "/#como-funciona", etiqueta: "Guía", ariaLabel: "¿Cómo funciona?", icono: "ayuda" },
   { href: "/cuenta", etiqueta: "Acceso", icono: "acceso" },
 ];
 
@@ -149,7 +150,7 @@ export function BottomNav() {
   const tieneUbicacion = useTieneUbicacion();
 
   return (
-    <nav className="sticky bottom-0 z-10 border-t-2 border-stone-900/10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/95 md:hidden">
+    <nav className="sticky bottom-0 z-10 border-t-2 border-stone-900/10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/95 lg:hidden">
       <div className="mx-auto grid w-full max-w-5xl grid-cols-5 gap-0.5 px-2 pb-[env(safe-area-inset-bottom)] pt-0.5">
         {items.map((item) => {
           const href = hrefDeItem(item, tieneUbicacion);
@@ -163,7 +164,7 @@ export function BottomNav() {
               key={item.href}
               href={href}
               aria-current={activo ? "page" : undefined}
-              aria-label={item.etiqueta}
+              aria-label={item.ariaLabel ?? item.etiqueta}
               onClick={(e) => desplazarEnPagina(e, href, pathname)}
               className={`flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[13px] font-semibold leading-none sm:text-[15px] ${
                 activo
@@ -190,7 +191,7 @@ export function NavEscritorio() {
   );
 
   return (
-    <nav className="hidden items-center gap-1 md:flex">
+    <nav className="hidden items-center gap-1 lg:flex">
       {items.map((item) => {
         const href = hrefDeItem(item, tieneUbicacion);
         const activoRuta =
@@ -203,6 +204,7 @@ export function NavEscritorio() {
           <Link
             key={item.href}
             href={href}
+            aria-label={item.ariaLabel ?? item.etiqueta}
             aria-current={activo ? "page" : undefined}
             onClick={(e) => {
               setSeleccion({ path: pathname, href });

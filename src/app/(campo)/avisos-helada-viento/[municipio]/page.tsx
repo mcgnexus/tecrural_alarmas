@@ -48,8 +48,8 @@ export default async function AvisosMunicipioPage({ params }: Props) {
   const datosEstructurados = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    name: `Avisos de helada y viento en ${municipio.name}`,
-    description: `Previsión municipal y riesgos orientativos de helada y viento para cultivos en ${municipio.name}, Granada.`,
+    name: `Tiempo y alarmas agrícolas en ${municipio.name}`,
+    description: `Previsión municipal, avisos oficiales AEMET y alarmas agrícolas de lluvia, helada y viento para cultivos en ${municipio.name}, Granada.`,
     url: `https://tecrural.es/avisos-helada-viento/${municipio.slug}`,
     about: {
       "@type": "Place",

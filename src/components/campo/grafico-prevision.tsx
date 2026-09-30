@@ -52,10 +52,10 @@ export function GraficoPrevision({ dias }: { dias: DiaGrafico[] }) {
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={datos} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
-              <XAxis dataKey="nombre" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} unit="°" />
+              <XAxis dataKey="nombre" tick={{ fontSize: 13 }} />
+              <YAxis tick={{ fontSize: 13 }} unit="°" />
               <Tooltip formatter={(valor) => numero(valor, " °C", 1)} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: 13 }} />
               <Line type="monotone" dataKey="maxima" name="Máxima" stroke={COLOR_MAX} strokeWidth={3} dot={{ r: 3 }} connectNulls />
               <Line type="monotone" dataKey="minima" name="Mínima" stroke={COLOR_MIN} strokeWidth={3} dot={{ r: 3 }} connectNulls />
             </ComposedChart>
@@ -71,16 +71,16 @@ export function GraficoPrevision({ dias }: { dias: DiaGrafico[] }) {
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={datos} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
-              <XAxis dataKey="nombre" tick={{ fontSize: 12 }} />
-              <YAxis yAxisId="lluvia" tick={{ fontSize: 12 }} />
-              <YAxis yAxisId="viento" orientation="right" tick={{ fontSize: 12 }} />
+              <XAxis dataKey="nombre" tick={{ fontSize: 13 }} />
+              <YAxis yAxisId="lluvia" tick={{ fontSize: 13 }} />
+              <YAxis yAxisId="viento" orientation="right" tick={{ fontSize: 13 }} />
               <Tooltip
                 formatter={(valor, nombre) => [
                   nombre === "Lluvia" ? numero(valor, " mm", 1) : numero(valor, " km/h"),
                   nombre,
                 ]}
               />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: 13 }} />
               <Bar yAxisId="lluvia" dataKey="lluvia" name="Lluvia" fill={COLOR_LLUVIA} radius={[4, 4, 0, 0]} />
               <Line yAxisId="viento" type="monotone" dataKey="racha" name="Rachas" stroke={COLOR_RACHA} strokeWidth={3} dot={{ r: 3 }} connectNulls />
             </ComposedChart>

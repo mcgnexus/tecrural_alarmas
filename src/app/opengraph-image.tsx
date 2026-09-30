@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Avisos de helada y viento para tu cultivo, gratis";
+export const alt = "Tiempo, avisos AEMET y alarmas agrícolas para Granada";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -58,10 +58,10 @@ export default function OpenGraphImage() {
             TECRURAL CAMPO
           </div>
           <div style={{ fontSize: 58, lineHeight: 1.08, fontWeight: 800, letterSpacing: -1 }}>
-            Avisos de helada y viento
+            Tiempo y alarmas agrícolas
           </div>
-          <div style={{ fontSize: 52, lineHeight: 1.12, fontWeight: 800, color: "#f5e8c8", marginTop: 8 }}>
-            para tu cultivo, gratis
+          <div style={{ fontSize: 42, lineHeight: 1.12, fontWeight: 800, color: "#f5e8c8", marginTop: 8 }}>
+            AEMET · lluvia · helada · viento
           </div>
           <div
             style={{
@@ -76,7 +76,7 @@ export default function OpenGraphImage() {
               fontWeight: 700,
             }}
           >
-            Gratis · Avisos por WhatsApp
+            Avisos oficiales y por cultivo
           </div>
         </div>
       </div>
