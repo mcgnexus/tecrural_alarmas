@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { colorTemperatura, etiquetaTermica } from "@/lib/ui/temperatura";
 import { colorHumedad, etiquetaHumedad } from "@/lib/ui/humedad";
+import { colorLluvia, etiquetaLluvia } from "@/lib/ui/lluvia";
+import { colorViento, etiquetaViento } from "@/lib/ui/viento";
 import { registrarEventoEmbudo } from "@/lib/analitica";
 import { etiquetaDia } from "@/lib/ui/fechas";
 import { GraficoPrevision } from "./grafico-prevision";
@@ -88,10 +90,10 @@ function ResumenPrevision({ dias }: { dias: DiaExtremos[] }) {
   const lluviaTotal = dias.reduce((suma, d) => suma + (d.lluviaTotal ?? 0), 0);
 
   const filas = [
-    { icono: "❄️", etiqueta: "Mínima más baja", texto: masBaja ? `${numero(masBaja.valor, " °C", 0)} el ${masBaja.dia.etiqueta}` : "—" },
-    { icono: "🔥", etiqueta: "Máxima más alta", texto: masAlta ? `${numero(masAlta.valor, " °C", 0)} el ${masAlta.dia.etiqueta}` : "—" },
-    { icono: "🌧️", etiqueta: "Lluvia máxima en un día", texto: masLluvia ? `${numero(masLluvia.valor, " mm", 1)} el ${masLluvia.dia.etiqueta}` : "—" },
-    { icono: "🌬️", etiqueta: "Rachas más fuertes", texto: masRacha ? `${numero(masRacha.valor, " km/h")} el ${masRacha.dia.etiqueta}` : "—" },
+    { icono: "❄️", etiqueta: "Mínima más baja", texto: masBaja ? `${numero(masBaja.valor, " °C", 0)} el ${masBaja.dia.etiqueta}` : "—", titulo: masBaja ? etiquetaTermica(masBaja.valor) : undefined, color: masBaja ? colorTemperatura(masBaja.valor) : "" },
+    { icono: "🔥", etiqueta: "Máxima más alta", texto: masAlta ? `${numero(masAlta.valor, " °C", 0)} el ${masAlta.dia.etiqueta}` : "—", titulo: masAlta ? etiquetaTermica(masAlta.valor) : undefined, color: masAlta ? colorTemperatura(masAlta.valor) : "" },
+    { icono: "🌧️", etiqueta: "Lluvia máxima en un día", texto: masLluvia ? `${numero(masLluvia.valor, " mm", 1)} el ${masLluvia.dia.etiqueta}` : "—", titulo: masLluvia ? etiquetaLluvia(masLluvia.valor) : undefined, color: masLluvia ? colorLluvia(masLluvia.valor) : "" },
+    { icono: "🌬️", etiqueta: "Rachas más fuertes", texto: masRacha ? `${numero(masRacha.valor, " km/h")} el ${masRacha.dia.etiqueta}` : "—", titulo: masRacha ? etiquetaViento(masRacha.valor) : undefined, color: masRacha ? colorViento(masRacha.valor) : "" },
   ];
 
   return (
@@ -103,7 +105,7 @@ function ResumenPrevision({ dias }: { dias: DiaExtremos[] }) {
             <dt className="text-[11px] font-bold uppercase tracking-wide text-stone-500">
               <span aria-hidden="true">{fila.icono}</span> {fila.etiqueta}
             </dt>
-            <dd className="mt-0.5 text-[15px] font-extrabold text-stone-950">{fila.texto}</dd>
+            <dd title={fila.titulo} className={`mt-0.5 text-[15px] font-extrabold ${fila.color || "text-stone-900"}`}>{fila.texto}</dd>
           </div>
         ))}
       </dl>
@@ -245,9 +247,9 @@ export function MeteoZona({ ubicacion, onComplete }: { ubicacion: Ubicacion; onC
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-3">
-            <Dato etiqueta="Viento" valor={numero(actual.windSpeedKmh, " km/h")} icono="💨" />
-            <Dato etiqueta="Rachas" valor={numero(actual.windGustKmh, " km/h")} icono="🌬️" />
-            <Dato etiqueta="Lluvia 1 h" valor={numero(actual.precipitationMm, " mm", 1)} icono="🌧️" />
+            <Dato etiqueta="Viento" valor={numero(actual.windSpeedKmh, " km/h")} claseValor={colorViento(actual.windSpeedKmh)} titulo={etiquetaViento(actual.windSpeedKmh)} icono="💨" />
+            <Dato etiqueta="Rachas" valor={numero(actual.windGustKmh, " km/h")} claseValor={colorViento(actual.windGustKmh)} titulo={etiquetaViento(actual.windGustKmh)} icono="🌬️" />
+            <Dato etiqueta="Lluvia 1 h" valor={numero(actual.precipitationMm, " mm", 1)} claseValor={colorLluvia(actual.precipitationMm)} titulo={etiquetaLluvia(actual.precipitationMm)} icono="🌧️" />
             <Dato etiqueta="Prob. lluvia" valor={numero(actual.precipitationProbabilityPct, " %")} icono="☔" />
             <Dato etiqueta="Humedad ambiente" valor={numero(actual.relativeHumidityPct, " %", 0)} claseValor={colorHumedad(actual.relativeHumidityPct)} titulo={etiquetaHumedad(actual.relativeHumidityPct)} icono="💧" />
             <Dato etiqueta="Máx. 5 días" valor={numero(maxima, " °C", 1)} claseValor={colorTemperatura(maxima)} titulo={etiquetaTermica(maxima)} icono="🔥" />
@@ -268,10 +270,10 @@ export function MeteoZona({ ubicacion, onComplete }: { ubicacion: Ubicacion; onC
                   <li key={dia.clave} className="rounded-xl border-2 border-stone-200 bg-wheat-50 p-3">
                     <span className="text-[15px] font-bold capitalize text-stone-800">{dia.etiqueta}</span>
                     <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-                      <p><span className="text-stone-500">Mín / Máx</span><br /><strong className={colorTemperatura(dia.minima)}>{numero(dia.minima, "°", 0)}</strong> / <strong className={colorTemperatura(dia.maxima)}>{numero(dia.maxima, "°", 0)}</strong></p>
-                      <p><span className="text-stone-500">Lluvia</span><br /><strong>{numero(dia.lluviaTotal, " mm", 1)}</strong></p>
-                      <p><span className="text-stone-500">Viento máx.</span><br /><strong>{numero(dia.vientoMaximo, " km/h")}</strong></p>
-                      <p><span className="text-stone-500">Rachas</span><br /><strong>{numero(dia.rachaMaxima, " km/h")}</strong></p>
+                      <p><span className="text-stone-500"><span aria-hidden="true">❄️</span> Mín / <span aria-hidden="true">🔥</span> Máx</span><br /><strong className={colorTemperatura(dia.minima)}>{numero(dia.minima, "°", 0)}</strong> / <strong className={colorTemperatura(dia.maxima)}>{numero(dia.maxima, "°", 0)}</strong></p>
+                      <p title={etiquetaLluvia(dia.lluviaTotal)}><span className="text-stone-500"><span aria-hidden="true">🌧️</span> Lluvia</span><br /><strong className={colorLluvia(dia.lluviaTotal)}>{numero(dia.lluviaTotal, " mm", 1)}</strong></p>
+                      <p title={etiquetaViento(dia.vientoMaximo)}><span className="text-stone-500"><span aria-hidden="true">💨</span> Viento máx.</span><br /><strong className={colorViento(dia.vientoMaximo)}>{numero(dia.vientoMaximo, " km/h")}</strong></p>
+                      <p title={etiquetaViento(dia.rachaMaxima)}><span className="text-stone-500"><span aria-hidden="true">🌬️</span> Rachas</span><br /><strong className={colorViento(dia.rachaMaxima)}>{numero(dia.rachaMaxima, " km/h")}</strong></p>
                     </div>
                   </li>
                 ))}

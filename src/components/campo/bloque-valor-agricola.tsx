@@ -442,15 +442,17 @@ export function BloqueValorAgricola({ ubicacion, cultivo, onComplete }: { ubicac
       <p className="mt-2 text-xs text-stone-500">Estimación orientativa de {DIAS_PREVISION} días (AEMET/Open-Meteo). No sustituye la observación de la parcela ni el criterio de un técnico.</p>
     </section>
 
-    {alertasVisibles.length ? (
-      <section className="flex flex-col gap-3" aria-labelledby="alertas-detectadas-titulo">
-        <h2 id="alertas-detectadas-titulo" className="text-xl font-extrabold text-stone-950">🌾 Alarmas agrícolas TecRural</h2>
-        <p className="text-base leading-snug text-stone-700">Estimadas para el cultivo y sus umbrales. Son independientes de los avisos oficiales de AEMET. Toca una alarma para ver la explicación y las medidas orientativas.</p>
-        {alertasVisibles.map((alerta) => (
-          <AlertaCard key={alerta.id} alerta={alerta} />
-        ))}
-      </section>
-    ) : null}
+    <section id="alertas-agricolas" className="scroll-mt-24 flex flex-col gap-3" aria-labelledby="alertas-detectadas-titulo">
+      <h2 id="alertas-detectadas-titulo" className="text-xl font-extrabold text-stone-950">🌾 Alarmas agrícolas TecRural</h2>
+      <p className="text-base leading-snug text-stone-700">Estimadas para el cultivo y sus umbrales. Son independientes de los avisos oficiales de AEMET. Toca una alarma para ver la explicación y las medidas orientativas.</p>
+      {alertasVisibles.length ? (
+        alertasVisibles.map((alerta) => <AlertaCard key={alerta.id} alerta={alerta} />)
+      ) : (
+        <p className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-4 text-[15px] font-semibold text-emerald-900">
+          <span aria-hidden="true">✅</span> No hay ninguna alarma agrícola activa para {nombreCultivo ?? "este cultivo"} en los próximos {DIAS_PREVISION} días según los umbrales de TecRural. Los avisos oficiales de AEMET se muestran aparte.
+        </p>
+      )}
+    </section>
     </>
   );
 }

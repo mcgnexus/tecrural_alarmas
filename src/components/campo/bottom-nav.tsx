@@ -9,12 +9,15 @@ interface ItemNav {
   etiqueta: string;
   ariaLabel?: string;
   icono: string;
+  /** Si necesita municipio elegido: sin él, lleva al selector de zona. */
+  requiereUbicacion?: boolean;
 }
 
 const items: ItemNav[] = [
   { href: "/", etiqueta: "Inicio", icono: "home" },
-  { href: "/#prevision", etiqueta: "Tiempo", icono: "tiempo" },
-  { href: "/#captacion", etiqueta: "Avisos", icono: "campana" },
+  { href: "/#prevision", etiqueta: "Tiempo", icono: "tiempo", requiereUbicacion: true },
+  { href: "/#avisos-aemet", etiqueta: "AEMET", ariaLabel: "Avisos oficiales de AEMET", icono: "nube", requiereUbicacion: true },
+  { href: "/#alertas-agricolas", etiqueta: "Alarma", ariaLabel: "Alarmas agrícolas TecRural", icono: "espiga", requiereUbicacion: true },
   { href: "/#como-funciona", etiqueta: "Guía", ariaLabel: "¿Cómo funciona?", icono: "ayuda" },
   { href: "/cuenta", etiqueta: "Acceso", icono: "acceso" },
 ];
@@ -48,6 +51,24 @@ function Icono({ nombre }: { nombre: string }) {
         <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true" {...common}>
           <path d="M6 8a6 6 0 0 1 12 0c0 7 2 8 2 8H4s2-1 2-8" />
           <path d="M10 21a2 2 0 0 0 4 0" />
+        </svg>
+      );
+    case "nube":
+      return (
+        <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true" {...common}>
+          <path d="M6.5 18a4.5 4.5 0 0 1-.4-8.98 5.5 5.5 0 0 1 10.7-1.2A4.25 4.25 0 0 1 17.5 18Z" />
+          <path d="M12 12.5v3" />
+          <path d="M10.4 14.1 12 12.5l1.6 1.6" />
+        </svg>
+      );
+    case "espiga":
+      return (
+        <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true" {...common}>
+          <path d="M12 21V9" />
+          <path d="M12 9c0-2.5 1.8-4.5 4.5-4.5C16.5 7 14.7 9 12 9Z" />
+          <path d="M12 9C12 6.5 10.2 4.5 7.5 4.5 7.5 7 9.3 9 12 9Z" />
+          <path d="M12 14.5c0-2.2 1.6-4 4-4 0 2.2-1.6 4-4 4Z" />
+          <path d="M12 14.5c0-2.2-1.6-4-4-4 0 2.2 1.6 4 4 4Z" />
         </svg>
       );
     case "maletin":
@@ -100,7 +121,9 @@ function desplazarEnPagina(
 
   const destino =
     (hash ? document.getElementById(hash) : null) ??
-    (hash === "prevision" ? document.getElementById("zona") : null);
+    (hash === "prevision" || hash === "avisos-aemet" || hash === "alertas-agricolas"
+      ? document.getElementById("zona")
+      : null);
 
   if (destino) {
     e.preventDefault();
@@ -140,9 +163,7 @@ function useTieneUbicacion(): boolean {
 }
 
 function hrefDeItem(item: ItemNav, tieneUbicacion: boolean): string {
-  return item.etiqueta === "Tiempo"
-    ? tieneUbicacion ? "/#prevision" : "/#zona"
-    : item.href;
+  return item.requiereUbicacion && !tieneUbicacion ? "/#zona" : item.href;
 }
 
 export function BottomNav() {
@@ -151,7 +172,7 @@ export function BottomNav() {
 
   return (
     <nav className="sticky bottom-0 z-10 border-t-2 border-stone-900/10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/95 lg:hidden">
-      <div className="mx-auto grid w-full max-w-5xl grid-cols-5 gap-0.5 px-2 pb-[env(safe-area-inset-bottom)] pt-0.5">
+      <div className="mx-auto grid w-full max-w-5xl grid-cols-6 gap-0.5 px-2 pb-[env(safe-area-inset-bottom)] pt-0.5">
         {items.map((item) => {
           const href = hrefDeItem(item, tieneUbicacion);
           const base = item.href.split("#")[0] || "/";

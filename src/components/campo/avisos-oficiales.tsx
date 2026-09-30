@@ -96,7 +96,7 @@ export function AvisosOficialesAemet({ ubicacion, region }: { ubicacion: Ubicaci
       : null;
 
   return (
-    <section className="rounded-2xl border-2 border-sky-300 bg-sky-50 p-5 shadow-sm" aria-labelledby="avisos-aemet-titulo">
+    <section id="avisos-aemet" className="scroll-mt-24 rounded-2xl border-2 border-sky-300 bg-sky-50 p-5 shadow-sm" aria-labelledby="avisos-aemet-titulo">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="avisos-aemet-titulo" className="text-xl font-extrabold text-stone-950">Avisos oficiales AEMET</h2>
         <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-sky-900">Fuente oficial · por zona</span>
