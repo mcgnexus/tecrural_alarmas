@@ -37,14 +37,14 @@ export function GraficoRiesgo({ dias }: { dias: DiaRiesgoGrafico[] }) {
       </figcaption>
       <div className="mt-2 h-48" role="img" aria-label="Gráfico del nivel de riesgo previsto para cada día">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={datos} margin={{ top: 20, right: 8, left: -20, bottom: 0 }}>
-            <XAxis dataKey="nombre" tick={<TickDia />} interval={0} />
+          <BarChart data={datos} margin={{ top: 20, right: 8, left: 4, bottom: 0 }}>
+            <XAxis dataKey="nombre" tick={<TickDia />} interval={0} height={34} padding={{ left: 16, right: 16 }} />
             <YAxis
               domain={[0, 3.4]}
               ticks={[0, 1, 2, 3]}
               tickFormatter={(valor: number) => ["", "Aviso", "Alerta", "Crítico"][valor] ?? ""}
               tick={{ fontSize: 13 }}
-              width={54}
+              width={62}
             />
             <Tooltip
               formatter={(_valor, _nombre, item) => [item.payload.detalle || "Sin riesgo", item.payload.nivel]}
