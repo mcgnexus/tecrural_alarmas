@@ -45,7 +45,7 @@ export function LandingMunicipio({ municipio }: { municipio: MunicipioPublico })
       <section className="scroll-mt-24 flex flex-col gap-3" aria-labelledby="prevision-local-titulo">
         <h2 id="prevision-local-titulo" className="text-xl font-extrabold text-stone-950">Tiempo de {municipio.name}</h2>
         <MeteoZona ubicacion={ubicacion} />
-        <AvisosOficialesAemet ubicacion={ubicacion} />
+        <AvisosOficialesAemet ubicacion={ubicacion} region={municipio.region} />
         <BloqueValorAgricola ubicacion={ubicacion} cultivo={cultivo || undefined} />
       </section>
 

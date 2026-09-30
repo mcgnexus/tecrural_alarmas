@@ -43,6 +43,7 @@ export function HomeSinRegistro() {
   const [error, setError] = useState<string | null>(null);
   const [geolocalizando, setGeolocalizando] = useState(false);
   const datosConsultados = Boolean(ubicacion) && tiempoConsultado && resumenConsultado;
+  const nombreCultivoSeleccionado = cultivo && cultivo !== "otro" ? catalogoCultivos[cultivo].nombre : null;
 
   const marcarTiempoConsultado = useCallback(() => setTiempoConsultado(true), []);
   const marcarResumenConsultado = useCallback(() => setResumenConsultado(true), []);
@@ -184,11 +185,48 @@ export function HomeSinRegistro() {
     {ubicacion ? <section id="prevision" aria-label="Tiempo de tu zona" className="scroll-mt-24 flex flex-col gap-3">
       <h2 className="text-xl font-extrabold text-stone-950">Tiempo de tu zona</h2>
       <MeteoZona key={`${ubicacion.lat}-${ubicacion.lon}`} ubicacion={ubicacion} onComplete={marcarTiempoConsultado} />
-      <AvisosOficialesAemet ubicacion={ubicacion} />
+      <AvisosOficialesAemet
+        ubicacion={ubicacion}
+        region={MUNICIPIOS_PUBLICOS.find((m) => ubicacion.nombre.startsWith(m.name))?.region}
+      />
     </section> : null}
 
     {/* BLOQUE 3: explicación valor agrícola */}
     {ubicacion ? <BloqueValorAgricola key={`${ubicacion.lat}-${ubicacion.lon}-${cultivo}`} ubicacion={ubicacion} cultivo={cultivo && cultivo !== "otro" ? cultivo : undefined} onComplete={marcarResumenConsultado} /> : null}
+
+    <section aria-label="Recibir avisos de este cultivo" className="flex flex-col gap-2">
+      {datosConsultados && nombreCultivoSeleccionado ? (
+        <div className="rounded-2xl border-2 border-brand-800 bg-brand-50 p-4 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-4">
+          <div>
+            <h2 className="text-lg font-extrabold text-stone-950">¿Quieres recibir estos avisos?</h2>
+            <p className="mt-1 text-sm leading-snug text-stone-700">Para {nombreCultivoSeleccionado} en {ubicacion?.nombre}. Te avisamos si aparece un riesgo relevante.</p>
+          </div>
+          <a href="#captacion" onClick={() => registrarEventoEmbudo("lead_started", { origen: "cta_post_resumen" })} className="mt-3 inline-flex min-h-[56px] w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-base font-black text-white hover:bg-brand-900 sm:mt-0 sm:w-auto">
+            <span aria-hidden="true">📲</span> Recibir estos avisos por WhatsApp
+          </a>
+        </div>
+      ) : datosConsultados && cultivo === "otro" ? (
+        <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4">
+          <h2 className="text-lg font-extrabold text-amber-950">Avisos para otro cultivo</h2>
+          <p className="mt-1 text-sm leading-snug text-amber-900">No tenemos umbrales automáticos para este cultivo. Puedes enviar el formulario y revisaremos contigo una alternativa manual.</p>
+          <a href="#captacion" onClick={() => registrarEventoEmbudo("lead_started", { origen: "cta_cultivo_otro" })} className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center rounded-xl border-2 border-amber-800 bg-white px-4 py-2 font-bold text-amber-950 sm:w-auto">Consultar activación</a>
+        </div>
+      ) : datosConsultados ? (
+        <div className="rounded-xl border-2 border-dashed border-stone-300 bg-stone-50 p-4 text-center">
+          <p className="text-sm font-semibold text-stone-700">Elige tu cultivo para recibir avisos ajustados a tu caso.</p>
+          <a href="#zona" className="mt-2 inline-flex min-h-[44px] items-center justify-center rounded-xl border-2 border-stone-300 bg-white px-4 text-sm font-bold text-stone-800">Elegir cultivo</a>
+        </div>
+      ) : ubicacion ? (
+        <div role="status" aria-live="polite" className="rounded-xl border-2 border-sky-200 bg-sky-50 p-4 text-center">
+          <p className="text-sm font-semibold text-sky-950">Estamos preparando tu resumen agrícola para mostrarte los avisos de {nombreCultivoSeleccionado ?? "tu cultivo"}.</p>
+        </div>
+      ) : (
+        <div className="rounded-xl border-2 border-dashed border-stone-300 bg-stone-50 p-4 text-center">
+          <p className="text-sm font-semibold text-stone-700">Elige tu municipio arriba para activar avisos gratuitos</p>
+          <a href="#zona" className="mt-3 inline-flex min-h-[44px] items-center justify-center rounded-xl border-2 border-stone-300 bg-white px-4 text-sm font-bold text-stone-800">Elegir municipio</a>
+        </div>
+      )}
+    </section>
 
     {datosConsultados ? <aside className="rounded-2xl border-2 border-olive-200 bg-white p-5 shadow-sm" aria-label="Contacto directo con el responsable de TecRural">
       <div className="flex items-center gap-3">
@@ -208,31 +246,11 @@ export function HomeSinRegistro() {
       <p className="mt-2 text-xs text-stone-500">Responsable del tratamiento · <Link href="/privacidad" className="inline-flex min-h-11 items-center py-2 font-semibold underline">Ver política de privacidad</Link></p>
     </aside> : null}
 
-    {/* CTA intercalada: activar avisos solo tras ver previsión */}
-    <section aria-label="Activar avisos" className="flex flex-col gap-2">
-      {datosConsultados ? (
-        <>
-          <a href="#captacion" onClick={() => registrarEventoEmbudo("lead_started", { origen: "cta_post_prevision" })} className="inline-flex min-h-[56px] w-full items-center justify-center rounded-xl bg-brand-800 px-5 py-3 text-lg font-black text-white hover:bg-brand-900">
-            Activar avisos gratis
-          </a>
-          <p className="text-center text-sm text-stone-600">Para {ubicacion?.nombre ?? "tu zona"} · Solo si hay riesgo relevante</p>
-        </>
-      ) : ubicacion ? (
-        <div role="status" aria-live="polite" className="rounded-xl border-2 border-sky-200 bg-sky-50 p-4 text-center">
-          <p className="text-sm font-semibold text-sky-950">Estamos consultando el tiempo y preparando el resumen agrícola de {ubicacion.nombre}.</p>
-        </div>
-      ) : (
-        <div className="rounded-xl border-2 border-dashed border-stone-300 bg-stone-50 p-4 text-center">
-          <p className="text-sm font-semibold text-stone-700">Elige tu municipio arriba para activar avisos gratuitos</p>
-          <a href="#zona" className="mt-3 inline-flex min-h-[44px] items-center justify-center rounded-xl border-2 border-stone-300 bg-white px-4 text-sm font-bold text-stone-800">Elegir municipio</a>
-        </div>
-      )}
-    </section>
-
     {/* BLOQUE 4: captación */}
     <section id="captacion" aria-label="Activar avisos gratuitos" className="scroll-mt-24">
       {datosConsultados ? <>
-        <h2 className="text-xl font-extrabold text-stone-950">Activa avisos gratuitos para tu zona</h2>
+        <h2 className="text-xl font-extrabold text-stone-950">Activa avisos gratuitos de {nombreCultivoSeleccionado ?? "tu cultivo"}</h2>
+        <p className="mt-1 text-base text-stone-700">Para {ubicacion?.nombre ?? "tu zona"}. Recibirás avisos por WhatsApp si se detecta un riesgo relevante.</p>
         <div className="mt-3"><FormularioContacto key={ubicacion?.nombre ?? "sin-ubicacion"} municipioInicial={ubicacion ? municipioDeUbicacion(ubicacion.nombre) : ""} cultivoInicial={cultivo && cultivo !== "otro" ? catalogoCultivos[cultivo].nombre : ""} onCultivoChange={(nombre) => setCultivo(idsCultivos.find((id) => catalogoCultivos[id].nombre === nombre) ?? "")} activarAvisosGratis ubicacionAvisos={ubicacion ? { lat: ubicacion.lat, lon: ubicacion.lon } : null} /></div>
       </> : <div className="rounded-2xl border-2 border-olive-200 bg-white p-5">
         <h2 className="text-xl font-extrabold text-stone-950">Primero, consulta tu zona</h2>

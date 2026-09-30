@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { colorTemperatura, etiquetaTermica } from "@/lib/ui/temperatura";
 import { colorHumedad, etiquetaHumedad } from "@/lib/ui/humedad";
 import { registrarEventoEmbudo } from "@/lib/analitica";
+import { etiquetaDia } from "@/lib/ui/fechas";
 import { GraficoPrevision } from "./grafico-prevision";
 
 type Ubicacion = { lat: number; lon: number; nombre: string; aemetMunicipio?: string };
@@ -59,6 +60,62 @@ function maximo(actual: number | null, valor: number | null): number | null {
   return typeof valor === "number" && Number.isFinite(valor) ? (actual === null ? valor : Math.max(actual, valor)) : actual;
 }
 
+/** Devuelve el día con el valor extremo y ese valor, ignorando datos ausentes. */
+function extremo<T>(
+  dias: T[],
+  valor: (dia: T) => number | null,
+  mejor: (a: number, b: number) => number,
+): { dia: T; valor: number } | null {
+  let elegido: { dia: T; valor: number } | null = null;
+  for (const dia of dias) {
+    const v = valor(dia);
+    if (v === null || !Number.isFinite(v)) continue;
+    if (!elegido || mejor(v, elegido.valor) < 0) elegido = { dia, valor: v };
+  }
+  return elegido;
+}
+
+/**
+ * Resumen en texto de la previsión: en consulta rápida de campo los valores
+ * concretos son más accionables que interpretar la gráfica.
+ */
+function ResumenPrevision({ dias }: { dias: DiaExtremos[] }) {
+  const masBaja = extremo(dias, (d) => d.minima, (a, b) => a - b);
+  const masAlta = extremo(dias, (d) => d.maxima, (a, b) => b - a);
+  const masLluvia = extremo(dias, (d) => d.lluviaTotal, (a, b) => b - a);
+  const masRacha = extremo(dias, (d) => d.rachaMaxima, (a, b) => b - a);
+  const conLluvia = dias.some((d) => (d.lluviaTotal ?? 0) > 0);
+  const lluviaTotal = dias.reduce((suma, d) => suma + (d.lluviaTotal ?? 0), 0);
+
+  const filas = [
+    { icono: "❄️", etiqueta: "Mínima más baja", texto: masBaja ? `${numero(masBaja.valor, " °C", 0)} el ${masBaja.dia.etiqueta}` : "—" },
+    { icono: "🔥", etiqueta: "Máxima más alta", texto: masAlta ? `${numero(masAlta.valor, " °C", 0)} el ${masAlta.dia.etiqueta}` : "—" },
+    { icono: "🌧️", etiqueta: "Lluvia máxima en un día", texto: masLluvia ? `${numero(masLluvia.valor, " mm", 1)} el ${masLluvia.dia.etiqueta}` : "—" },
+    { icono: "🌬️", etiqueta: "Rachas más fuertes", texto: masRacha ? `${numero(masRacha.valor, " km/h")} el ${masRacha.dia.etiqueta}` : "—" },
+  ];
+
+  return (
+    <div className="mt-4 rounded-xl border-2 border-sky-300 bg-sky-50 p-3">
+      <p className="text-[15px] font-extrabold text-stone-950">Resumen de los próximos {dias.length} días</p>
+      <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+        {filas.map((fila) => (
+          <div key={fila.etiqueta} className="rounded-lg border border-sky-200 bg-white px-3 py-2">
+            <dt className="text-[11px] font-bold uppercase tracking-wide text-stone-500">
+              <span aria-hidden="true">{fila.icono}</span> {fila.etiqueta}
+            </dt>
+            <dd className="mt-0.5 text-[15px] font-extrabold text-stone-950">{fila.texto}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-2 text-[13px] font-semibold text-stone-700">
+        {conLluvia
+          ? `Lluvia prevista en total: ${numero(lluviaTotal, " mm", 1)} en ${dias.length} días.`
+          : "No se espera lluvia en estos días."}
+      </p>
+    </div>
+  );
+}
+
 /** Agrupa la serie horaria por día natural y resume las variables principales. */
 function extremosPorDia(horas: Hora[]): DiaExtremos[] {
   const porDia = new Map<string, DiaExtremos>();
@@ -75,7 +132,7 @@ function extremosPorDia(horas: Hora[]): DiaExtremos[] {
     const fecha = new Date(hora.timestamp);
     if (Number.isNaN(fecha.getTime())) continue;
     const clave = `${fecha.getFullYear()}-${fecha.getMonth()}-${fecha.getDate()}`;
-    const etiqueta = fecha.toLocaleDateString("es-ES", { weekday: "short", day: "2-digit" });
+    const etiqueta = etiquetaDia(fecha);
     const actual = porDia.get(clave);
     if (!actual) porDia.set(clave, {
       clave,
@@ -203,8 +260,10 @@ export function MeteoZona({ ubicacion, onComplete }: { ubicacion: Ubicacion; onC
                 <h3 className="text-[15px] font-extrabold text-stone-900">Previsión diaria · {dias.length} días</h3>
                 <span className="text-[11px] font-bold uppercase tracking-wide text-stone-500">Temperatura · lluvia · viento</span>
               </div>
+              <ResumenPrevision dias={dias} />
               <GraficoPrevision dias={dias} />
-              <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <h4 className="mt-4 text-[15px] font-extrabold text-stone-900">Detalle de cada día</h4>
+              <ul className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {dias.map((dia) => (
                   <li key={dia.clave} className="rounded-xl border-2 border-stone-200 bg-wheat-50 p-3">
                     <span className="text-[15px] font-bold capitalize text-stone-800">{dia.etiqueta}</span>

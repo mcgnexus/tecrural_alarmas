@@ -1,6 +1,7 @@
 "use client";
 
 import { Bar, BarChart, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { TickDia } from "./tick-dia";
 
 export type NivelGrafico = "info" | "aviso" | "alerta" | "critica";
 
@@ -37,7 +38,7 @@ export function GraficoRiesgo({ dias }: { dias: DiaRiesgoGrafico[] }) {
       <div className="mt-2 h-48" role="img" aria-label="Gráfico del nivel de riesgo previsto para cada día">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={datos} margin={{ top: 20, right: 8, left: -20, bottom: 0 }}>
-            <XAxis dataKey="nombre" tick={{ fontSize: 13 }} />
+            <XAxis dataKey="nombre" tick={<TickDia />} interval={0} />
             <YAxis
               domain={[0, 3.4]}
               ticks={[0, 1, 2, 3]}

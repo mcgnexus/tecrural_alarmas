@@ -11,6 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { TickDia } from "./tick-dia";
 
 export type DiaGrafico = {
   clave: string;
@@ -52,7 +53,7 @@ export function GraficoPrevision({ dias }: { dias: DiaGrafico[] }) {
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={datos} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
-              <XAxis dataKey="nombre" tick={{ fontSize: 13 }} />
+              <XAxis dataKey="nombre" tick={<TickDia />} interval={0} />
               <YAxis tick={{ fontSize: 13 }} unit="°" />
               <Tooltip formatter={(valor) => numero(valor, " °C", 1)} />
               <Legend wrapperStyle={{ fontSize: 13 }} />
@@ -71,7 +72,7 @@ export function GraficoPrevision({ dias }: { dias: DiaGrafico[] }) {
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={datos} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
-              <XAxis dataKey="nombre" tick={{ fontSize: 13 }} />
+              <XAxis dataKey="nombre" tick={<TickDia />} interval={0} />
               <YAxis yAxisId="lluvia" tick={{ fontSize: 13 }} />
               <YAxis yAxisId="viento" orientation="right" tick={{ fontSize: 13 }} />
               <Tooltip

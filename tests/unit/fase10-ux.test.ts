@@ -9,8 +9,9 @@ describe("Fase10 UX", () => {
     const home = read("src/components/campo/home-sin-registro.tsx");
     // Hero prioriza ver tiempo/riesgos antes de pedir datos
     expect(home).toContain("Ver tiempo y riesgos");
-    // Activar avisos aparece tras la previsión y solo cuando hay zona
-    expect(home).toContain("Activar avisos gratis");
+    // La llamada principal aparece junto al resumen y personaliza cultivo/zona
+    expect(home).toContain("Recibir estos avisos por WhatsApp");
+    expect(home).toContain("nombreCultivoSeleccionado");
     expect(home).toContain('href="#captacion"');
     // No debe haber Recibir avisos antes de elegir municipio en bloque superior
     const heroRecibir = (home.match(/Recibir avisos de mi zona/g) || []).length;

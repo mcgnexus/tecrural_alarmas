@@ -5,6 +5,7 @@ import type { CulturaId } from "@/lib/cultivos/catalogo";
 import { catalogoCultivos } from "@/lib/cultivos/catalogo";
 import { canUseFeature, planForUser } from "@/lib/planes/permisos";
 import { registrarEventoEmbudo } from "@/lib/analitica";
+import { etiquetaDia } from "@/lib/ui/fechas";
 import type { Alerta } from "@/lib/dominio/tipos";
 import { AlertaCard } from "@/components/riesgo/alerta-card";
 import { GraficoRiesgo, type DiaRiesgoGrafico } from "./grafico-riesgo";
@@ -154,7 +155,7 @@ function diasDesdeHoras(horas: Hora[]): Array<{
     const fecha = new Date(hora.timestamp);
     if (Number.isNaN(fecha.getTime())) continue;
     const clave = `${fecha.getFullYear()}-${fecha.getMonth()}-${fecha.getDate()}`;
-    const etiqueta = fecha.toLocaleDateString("es-ES", { weekday: "short", day: "2-digit" });
+    const etiqueta = etiquetaDia(fecha);
     const actual = porDia.get(clave);
     if (!actual) porDia.set(clave, { clave, etiqueta, minima: t, rachaMaxima: racha, lluviaTotal: lluvia });
     else {

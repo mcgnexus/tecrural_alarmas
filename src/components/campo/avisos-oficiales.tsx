@@ -9,7 +9,7 @@ import {
   type FenomenoOficial,
 } from "@/lib/ui/avisos-oficiales";
 
-type Ubicacion = { lat: number; lon: number };
+type Ubicacion = { lat: number; lon: number; nombre?: string };
 
 type AvisoOficial = {
   id: string;
@@ -57,7 +57,7 @@ function formatearPeriodo(desde: string, hasta: string): string {
   return `${fmt(d)} → ${fmt(h)}`;
 }
 
-export function AvisosOficialesAemet({ ubicacion }: { ubicacion: Ubicacion }) {
+export function AvisosOficialesAemet({ ubicacion, region }: { ubicacion: Ubicacion; region?: string }) {
   const [avisos, setAvisos] = useState<AvisoOficial[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(false);
@@ -83,6 +83,18 @@ export function AvisosOficialesAemet({ ubicacion }: { ubicacion: Ubicacion }) {
       aviso.fenomenoVisible !== null && avisoVigente(aviso),
     );
 
+  const areasAviso = [...new Set(avisosRelevantes.map((aviso) => aviso.area.trim()).filter(Boolean))];
+  const nombreMunicipio = (ubicacion.nombre ?? "").split(",")[0]?.trim();
+  const notaArea =
+    nombreMunicipio && areasAviso.length
+      ? areasAviso
+          .map(
+            (area) =>
+              `Para ${nombreMunicipio}${region ? `, tu zona «${region}»` : ""}, AEMET publica estos avisos por el área «${area}»: es una zona de aviso compartida por varios municipios, no una medición de tu parcela.`,
+          )
+          .join(" ")
+      : null;
+
   return (
     <section className="rounded-2xl border-2 border-sky-300 bg-sky-50 p-5 shadow-sm" aria-labelledby="avisos-aemet-titulo">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -90,6 +102,12 @@ export function AvisosOficialesAemet({ ubicacion }: { ubicacion: Ubicacion }) {
         <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-sky-900">Fuente oficial · por zona</span>
       </div>
       <p className="mt-1 text-sm leading-relaxed text-stone-700">Lluvia, temperatura mínima y viento previstos para el municipio. Son avisos meteorológicos oficiales, independientes de las alarmas agrícolas de TecRural.</p>
+
+      {!cargando && !error && notaArea ? (
+        <p className="mt-3 rounded-xl border border-sky-200 bg-white/80 p-3 text-sm leading-snug text-stone-700">
+          <span aria-hidden="true">🗺️</span> {notaArea}
+        </p>
+      ) : null}
 
       {cargando ? <p role="status" className="mt-3 text-[15px] text-stone-600">Cargando avisos oficiales de AEMET…</p> : null}
 
@@ -109,7 +127,11 @@ export function AvisosOficialesAemet({ ubicacion }: { ubicacion: Ubicacion }) {
               </div>
               <p className="mt-1 text-[13px] font-bold">{etiquetaFenomenoOficial(aviso.fenomenoVisible)}</p>
               <p className="mt-1 text-[13px] font-semibold">{formatearPeriodo(aviso.startsAt, aviso.endsAt)}</p>
-              {aviso.area ? <p className="text-[12px]">{aviso.area}</p> : null}
+              {aviso.area ? (
+                <p className="mt-1 text-[12px] font-bold">
+                  <span aria-hidden="true">📍</span> Área oficial AEMET: {aviso.area}
+                </p>
+              ) : null}
               {aviso.description ? <p className="mt-2 text-sm leading-snug">{aviso.description}</p> : null}
               {aviso.sourceUrl ? (
                 <a href={aviso.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-[12px] font-bold underline">Fuente oficial</a>
