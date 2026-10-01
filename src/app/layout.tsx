@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { ServiceWorkerRegistrator } from "@/components/pwa/service-worker-registrator";
@@ -76,6 +77,16 @@ export default function RootLayout({
         {children}
         <ServiceWorkerRegistrator />
         <Analytics />
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-3SXTJ9EMW6"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`window.dataLayer = window.dataLayer || [];
+function gtag(){window.dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-3SXTJ9EMW6');`}
+        </Script>
       </body>
     </html>
   );

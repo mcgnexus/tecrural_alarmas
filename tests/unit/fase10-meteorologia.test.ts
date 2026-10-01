@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { esquemaCuerpoRiesgo } from "@/lib/datos/validacion";
 import { esDatosCaducados } from "@/lib/dominio/frescura";
 import { evaluadorHelada } from "@/lib/alertas/evaluadores/helada";

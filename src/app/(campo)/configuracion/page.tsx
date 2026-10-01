@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { GestionAvisos } from "@/components/avisos/gestion-avisos";
-import { ResumenInteres } from "@/components/crm/resumen-interes";
 
 export const metadata: Metadata = {
   title: "Ajustes",

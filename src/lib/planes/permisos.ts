@@ -3,6 +3,7 @@
  * No hardcodear `if (plan==='pro')` disperso: usar `canUseFeature(plan, feature)`.
  * Fuente única de verdad para qué ve el usuario gratuito vs premium.
  */
+import { isFlagEnabled } from "@/config/feature-flags";
 
 export type Plan = "free" | "essential" | "monitor" | "pro" | "cooperative";
 
@@ -95,11 +96,7 @@ export function canUseFeature(plan: Plan, feature: Feature): boolean {
   const planOk = (allowed as readonly string[]).includes(feature);
   if (!planOk) return false;
   // Fase 8: flag por entorno — si PUBLIC_MVP_MODE y flag deshabilitado, aunque plan lo permita, ocultar
-  // evitar importar circular: require dinámico
-  try {
-    const { isFlagEnabled } = require("@/config/feature-flags") as typeof import("@/config/feature-flags");
-    if (!isFlagEnabled(feature)) return false;
-  } catch {}
+  if (!isFlagEnabled(feature)) return false;
   return true;
 }
 
@@ -109,7 +106,7 @@ export function canAccessServer(plan: Plan, feature: Feature): boolean {
 }
 
 /** Plan efectivo del usuario — hoy todos `free` hasta integrar facturación. */
-export function planForUser(_userId?: string | null): Plan {
+export function planForUser(): Plan {
   // TODO premium: resolver desde `plataforma.users.plan` o `lead_scores` cuando exista.
   // No hardcodear en componentes; centralizar aquí.
   return "free";
