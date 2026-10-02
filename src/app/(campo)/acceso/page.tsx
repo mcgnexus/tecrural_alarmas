@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { asegurarSesionDispositivo } from "@/lib/datos/dispositivo";
 
@@ -9,16 +9,21 @@ type Estado = "cargando" | "ok" | "error";
 export default function AccesoPage() {
   const [estado, setEstado] = useState<Estado>("cargando");
   const [mensaje, setMensaje] = useState("");
+  // El token es de un solo uso: evita canjearlo dos veces si el efecto se
+  // monta por duplicado (React Strict Mode) o el componente se re-monta.
+  const canjeIniciado = useRef(false);
 
   useEffect(() => {
-    let activo = true;
+    if (canjeIniciado.current) return;
+    canjeIniciado.current = true;
     async function activar() {
       try {
         // Deja lista la cookie de dispositivo para vincular sus datos anónimos.
         await asegurarSesionDispositivo();
         const token = new URLSearchParams(window.location.search).get("token") ?? "";
         if (!token) {
-          if (activo) { setEstado("error"); setMensaje("Falta el enlace de acceso."); }
+          setEstado("error");
+          setMensaje("Falta el enlace de acceso.");
           return;
         }
         const r = await fetch("/api/auth/invite/accept", {
@@ -28,7 +33,6 @@ export default function AccesoPage() {
           body: JSON.stringify({ token }),
         });
         const j = (await r.json().catch(() => ({}))) as { error?: string };
-        if (!activo) return;
         if (!r.ok) {
           setEstado("error");
           setMensaje(j.error ?? "No se pudo activar la cuenta.");
@@ -36,11 +40,11 @@ export default function AccesoPage() {
         }
         setEstado("ok");
       } catch {
-        if (activo) { setEstado("error"); setMensaje("No se pudo activar la cuenta."); }
+        setEstado("error");
+        setMensaje("No se pudo activar la cuenta.");
       }
     }
     void activar();
-    return () => { activo = false; };
   }, []);
 
   return (

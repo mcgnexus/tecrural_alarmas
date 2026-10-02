@@ -17,6 +17,9 @@ import {
   listarUsuarios,
   type NuevoUsuario,
 } from "@/lib/datos/usuarios-repo";
+import { crearLogger } from "@/lib/log/logger";
+
+const log = crearLogger("aplicacion.cuentas");
 
 export interface InvitacionCreada {
   usuarioId: string;
@@ -55,7 +58,13 @@ export async function aceptarInvitacion(
 ): Promise<string | null> {
   const userId = await consumirInvitacion(token);
   if (!userId) return null;
-  await reclamarDispositivo(userId, dispositivoId);
+  // La vinculación de datos anónimos es best-effort: si falla, la cuenta ya
+  // está activada y el token consumido; no debe tirar el acceso ni exigir otro.
+  try {
+    await reclamarDispositivo(userId, dispositivoId);
+  } catch (error) {
+    log.error("cuentas.aceptar.reclamar.error", { user_id: userId }, error);
+  }
   return userId;
 }
 
